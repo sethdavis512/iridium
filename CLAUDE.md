@@ -10,16 +10,17 @@ Iridium is now a **small, opinionated starter** for React Router 7 apps.
 
 - ✅ BetterAuth email/password authentication
 - ✅ Simple dashboard and profile editor
-- ✅ AI chat demo (Vercel AI SDK + OpenAI)
+- ✅ AI chat demo (Vercel AI SDK — provider-agnostic, defaults to OpenAI)
+- ✅ Transactional email (Resend + React Email)
 - ✅ PostgreSQL + Prisma ORM
 - ✅ Config-based routing, middleware patterns, model-layer architecture
 - ✅ Hybrid form validation (client + server)
 
-**Optional Integrations (wired but require API keys):**
+**Optional Integrations (require API keys):**
 
-- 🔌 PostHog analytics and feature flags
-- 🔌 Resend transactional email
-- 🔌 Polar billing/subscriptions (see `.github/instructions/polar.instructions.md`)
+- 🔌 OAuth providers (GitHub, Google)
+- 🔌 File storage (Railway S3 / AWS S3)
+- 🔌 Additional AI providers (Anthropic, Google — see `app/lib/ai.ts`)
 
 **Explicitly Scoped Out:**
 
@@ -233,9 +234,6 @@ const user = await getUserProfile(userId);
 - `app/models/message.server.ts` / `app/models/thread.server.ts` - Chat messages/threads
 - `app/models/admin.server.ts` - Admin operations
 - `app/models/analytics.server.ts` - Analytics operations
-- `app/models/feature-flags.server.ts` - PostHog feature flags with caching
-- `app/models/posthog.server.ts` - PostHog analytics and error tracking
-- `app/models/polar.server.ts` - Polar billing operations
 
 ### 4. Custom Prisma Output Path
 
@@ -660,8 +658,7 @@ import { Paths } from '~/constants';
 - `OPENAI_API_KEY` - AI chat demo
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL` - Transactional emails
 - `VITE_POSTHOG_API_KEY`, `VITE_POSTHOG_HOST` - Client-side analytics
-- `POSTHOG_API_KEY`, `POSTHOG_HOST` - Server-side analytics (LLM tracking)
-- `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET` - Polar billing
+- `AI_PROVIDER`, `AI_MODEL` - AI provider and model selection (default: `openai` / `gpt-4o-mini`)
 
 See `.env.example` for the full list.
 

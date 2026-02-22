@@ -157,30 +157,37 @@ export async function getEngagementMetrics(params: EngagementMetricsParams) {
         take: topUsersLimit,
     });
 
-    // Enrich with user details and thread counts
-    const topUsers = await Promise.all(
-        topUserGroups.map(async (group) => {
-            const user = await prisma.user.findUnique({
-                where: { id: group.userId! },
-                select: { name: true, email: true },
-            });
-
-            const threadCount = await prisma.thread.count({
-                where: {
-                    createdById: group.userId!,
-                    createdAt: { gte: startDate, lte: endDate },
+    // Enrich with user details and thread counts in a single batch query
+    const topUserIds = topUserGroups.map((g) => g.userId!);
+    const usersWithData = await prisma.user.findMany({
+        where: { id: { in: topUserIds } },
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            _count: {
+                select: {
+                    threads: {
+                        where: {
+                            createdAt: { gte: startDate, lte: endDate },
+                        },
+                    },
                 },
-            });
+            },
+        },
+    });
+    const userMap = new Map(usersWithData.map((u) => [u.id, u]));
 
-            return {
-                userId: group.userId!,
-                userName: user?.name ?? null,
-                userEmail: user?.email ?? 'unknown',
-                messageCount: group._count.id,
-                threadCount,
-            };
-        }),
-    );
+    const topUsers = topUserGroups.map((group) => {
+        const user = userMap.get(group.userId!);
+        return {
+            userId: group.userId!,
+            userName: user?.name ?? null,
+            userEmail: user?.email ?? 'unknown',
+            messageCount: group._count.id,
+            threadCount: user?._count.threads ?? 0,
+        };
+    });
 
     // 6. Daily threads for trend
     const dailyThreads = (await prisma.$queryRaw`

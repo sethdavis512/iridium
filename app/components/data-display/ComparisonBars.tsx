@@ -1,4 +1,3 @@
-import { scaleLinear } from '@visx/scale';
 import { cx } from '~/cva.config';
 
 interface ComparisonBarsProps {
@@ -19,14 +18,8 @@ export function ComparisonBars({
     className,
 }: ComparisonBarsProps) {
     const maxValue = Math.max(0, aValue, bValue);
-    const scale = scaleLinear<number>({
-        domain: [0, maxValue || 1],
-        range: [0, 1],
-        clamp: true,
-    });
-
-    const aPct = scale(aValue);
-    const bPct = scale(bValue);
+    const aPct = maxValue === 0 ? 0 : aValue / maxValue;
+    const bPct = maxValue === 0 ? 0 : bValue / maxValue;
 
     return (
         <div className={cx('flex flex-col gap-3', className)}>
@@ -72,4 +65,3 @@ function BarRow({
         </div>
     );
 }
-

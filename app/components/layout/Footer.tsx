@@ -86,20 +86,20 @@ export function Footer() {
                         <ul className="flex flex-col gap-1">
                             <li>
                                 <a
-                                    href="https://posthog.com/"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    PostHog
-                                </a>
-                            </li>
-                            <li>
-                                <a
                                     href="https://railway.com/deploy/?referralCode=YZe1VE"
                                     target="_blank"
                                     rel="noreferrer"
                                 >
                                     Railway
+                                </a>
+                            </li>
+                            <li>
+                                <a
+                                    href="https://resend.com"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    Resend
                                 </a>
                             </li>
                         </ul>

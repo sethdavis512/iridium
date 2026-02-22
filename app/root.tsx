@@ -9,15 +9,11 @@ import {
 } from 'react-router';
 import { FileQuestionIcon } from 'lucide-react';
 
-import { getFeatureFlags } from './models/posthog.server';
-import { getFeatureFlagsForUser } from './models/posthog.server';
 import { getUserFromSession } from './lib/session.server';
 import { getUserRole } from './models/user.server';
-import { PHProvider } from './components/providers/PostHogProvider';
 import { themeCookie } from './lib/cookies.server';
 import { useRootData } from './hooks/useRootData';
 import type { Route } from './+types/root';
-import { getProductDetails } from './models/polar.server';
 
 import './app.css';
 
@@ -40,25 +36,14 @@ export async function loader({ request }: Route.LoaderArgs) {
     const roleObj = user ? await getUserRole(user?.id) : null;
     const role = roleObj?.role || null;
 
-    const allFlagsResponse = await getFeatureFlags();
-    const allFlags = allFlagsResponse.results;
-
-    const userFlags = await getFeatureFlagsForUser(request);
-
     const cookieHeader = request.headers.get('Cookie');
     const cookie = (await themeCookie.parse(cookieHeader)) || {};
     const theme = cookie.theme || process.env.DEFAULT_THEME || 'light';
 
-    const product =
-        (await getProductDetails(process.env.POLAR_PRODUCT_ID)) || null;
-
     return {
-        allFlags,
-        product,
         role,
         theme,
         user,
-        userFlags,
     };
 }
 
@@ -95,11 +80,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Links />
             </head>
             <body className="min-h-screen">
-                <PHProvider>
-                    {children}
-                    <ScrollRestoration />
-                    <Scripts />
-                </PHProvider>
+                {children}
+                <ScrollRestoration />
+                <Scripts />
             </body>
         </html>
     );

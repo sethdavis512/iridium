@@ -37,7 +37,6 @@ export default function SiteLayoutRoute() {
     const drawerContents = data?.user?.id ? (
         <AdminPanel
             drawerActions={appDrawerActions}
-            allFlags={data.allFlags}
             theme={data.theme || process.env.DEFAULT_THEME || 'light'}
             user={data.user}
         />

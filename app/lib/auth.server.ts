@@ -1,17 +1,9 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { admin } from 'better-auth/plugins';
-import {
-    checkout,
-    polar,
-    usage,
-    portal,
-    webhooks,
-} from '@polar-sh/better-auth';
 
 import { prisma } from '~/db.server';
 import { Paths } from '~/constants';
-import { polarClient } from './polar';
 import {
     sendPasswordResetEmail,
     sendVerificationEmail,
@@ -86,31 +78,6 @@ export const auth = betterAuth({
     plugins: [
         admin({
             defaultRole: 'USER',
-        }),
-        polar({
-            client: polarClient,
-            createCustomerOnSignUp: true,
-            use: [
-                checkout({
-                    successUrl:
-                        process.env.POLAR_SUCCESS_URL || '/payment/success',
-                    authenticatedUsersOnly: true,
-                }),
-                portal(),
-                usage(),
-                webhooks({
-                    secret: process.env.POLAR_WEBHOOK_SECRET!,
-                    onCustomerStateChanged: async (payload) => {
-                        console.log('Customer state changed:', payload);
-                    },
-                    onOrderPaid: async (payload) => {
-                        console.log('Order paid:', payload);
-                    },
-                    onPayload: async (payload) => {
-                        console.log('Polar webhook received:', payload);
-                    },
-                }),
-            ],
         }),
     ],
 });

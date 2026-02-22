@@ -3,20 +3,21 @@ set -e
 
 echo "Waiting for database to be ready..."
 
-# Retry logic for database connection
-max_attempts=30
+max_attempts=60
 attempt=0
 
-until npx prisma migrate deploy || [ $attempt -eq $max_attempts ]; do
+until pg_isready -d "$DATABASE_URL" > /dev/null 2>&1; do
   attempt=$((attempt + 1))
-  echo "Database not ready, attempt $attempt/$max_attempts. Waiting 2 seconds..."
+  if [ $attempt -ge $max_attempts ]; then
+    echo "ERROR: Database not reachable after ${max_attempts} attempts. Exiting."
+    exit 1
+  fi
+  echo "  Attempt $attempt/$max_attempts — retrying in 2s..."
   sleep 2
 done
 
-if [ $attempt -eq $max_attempts ]; then
-  echo "Failed to connect to database after $max_attempts attempts."
-  exit 1
-fi
+echo "Database is ready. Running migrations..."
+npx prisma migrate deploy
 
-echo "Database is ready! Starting application..."
+echo "Migrations complete. Starting application..."
 exec npm run start

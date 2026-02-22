@@ -1,1 +1,2 @@
-export { PHProvider } from './PostHogProvider';
+// Providers barrel export
+// Add provider exports here as needed

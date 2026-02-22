@@ -33,11 +33,15 @@ export function getAllThreadsByUserId(userId: string) {
     });
 }
 
-export function getThreadById(threadId: string) {
+export function getThreadById(threadId: string, messageCursor?: string) {
     return prisma.thread.findUnique({
         where: { id: threadId },
         include: {
             messages: {
+                take: 50,
+                ...(messageCursor
+                    ? { cursor: { id: messageCursor }, skip: 1 }
+                    : {}),
                 orderBy: { createdAt: 'asc' },
             },
         },

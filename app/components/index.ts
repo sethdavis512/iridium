@@ -16,8 +16,5 @@ export * from './layout';
 // Navigation
 export * from './navigation';
 
-// Providers
-export * from './providers';
-
 // Utilities
 export * from './utilities';

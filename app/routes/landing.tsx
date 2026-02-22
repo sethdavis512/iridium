@@ -1,4 +1,3 @@
-import { Alert } from '~/components/feedback/Alert';
 import { Accordion, AccordionItem } from '~/components/data-display/Accordion';
 import {
     ArrowRightIcon,
@@ -18,26 +17,21 @@ import {
     HelpCircle,
     Zap,
     Cpu,
-    Activity,
 } from 'lucide-react';
 import { isRouteErrorResponse, useRouteError } from 'react-router';
 import {
     Children,
     useId,
-    useMemo,
     type PropsWithChildren,
     type ReactNode,
 } from 'react';
 
 import { Container } from '~/components/layout/Container';
 import { cx } from '~/cva.config';
-import { useRootData } from '~/hooks/useRootData';
-import { isActive } from '~/lib/flags';
 import { BetterAuthLogo } from '~/components/logos/BetterAuthLogo';
 import { DaisyUILogo } from '~/components/logos/DaisyUILogo';
 import { GitHubLogo } from '~/components/logos/GitHubLogo';
 import { MCPLogo } from '~/components/logos/MCPLogo';
-import { PolarLogo } from '~/components/logos/PolarLogo';
 import { PostgresLogo } from '~/components/logos/PostgresLogo';
 import { PrismaLogo } from '~/components/logos/PrismaLogo';
 import { RailwayLogo } from '~/components/logos/RailwayLogo';
@@ -46,7 +40,6 @@ import { ReactRouterLogo } from '~/components/logos/ReactRouterLogo';
 import { TailwindLogo } from '~/components/logos/TailwindLogo';
 import { TypescriptLogo } from '~/components/logos/TypescriptLogo';
 import { Tooltip } from '~/components/feedback/Tooltip';
-import { PolarLogoType } from '~/components/logos/PolarLogoType';
 
 function ContentBlock({
     heading,
@@ -122,25 +115,7 @@ function ContentSection({
 }
 
 export default function LandingPage() {
-    const data = useRootData();
-
-    const alertExperimentActive = useMemo(
-        () => isActive(data?.allFlags, 'alert-experiment'),
-        [data?.allFlags],
-    );
-
-    const homePageHeroActive = useMemo(
-        () => isActive(data?.allFlags, 'home_page_hero_image'),
-        [data?.allFlags],
-    );
-
-    const homePageIntroCopyExperimentActive = useMemo(
-        () => isActive(data?.allFlags, 'home_page_intro_copy'),
-        [data?.allFlags],
-    );
-
-    const introCopyControl = `Your first paying customer could be using your product by next Monday. Iridium ships with authentication, payments, AI chat, and production-ready patterns—everything you need to launch, pre-built and working.`;
-    const introCopyVariant = `Every week you spend rebuilding auth and database patterns is a week your competitors are shipping features. Iridium handles the solved problems so you can focus on what makes your product worth paying for.`;
+    const introCopy = `Your first paying customer could be using your product by next Monday. Iridium ships with authentication, email, AI chat, and production-ready patterns—everything you need to launch, pre-built and working.`;
 
     const GitHubCta = () => (
         <a
@@ -162,31 +137,13 @@ export default function LandingPage() {
                 name="description"
                 content="Skip months of setup. Auth, payments, database, and AI—production-ready so you ship what makes your product different, not what every SaaS needs."
             />
-            {alertExperimentActive && (
-                <Container className="px-4">
-                    <Alert status="warning" className="mb-4">
-                        <p>
-                            This is an experimental variant of this alert
-                            message. PostHog feature flags let us test different
-                            UI variations with real users to find what works
-                            best!
-                        </p>
-                    </Alert>
-                </Container>
-            )}
             <Container className="px-4">
                 <div
                     className={`grid grid-cols-12 ${GRID_GAP} rounded-box overflow-hidden mb-8 bg-base-100`}
                 >
                     <div className="col-span-12 lg:col-span-6 p-4 md:p-8">
                         <div
-                            className={cx(
-                                `rounded-box h-120`,
-                                homePageHeroActive &&
-                                    `bg-[url(https://res.cloudinary.com/setholito/image/upload/v1762886753/iridium/iridium-2.png)] bg-position-[center_top]`,
-                                !homePageHeroActive &&
-                                    `bg-[url(https://res.cloudinary.com/setholito/image/upload/v1762886753/iridium/iridium-1.png)]`,
-                            )}
+                            className="rounded-box h-120 bg-[url(https://res.cloudinary.com/setholito/image/upload/v1762886753/iridium/iridium-1.png)]"
                         />
                     </div>
                     <div className="col-span-12 lg:col-span-6 flex flex-col justify-center p-8">
@@ -195,9 +152,7 @@ export default function LandingPage() {
                                 From Idea to Launch in a Weekend
                             </h1>
                             <p className="text-lg mb-12">
-                                {homePageIntroCopyExperimentActive
-                                    ? introCopyVariant
-                                    : introCopyControl}
+                                {introCopy}
                             </p>
                             <GitHubCta />
                         </div>
@@ -225,9 +180,6 @@ export default function LandingPage() {
                     </Tooltip>
                     <Tooltip content="BetterAuth">
                         <BetterAuthLogo className="w-12 md:w-16 fill-base-content" />
-                    </Tooltip>
-                    <Tooltip content="Polar">
-                        <PolarLogo className="w-12 md:w-16 fill-base-content" />
                     </Tooltip>
                     <Tooltip content="Prisma">
                         <PrismaLogo className="w-12 md:w-16 fill-base-content" />
@@ -287,23 +239,21 @@ export default function LandingPage() {
                         >
                             Iridium includes a fully functional dashboard with
                             real metrics, thread management, and a working AI
-                            chat interface. Every button click, every message
-                            sent, every thread created triggers PostHog events.
-                            See exactly how to instrument your features by
-                            reading production code that actually works.
+                            chat interface. Every pattern—from route loaders to
+                            model-layer queries—is production code you can read,
+                            understand, and build on immediately.
                         </ContentBlock>
                         <ContentBlock
                             heading="AI Chat with Tool Calling"
                             icon={MessageSquare}
                         >
-                            Built with Vercel AI SDK and OpenAI, the chat
-                            interface demonstrates streaming responses,
-                            multi-turn conversations, and tool calling patterns.
-                            Messages persist to your database, threads organize
-                            conversations, and the @posthog/ai wrapper tracks
-                            token usage and costs automatically. Copy the
-                            implementation, adapt it to your product, and ship
-                            AI features in hours instead of weeks.
+                            Built with Vercel AI SDK, the chat interface
+                            demonstrates streaming responses, multi-turn
+                            conversations, and tool calling patterns. Messages
+                            persist to your database, threads organize
+                            conversations, and the provider-agnostic setup lets
+                            you switch between OpenAI, Anthropic, and Google
+                            with a single env var.
                         </ContentBlock>
                         <ContentBlock
                             heading="End-to-End Type Safety"
@@ -430,11 +380,11 @@ export default function LandingPage() {
                             icon={Code}
                         >
                             Iridium includes working tool definitions for user
-                            analytics, data fetching, and content generation.
-                            Each tool is tracked by PostHog for cost and
-                            performance monitoring. Copy the pattern, adapt it
-                            to your domain, and ship AI features with
-                            confidence.
+                            analytics and data fetching. Each tool is defined
+                            with a Zod schema, validated automatically, and
+                            returns structured, type-safe results. Copy the
+                            pattern, adapt it to your domain, and ship AI
+                            features with confidence.
                         </ContentBlock>
                     </div>
                 </div>
@@ -450,15 +400,13 @@ export default function LandingPage() {
                     </div>
                     <div className="col-span-12 lg:col-span-6">
                         <ContentBlock
-                            heading="Feature Flag Management"
+                            heading="Theme & Settings Control"
                             icon={Sparkles}
                         >
-                            Toggle features on and off without deployments. The
-                            admin panel integrates with PostHog for real-time
-                            feature flag control, A/B testing, and gradual
-                            rollouts. Test new features with a subset of users,
-                            roll back instantly if needed, and iterate faster
-                            with confidence.
+                            Switch themes in real time without deployments. The
+                            admin panel gives ADMIN and EDITOR roles a quick
+                            settings interface accessible from any page via the
+                            floating gear button—no separate admin route needed.
                         </ContentBlock>
                         <ContentBlock
                             heading="Built-In Developer Tools"
@@ -468,8 +416,7 @@ export default function LandingPage() {
                             component galleries. The admin panel serves as a
                             central hub for developers to test UI variations,
                             preview components, and manage application settings
-                            without touching code. Links to external services
-                            like Polar.sh keep everything in one place.
+                            without touching code.
                         </ContentBlock>
                         <ContentBlock
                             heading="Design System Playground"
@@ -493,69 +440,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </Container>
-            <Container className="px-4">
-                <div
-                    className={`grid grid-cols-12 ${GRID_GAP} rounded-box overflow-hidden mb-8 bg-base-100 p-8`}
-                >
-                    <div className="col-span-12">
-                        <h2 className="text-3xl font-semibold mb-4 text-base-content">
-                            Powered by PostHog: Analytics That Actually Help You
-                            Build
-                        </h2>
-                    </div>
-                    <div className="col-span-12 lg:col-span-6">
-                        <div className="rounded-box overflow-hidden bg-base-300 shadow-lg">
-                            <img
-                                src="https://res.cloudinary.com/setholito/image/upload/v1765824201/iridium/iridium-and-posthog.png"
-                                alt="PostHog Integration - Real-time analytics, feature flags, and LLM tracking"
-                            />
-                        </div>
-                    </div>
-                    <div className="col-span-12 lg:col-span-6">
-                        <ContentBlock
-                            heading="Event Tracking Built Into Your Code"
-                            icon={BarChart}
-                        >
-                            Every meaningful action—sign-ups, thread creation,
-                            message sends, tool calls—automatically tracked. No
-                            guessing about user behavior. PostHog events are
-                            instrumented throughout the codebase, so you can see
-                            patterns like which features drive retention and
-                            where users get stuck.
-                        </ContentBlock>
-                        <ContentBlock
-                            heading="Feature Flags for Confident Releases"
-                            icon={Sparkles}
-                        >
-                            Toggle features on and off without deploying. Run
-                            A/B tests to validate product decisions before
-                            committing. This landing page uses feature flags
-                            right now—different hero images and copy variants
-                            served to different users, measured in real-time.
-                        </ContentBlock>
-                        <ContentBlock
-                            heading="LLM Analytics: Track AI Costs Automatically"
-                            icon={Cpu}
-                        >
-                            The @posthog/ai wrapper captures every AI
-                            interaction: model used, tokens consumed, estimated
-                            cost, latency. See which prompts work, which tools
-                            get called, and how much your AI features actually
-                            cost—without manual logging.
-                        </ContentBlock>
-                        <ContentBlock
-                            heading="Session Replay & Error Tracking"
-                            icon={Activity}
-                        >
-                            Watch user sessions to understand confusion and
-                            bugs. Automatic exception capture with stack traces
-                            means you know about issues before users report
-                            them. Debug with context instead of guessing from
-                            error messages.
-                        </ContentBlock>
-                    </div>
-                </div>
-            </Container>
             <ContentSection heading="Core Features">
                 <ContentBlock heading="Authentication & Security" icon={Lock}>
                     BetterAuth with email/password and social login. Session
@@ -563,9 +447,9 @@ export default function LandingPage() {
                     patterns. PostgreSQL with Prisma for robust data management.
                 </ContentBlock>
                 <ContentBlock heading="AI-Powered" icon={Sparkles}>
-                    OpenAI integration with streaming chat using Vercel AI SDK.
-                    Message persistence, tool calling, and automatic LLM
-                    analytics tracking (tokens, costs, latency) via PostHog.
+                    Provider-agnostic AI chat using Vercel AI SDK. Streaming
+                    responses, tool calling, message persistence, and support
+                    for OpenAI, Anthropic, and Google via a single env var.
                 </ContentBlock>
                 <ContentBlock heading="Forms & Validation" icon={FileCheck}>
                     Hybrid client/server validation with Zod and React Hook
@@ -577,11 +461,10 @@ export default function LandingPage() {
                     Dark mode, responsive design, and accessible components
                     throughout.
                 </ContentBlock>
-                <ContentBlock heading="Analytics & Testing" icon={BarChart}>
-                    PostHog integration for user analytics, session replay, A/B
-                    testing, and feature flags. Automatic event tracking and
-                    exception capture. The page you're reading uses feature
-                    flags right now.
+                <ContentBlock heading="Type-Safe Throughout" icon={BarChart}>
+                    From database schema to API response to UI component, every
+                    layer is type-safe. Prisma, Zod, React Router 7, and CVA
+                    together catch errors at build time—not in production.
                 </ContentBlock>
                 <ContentBlock heading="Email & Notifications" icon={Mail}>
                     Resend integration with React Email templates. Pre-built
@@ -655,43 +538,6 @@ export default function LandingPage() {
                 >
                     <div className="col-span-12 lg:col-span-6 flex flex-col justify-center">
                         <div className="flex items-start gap-3 mb-4">
-                            <BarChart className="w-8 h-8 text-primary mt-1" />
-                            <h2 className="text-3xl font-semibold text-base-content">
-                                Optional Billing with Polar
-                            </h2>
-                        </div>
-                        <p className="text-lg mb-4 text-base-content/80">
-                            Polar billing integration is pre-wired but
-                            completely optional. Add your credentials when
-                            you&apos;re ready to monetize, or remove it if you
-                            don&apos;t need billing.
-                        </p>
-                        <div className="mb-4">
-                            <a
-                                href="https://polar.sh"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-outline"
-                            >
-                                Learn more at polar.sh
-                            </a>
-                        </div>
-                        <p className="text-sm text-base-content/70">
-                            Polar acts as a Merchant of Record, handling tax
-                            compliance, VAT, and payment processing for you.
-                        </p>
-                    </div>
-                    <div className="col-span-12 lg:col-span-6 flex items-center justify-center">
-                        <PolarLogoType className="w-full max-w-xs" />
-                    </div>
-                </div>
-            </Container>
-            <Container className="px-4">
-                <div
-                    className={`grid grid-cols-12 ${GRID_GAP} rounded-box overflow-hidden mb-8 bg-base-100 p-8`}
-                >
-                    <div className="col-span-12 lg:col-span-6 flex flex-col justify-center">
-                        <div className="flex items-start gap-3 mb-4">
                             <Zap className="w-8 h-8 text-primary mt-1" />
                             <h2 className="text-3xl font-semibold text-base-content">
                                 Deploy with Railway
@@ -749,17 +595,15 @@ export default function LandingPage() {
                         >
                             Iridium is turnkey—clone the repo and you have a
                             working application immediately. Out of the box, you
-                            get: this landing page (with working A/B tests), a
-                            complete authentication system (sign-in, sign-up,
-                            password reset), a user dashboard with AI chat and
-                            thread management, a profile editor, and an admin
-                            panel with feature flag management and design system
-                            preview. Every page is production-ready with real
-                            functionality, not placeholder content. The
-                            dashboard includes a working AI chat interface with
-                            tool calling, message persistence, and conversation
-                            threads. The admin panel lets you toggle features,
-                            test components, and manage settings. It&apos;s a
+                            get: this landing page, a complete authentication
+                            system (sign-in, sign-up, password reset), a user
+                            dashboard with AI chat and thread management, a
+                            profile editor, and an admin panel with theme
+                            switching and design system preview. Every page is
+                            production-ready with real functionality, not
+                            placeholder content. The dashboard includes a
+                            working AI chat interface with tool calling, message
+                            persistence, and conversation threads. It&apos;s a
                             complete application you can immediately customize
                             and build upon—not a bare-bones starter you need to
                             finish.
@@ -793,14 +637,14 @@ export default function LandingPage() {
                             instance with database and authentication in under 5
                             minutes. No local setup required. Perfect for
                             testing the architecture and seeing everything work
-                            immediately. For local development: if you have
-                            Node.js and PostgreSQL installed, you can be running
-                            locally in under 10 minutes. Clone the repo, copy
-                            .env.example to .env, add your database URL and auth
-                            secret, run npm install and the database migrations,
-                            then npm run dev. The core features (auth, database,
-                            routing, components) work immediately. Optional
-                            integrations like OpenAI, Resend, and PostHog
+                            immediately. For local development: run{' '}
+                            <code>npm install</code> then{' '}
+                            <code>npm run setup</code>—the interactive wizard
+                            generates your .env, runs migrations, and
+                            optionally seeds demo data. Then{' '}
+                            <code>npm run dev</code>. The core features (auth,
+                            database, routing, components) work immediately.
+                            Optional integrations like AI chat and Resend email
                             require API keys but aren&apos;t necessary to start
                             building.
                         </AccordionItem>
@@ -826,15 +670,15 @@ export default function LandingPage() {
                             variant="plus"
                             bordered
                         >
-                            Absolutely. The AI chat demo, PostHog analytics,
-                            Resend emails, and Polar billing are all optional.
-                            Don&apos;t need AI? Delete app/routes/api/chat.ts
-                            and the related components. Don&apos;t need
-                            analytics? Remove the PostHog provider. The core
-                            foundation—routing, auth, database, validation,
-                            components—is designed to be extended or simplified
-                            based on your product needs. We deliberately kept
-                            the scope lean to make this easier.
+                            Absolutely. The AI chat demo and Resend emails are
+                            both optional. Don&apos;t need AI? Delete
+                            app/routes/api/chat.ts and the related components.
+                            Don&apos;t need email? Remove the Resend integration.
+                            The core foundation—routing, auth, database,
+                            validation, components—is designed to be extended or
+                            simplified based on your product needs. We
+                            deliberately kept the scope lean to make this
+                            easier.
                         </AccordionItem>
                         <AccordionItem
                             title="Is this production-ready or just a learning project?"
@@ -878,8 +722,8 @@ export default function LandingPage() {
                             control, and the complete routing and middleware
                             architecture. You can build a full-featured SaaS
                             product before adding a single integration. External
-                            services (OpenAI, Resend, PostHog, Polar) are wired
-                            up and ready to use with API keys, but they&apos;re
+                            services (AI chat, Resend email, OAuth) are wired up
+                            and ready to use with API keys, but they&apos;re
                             optional.
                         </AccordionItem>
                         <AccordionItem

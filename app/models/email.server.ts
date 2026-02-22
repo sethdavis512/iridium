@@ -8,7 +8,6 @@ import AccountDeletionEmail from '~/emails/account-deletion-email';
 import UserBanEmail from '~/emails/user-ban-email';
 import InterestListConfirmationEmail from '~/emails/interest-list-confirmation-email';
 import AdminInterestListNotification from '~/emails/admin-interest-list-notification';
-import { getPostHogClient } from '~/lib/posthog';
 
 /**
  * Email Model Layer
@@ -76,15 +75,11 @@ export async function sendEmail(options: SendEmailOptions) {
         const { data, error } = await resend.emails.send(emailPayload as any);
 
         if (error) {
-            const postHogClient = getPostHogClient();
-            postHogClient?.captureException(error);
             throw new Error(`Failed to send email: ${error.message}`);
         }
 
         return { success: true, data };
     } catch (error) {
-        const postHogClient = getPostHogClient();
-        postHogClient?.captureException(error);
         throw error;
     }
 }

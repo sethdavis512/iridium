@@ -29,10 +29,8 @@ export default [
                 route('view/*', 'routes/file-browser-view.tsx'),
             ]),
             route(Paths.FORMS, 'routes/forms.tsx'),
-            route(Paths.PORTAL, 'routes/portal.tsx'),
         ]),
     ]),
-    route(Paths.CHECKOUT, 'routes/checkout.tsx'),
     // ========================
     // API ROUTES
     // ========================
@@ -43,11 +41,5 @@ export default [
         route(Paths.CHAT, 'routes/api/chat.ts'),
         route(Paths.HEALTH, 'routes/api/health.ts'),
         route(Paths.INTEREST, 'routes/api/interest.ts'),
-        ...prefix(Paths.WEBHOOKS, [
-            route(Paths.POLAR, 'routes/api/webhooks/polar.ts'),
-        ]),
-        ...prefix(Paths.POSTHOG, [
-            route(Paths.FEATURE_FLAGS, 'routes/api/posthog/feature-flags.ts'),
-        ]),
     ]),
 ] satisfies RouteConfig;

@@ -7,7 +7,6 @@ import {
     StopCircleIcon,
     UserIcon,
 } from 'lucide-react';
-import { usePostHog } from 'posthog-js/react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { data, useNavigation } from 'react-router';
 import { Button } from '~/components/actions/Button';
@@ -18,19 +17,12 @@ import {
 } from '~/components/data-display/ChatBubble';
 import { TextInput } from '~/components/data-input/TextInput';
 import { Loading } from '~/components/feedback/Loading';
-import { PostHogEventNames } from '~/constants';
 import { cx } from '~/cva.config';
 import type { Route } from './+types/thread';
-import { getPostHogClient } from '~/lib/posthog';
 import { getUserFromSession } from '~/lib/session.server';
 import { getThreadById } from '~/models/thread.server';
 import invariant from 'tiny-invariant';
-import type {
-    MoneyAmount,
-    RevenueMetricsOutput,
-    UserAnalyticsOutput,
-} from '~/lib/chat-tools.types';
-import { RevenueMetricsToolCard } from '~/components/data-display/features/RevenueMetricsToolCard';
+import type { UserAnalyticsOutput } from '~/lib/chat-tools.types';
 import { UserAnalyticsToolCard } from '~/components/data-display/features/UserAnalyticsToolCard';
 
 type ToolState =
@@ -99,27 +91,6 @@ function normalizeToolPart(part: unknown): NormalizedToolPart | null {
     }
 
     return null;
-}
-
-function isMoneyAmount(value: unknown): value is MoneyAmount {
-    if (!isRecord(value)) return false;
-    return typeof value.cents === 'number' && typeof value.dollars === 'number';
-}
-
-function isRevenueMetricsOutput(value: unknown): value is RevenueMetricsOutput {
-    if (!isRecord(value)) return false;
-    return (
-        typeof value.startDate === 'string' &&
-        typeof value.endDate === 'string' &&
-        typeof value.orders === 'number' &&
-        isMoneyAmount(value.revenue) &&
-        isMoneyAmount(value.netRevenue) &&
-        isMoneyAmount(value.averageOrderValue) &&
-        isMoneyAmount(value.netAverageOrderValue) &&
-        isMoneyAmount(value.grossMargin) &&
-        typeof value.grossMarginPercentage === 'number' &&
-        isMoneyAmount(value.cashflow)
-    );
 }
 
 function isUserAnalyticsOutput(value: unknown): value is UserAnalyticsOutput {
@@ -247,40 +218,24 @@ function ToolCallPart({ tool }: { tool: NormalizedToolPart }) {
 
 export async function loader({ request, params }: Route.LoaderArgs) {
     const user = await getUserFromSession(request);
-    const postHogClient = getPostHogClient();
 
     if (!user) {
         throw new Response('Unauthorized', { status: 401 });
     }
 
-    try {
-        const thread = await getThreadById(params.threadId);
-        invariant(thread, 'Thread not found');
+    const thread = await getThreadById(params.threadId);
+    invariant(thread, 'Thread not found');
 
-        postHogClient?.capture({
-            distinctId: user.id,
-            event: PostHogEventNames.CHAT_THREAD_LOADED,
-            properties: {
-                threadId: params.threadId,
-            },
-        });
+    const uiMessages: UIMessage[] = thread?.messages.map((msg) => ({
+        id: msg.id,
+        role: msg.role.toLowerCase() as 'user' | 'assistant' | 'system',
+        parts: JSON.parse(msg.content),
+    }));
 
-        const uiMessages: UIMessage[] = thread?.messages.map((msg) => ({
-            id: msg.id,
-            role: msg.role.toLowerCase() as 'user' | 'assistant' | 'system',
-            parts: JSON.parse(msg.content),
-        }));
-
-        return data({
-            threadId: thread?.id,
-            messages: uiMessages,
-        });
-    } catch (error) {
-        postHogClient?.captureException(error as Error, user.id, {
-            context: PostHogEventNames.CHAT_THREAD_CREATE_ERROR,
-            timestamp: new Date().toISOString(),
-        });
-    }
+    return data({
+        threadId: thread?.id,
+        messages: uiMessages,
+    });
 }
 
 const threadLayout = {
@@ -298,7 +253,6 @@ export default function ThreadRoute({
     const navigation = useNavigation();
     const [chatInput, setChatInput] = useState('');
     const messageRef = useRef<HTMLDivElement>(null);
-    const postHog = usePostHog();
 
     const transport = useMemo(() => {
         return new DefaultChatTransport({
@@ -310,27 +264,6 @@ export default function ThreadRoute({
         id: params.threadId,
         messages: loaderData?.messages,
         transport,
-        onData: (payload) => {
-            postHog.capture(PostHogEventNames.CHAT_MESSAGE_STREAM_DATA, {
-                threadId: params.threadId,
-                data: payload.data,
-            });
-        },
-        onError: (error) => {
-            postHog.captureException(error, {
-                context: PostHogEventNames.CHAT_MESSAGE_STREAM_ERROR,
-                threadId: params.threadId,
-            });
-        },
-        onFinish: (payload) => {
-            postHog.capture(PostHogEventNames.CHAT_MESSAGE_STREAM_FINISHED, {
-                threadId: params.threadId,
-                messageId: payload.message?.id,
-                messageText: payload.message?.parts.find(
-                    (part) => part.type === 'text',
-                )?.text,
-            });
-        },
     });
 
     useEffect(() => {
@@ -365,10 +298,6 @@ export default function ThreadRoute({
     };
 
     const presentQuestions = [
-        {
-            label: 'Revenue overview (this month)',
-            text: 'Give me a revenue overview for this month. Use getRevenueMetrics and call out revenue, net revenue, orders, AOV, and gross margin.',
-        },
         {
             label: 'User growth (30 days)',
             text: 'Show me user growth over the last 30 days. Use the getUserAnalytics tool and highlight total users, new users, growth rate, and active users.',
@@ -443,33 +372,6 @@ export default function ThreadRoute({
                                             const tool =
                                                 normalizeToolPart(part);
                                             if (tool) {
-                                                if (
-                                                    tool.toolName ===
-                                                        'getRevenueMetrics' &&
-                                                    tool.state ===
-                                                        'output-available' &&
-                                                    isRevenueMetricsOutput(
-                                                        tool.output,
-                                                    )
-                                                ) {
-                                                    return (
-                                                        <MessagePartBubble
-                                                            key={`${message.id}-${partIndex}`}
-                                                            placement={
-                                                                placement
-                                                            }
-                                                            color={color}
-                                                            isUser={isUser}
-                                                        >
-                                                            <RevenueMetricsToolCard
-                                                                output={
-                                                                    tool.output
-                                                                }
-                                                            />
-                                                        </MessagePartBubble>
-                                                    );
-                                                }
-
                                                 if (
                                                     tool.toolName ===
                                                         'getUserAnalytics' &&

@@ -16,8 +16,6 @@ import {
     sendWelcomeEmail,
     sendTransactionalEmail,
 } from '~/models/email.server';
-import { getPostHogClient } from '~/lib/posthog';
-import { PostHogEventNames } from '~/constants';
 
 /**
  * Email API Endpoint
@@ -35,8 +33,7 @@ import { PostHogEventNames } from '~/constants';
 // POST - Send email
 export async function action({ request }: Route.ActionArgs) {
     // Require authentication for all email sending
-    const user = await requireUser(request);
-    const postHogClient = getPostHogClient();
+    await requireUser(request);
 
     if (request.method !== 'POST') {
         return data({ error: 'Method not allowed' }, { status: 405 });
@@ -68,16 +65,6 @@ export async function action({ request }: Route.ActionArgs) {
             switch (templateName) {
                 case 'verification':
                     if (!props?.verificationUrl) {
-                        postHogClient?.captureException(
-                            new Error(
-                                'Missing verificationUrl in email template',
-                            ),
-                            'user',
-                            {
-                                distinctId: user.id,
-                            },
-                        );
-
                         return data(
                             {
                                 error: 'Verification URL is required for verification template',
@@ -89,29 +76,10 @@ export async function action({ request }: Route.ActionArgs) {
                         to,
                         verificationUrl: props.verificationUrl,
                     });
-
-                    postHogClient?.capture({
-                        distinctId: user.id,
-                        event: PostHogEventNames.RESEND_VERIFICATION_EMAIL_SENT,
-                        properties: {
-                            type: 'template',
-                            templateName,
-                            recipient: to,
-                        },
-                    });
-
                     break;
 
                 case 'password-reset':
                     if (!props?.resetUrl) {
-                        postHogClient?.captureException(
-                            new Error('Missing resetUrl in email template'),
-                            'user',
-                            {
-                                distinctId: user.id,
-                            },
-                        );
-
                         return data(
                             {
                                 error: 'resetUrl is required for password-reset template',
@@ -123,31 +91,10 @@ export async function action({ request }: Route.ActionArgs) {
                         to,
                         resetUrl: props.resetUrl,
                     });
-
-                    postHogClient?.capture({
-                        distinctId: user.id,
-                        event: PostHogEventNames.RESEND_PASSWORD_RESET_EMAIL_SENT,
-                        properties: {
-                            type: 'template',
-                            templateName,
-                            recipient: to,
-                        },
-                    });
-
                     break;
 
                 case 'welcome':
                     if (!props?.userName || !props?.dashboardUrl) {
-                        postHogClient?.captureException(
-                            new Error(
-                                'Missing userName or dashboardUrl in welcome email template',
-                            ),
-                            'user',
-                            {
-                                distinctId: user.id,
-                            },
-                        );
-
                         return data(
                             {
                                 error: 'userName and dashboardUrl are required for welcome template',
@@ -160,17 +107,6 @@ export async function action({ request }: Route.ActionArgs) {
                         userName: props.userName,
                         dashboardUrl: props.dashboardUrl,
                     });
-
-                    postHogClient?.capture({
-                        distinctId: user.id,
-                        event: PostHogEventNames.RESEND_WELCOME_EMAIL_SENT,
-                        properties: {
-                            type: 'template',
-                            templateName,
-                            recipient: to,
-                        },
-                    });
-
                     break;
 
                 case 'transactional':
@@ -179,16 +115,6 @@ export async function action({ request }: Route.ActionArgs) {
                         !props?.previewText ||
                         !props?.message
                     ) {
-                        postHogClient?.captureException(
-                            new Error(
-                                'Missing heading, previewText, or message in transactional email template',
-                            ),
-                            'user',
-                            {
-                                distinctId: user.id,
-                            },
-                        );
-
                         return data(
                             {
                                 error: 'heading, previewText, and message are required for transactional template',
@@ -205,17 +131,6 @@ export async function action({ request }: Route.ActionArgs) {
                         buttonUrl: props.buttonUrl,
                         footerText: props.footerText,
                     });
-
-                    postHogClient?.capture({
-                        distinctId: user.id,
-                        event: PostHogEventNames.RESEND_TRANSACTIONAL_EMAIL_SENT,
-                        properties: {
-                            type: 'template',
-                            templateName,
-                            recipient: to,
-                        },
-                    });
-
                     break;
 
                 default:
@@ -247,26 +162,13 @@ export async function action({ request }: Route.ActionArgs) {
 
         const result = await sendEmail(validatedData!);
 
-        postHogClient?.capture({
-            distinctId: user.id,
-            event: PostHogEventNames.RESEND_EMAIL_SEND_SUCCESS,
-            properties: {
-                type: 'custom',
-                recipient: validatedData!.to,
-                subject: validatedData!.subject,
-            },
-        });
-
         return data({
             success: true,
             message: 'Email sent successfully',
             data: result.data,
         });
     } catch (error) {
-        postHogClient?.captureException(
-            new Error('Failed to send email'),
-            'system',
-        );
+        console.error('Failed to send email:', error);
 
         return data(
             {

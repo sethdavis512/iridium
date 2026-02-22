@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router';
-import { usePostHog } from 'posthog-js/react';
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -14,7 +13,7 @@ import {
     type SignUpData,
 } from '~/lib/validations';
 import { authClient } from '~/lib/auth-client';
-import { Paths, PostHogEventNames } from '~/constants';
+import { Paths } from '~/constants';
 import { TabRadio, Tabs } from '~/components/navigation/Tabs';
 import { Container } from '~/components/layout/Container';
 
@@ -26,7 +25,6 @@ export function Turnstile({
     onSuccessfulLogin: () => void;
 }) {
     const navigate = useNavigate();
-    const postHog = usePostHog();
 
     const [mode, setMode] = useState<AuthMode>('signIn');
     const [isLoading, setIsLoading] = useState<
@@ -56,15 +54,6 @@ export function Turnstile({
         setServerError(null);
 
         try {
-            postHog.capture(
-                isSignIn
-                    ? PostHogEventNames.SIGN_IN_ATTEMPT
-                    : PostHogEventNames.SIGN_UP_ATTEMPT,
-                {
-                    email: data.email,
-                },
-            );
-
             if (isSignIn) {
                 await authClient.signIn.email(
                     {
@@ -73,16 +62,9 @@ export function Turnstile({
                     },
                     {
                         onSuccess: () => {
-                            postHog.capture(PostHogEventNames.SIGN_IN_SUCCESS, {
-                                email: data.email,
-                            });
                             onSuccessfulLogin();
                         },
                         onError: (ctx) => {
-                            postHog.captureException(ctx.error, {
-                                email: data.email,
-                                error: ctx?.error?.message || 'unknown',
-                            });
                             setServerError(
                                 ctx.error.message ||
                                     'Invalid credentials. Please try again.',
@@ -100,17 +82,9 @@ export function Turnstile({
                     },
                     {
                         onSuccess: () => {
-                            postHog.capture(PostHogEventNames.SIGN_UP_SUCCESS, {
-                                email: signUpData.email,
-                                name: signUpData.name,
-                            });
                             onSuccessfulLogin();
                         },
                         onError: (ctx) => {
-                            postHog.captureException(ctx.error, {
-                                email: signUpData.email,
-                                error: ctx?.error?.message || 'unknown',
-                            });
                             setServerError(
                                 ctx.error.message ||
                                     'Account creation failed. Please try again.',
@@ -119,14 +93,7 @@ export function Turnstile({
                     },
                 );
             }
-        } catch (error: unknown) {
-            postHog.captureException(error as Error, {
-                context: isSignIn
-                    ? PostHogEventNames.SIGN_IN_FAILURE
-                    : PostHogEventNames.SIGN_UP_FAILURE,
-                email: data.email,
-                timestamp: new Date().toISOString(),
-            });
+        } catch {
             setServerError('An unexpected error occurred. Please try again.');
         } finally {
             setIsLoading(null);
@@ -139,35 +106,13 @@ export function Turnstile({
             setIsLoading(provider);
             setServerError(null);
 
-            const data: SignInData | SignUpData = {
-                email: getValues('email'),
-                password: getValues('password'),
-                name: getValues('name'),
-            };
-
             try {
                 await authClient.signIn.social({
                     provider,
                 });
 
-                postHog.capture(
-                    provider === 'google'
-                        ? PostHogEventNames.GOOGLE_SIGN_IN_SUCCESS
-                        : PostHogEventNames.GITHUB_SIGN_IN_SUCCESS,
-                    {
-                        email: data.email,
-                    },
-                );
-
                 navigate(Paths.DASHBOARD);
-            } catch (error: unknown) {
-                postHog.captureException(error as Error, {
-                    context:
-                        provider === 'google'
-                            ? PostHogEventNames.GOOGLE_SIGN_IN_FAILURE
-                            : PostHogEventNames.GITHUB_SIGN_IN_FAILURE,
-                    timestamp: new Date().toISOString(),
-                });
+            } catch {
                 setServerError(
                     `An unexpected error occurred during ${provider === 'google' ? 'Google' : 'GitHub'} sign-in. Please try again.`,
                 );
@@ -178,17 +123,6 @@ export function Turnstile({
 
     const handleToggleMode = () => {
         const newMode: AuthMode = isSignIn ? 'signUp' : 'signIn';
-
-        postHog.capture(
-            isSignIn
-                ? PostHogEventNames.AUTH_MODE_TOGGLE_SIGN_IN
-                : PostHogEventNames.AUTH_MODE_TOGGLE_SIGN_UP,
-            {
-                previousMode: mode,
-                newMode,
-            },
-        );
-
         setMode(newMode);
     };
 

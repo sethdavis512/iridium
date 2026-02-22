@@ -4,7 +4,6 @@ import { validateFormData } from '~/lib/form-validation.server';
 import { interestFormSchema, type InterestFormData } from '~/lib/validations';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Prisma } from '~/generated/prisma/client';
-import { getPostHogClient } from '~/lib/posthog';
 import { createInterestSignup } from '~/models/interest.server';
 import {
     sendInterestListConfirmationEmail,
@@ -22,8 +21,6 @@ import {
 
 // POST - Add email to interest list
 export async function action({ request }: Route.ActionArgs) {
-    const postHogClient = getPostHogClient();
-
     if (request.method !== 'POST') {
         return data({ error: 'Method not allowed' }, { status: 405 });
     }
@@ -54,10 +51,6 @@ export async function action({ request }: Route.ActionArgs) {
         } catch (emailError) {
             // Log email error but don't fail the signup
             console.error('Failed to send confirmation email:', emailError);
-            postHogClient?.captureException(
-                new Error('Failed to send interest list confirmation email'),
-                'system',
-            );
         }
 
         // Send notification email to admin
@@ -75,24 +68,8 @@ export async function action({ request }: Route.ActionArgs) {
             } catch (emailError) {
                 // Log email error but don't fail the signup
                 console.error('Failed to send admin notification:', emailError);
-                postHogClient?.captureException(
-                    new Error('Failed to send admin notification email'),
-                    'system',
-                );
             }
         }
-
-        // Track successful signup in PostHog
-        postHogClient?.capture({
-            distinctId: validatedData!.email,
-            event: 'interest_list_signup',
-            properties: {
-                email: validatedData!.email,
-                inquiryType: validatedData!.inquiryType,
-                hasNote: !!validatedData!.note,
-                source: 'landing_page',
-            },
-        });
 
         return data({
             success: true,
@@ -113,11 +90,7 @@ export async function action({ request }: Route.ActionArgs) {
             );
         }
 
-        // Log unexpected errors
-        postHogClient?.captureException(
-            new Error('Failed to add email to interest list'),
-            'system',
-        );
+        console.error('Failed to add email to interest list:', error);
 
         return data(
             {

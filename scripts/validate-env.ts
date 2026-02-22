@@ -18,19 +18,13 @@ const REQUIRED_VARS = [
     'BETTER_AUTH_SECRET',
     'BETTER_AUTH_URL',
     'VITE_BETTER_AUTH_BASE_URL',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
 ];
 
-// Required for specific features (can be disabled if not using feature)
+// Optional features (can be disabled if not using feature)
 const FEATURE_VARS: Record<string, string[]> = {
-    'Email (Resend)': ['RESEND_API_KEY', 'RESEND_FROM_EMAIL'],
-    'AI (OpenAI)': ['OPENAI_API_KEY'],
-    'Billing (Polar)': [
-        'POLAR_ACCESS_TOKEN',
-        'POLAR_ORGANIZATION_ID',
-        'POLAR_PRODUCT_ID',
-        'POLAR_WEBHOOK_SECRET',
-    ],
-    'Analytics (PostHog)': ['POSTHOG_API_KEY', 'POSTHOG_HOST'],
+    'AI Chat': ['OPENAI_API_KEY'],
     'OAuth (GitHub)': ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'],
     'OAuth (Google)': ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
     'Storage (AWS/Railway)': [
@@ -66,7 +60,7 @@ function getEnvVars(useRailway: boolean): Record<string, string> {
     // Load from .env file
     const envPath = resolve(process.cwd(), '.env');
     if (!existsSync(envPath)) {
-        console.error('❌ No .env file found. Copy .env.example to .env');
+        console.error('❌ No .env file found. Run: npm run setup');
         process.exit(1);
     }
 
@@ -175,7 +169,7 @@ function printResults(result: ValidationResult, source: string): void {
         console.log(
             '❌ Deployment blocked: Missing required environment variables',
         );
-        console.log('   Set them with: railway variables --set KEY=value\n');
+        console.log('   Run: npm run setup\n');
         process.exit(1);
     } else {
         console.log('✅ Ready for deployment\n');

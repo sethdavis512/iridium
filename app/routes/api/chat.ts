@@ -1,15 +1,13 @@
-import { createOpenAI } from '@ai-sdk/openai';
 import {
     streamText,
     convertToModelMessages,
     stepCountIs,
     generateText,
 } from 'ai';
-import { withTracing } from '@posthog/ai';
 import type { UIMessage } from 'ai';
 import z from 'zod';
 
-import { getPostHogClient } from '~/lib/posthog';
+import { getAIModel } from '~/lib/ai';
 import { getUserFromSession } from '~/lib/session.server';
 import {
     getAllThreadsByUserId,
@@ -19,10 +17,6 @@ import {
 } from '~/models/thread.server';
 import type { Route } from './+types/chat';
 import { chatTools } from '~/lib/chat-tools.server';
-
-const openAIClient = createOpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
-});
 
 interface UIMessagesRequestJson {
     messages: UIMessage[];
@@ -70,28 +64,14 @@ export async function action({ request }: Route.ActionArgs) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const postHogClient = getPostHogClient();
-    const baseModel = openAIClient('gpt-5-mini');
-
-    const model = postHogClient
-        ? withTracing(baseModel, postHogClient, {
-              posthogDistinctId: user.id, // optional
-              // posthogTraceId: 'trace_123', // optional
-              // posthogProperties: { conversationId: 'abc123', paid: true }, // optional
-              // posthogPrivacyMode: false, // optional
-              // posthogGroups: { company: 'companyIdInYourDb' }, // optional
-          })
-        : baseModel;
-
+    const model = getAIModel();
     const thread = await getThreadById(threadId);
 
     if (messages.length > 3 && (thread?.title === 'Untitled' || !thread)) {
         try {
-            // Extract text content from the first few messages to generate a meaningful title
             const conversationContext = messages
-                .slice(0, 4) // Get first 4 messages for context
+                .slice(0, 4)
                 .map((msg) => {
-                    // Filter and extract text parts from UIMessage
                     const textParts = msg.parts
                         .filter((part) => part.type === 'text')
                         .map((part) => ('text' in part ? part.text : ''))
@@ -101,34 +81,27 @@ export async function action({ request }: Route.ActionArgs) {
                 })
                 .join('\n');
 
-            const conversationPrompt = `Generate a concise, descriptive title (max 6 words) for this conversation. The title should capture the main topic or question being discussed.
-
-Conversation:
-${conversationContext}
-
-Generate only the title, no quotes or extra text.`;
-
             const titleResult = await generateText({
                 model,
-                prompt: conversationPrompt,
+                prompt: `Generate a concise, descriptive title (max 6 words) for this conversation. Return only the title, no quotes.\n\n${conversationContext}`,
             });
 
             const title = titleResult.text
                 .trim()
-                .replace(/^["']|["']$/g, '') // Remove surrounding quotes if present
+                .replace(/^["']|["']$/g, '')
                 .slice(0, 100);
 
             if (thread) {
                 await updateThreadTitle(threadId, title);
             }
-        } catch (error) {
-            // Handle error if needed
+        } catch {
+            // Non-critical — continue without updating title
         }
     }
 
     const result = streamText({
         model,
-        system: "You are a business data analyst AI assistant helping a digital downloads entrepreneur. Help analyze sales, revenue, and conversion metrics for their digital products. Provide clear, actionable insights based on the tools available to you.\n\nIMPORTANT: Tools return monetary values in BOTH cents and dollars. Prefer the `dollars` fields when presenting amounts to the user, and keep cents for exact calculations.\n\nBe direct and data-driven in your responses. Report concrete numbers, trends, and metrics rather than vague or generic statements. Avoid fluffy language—focus on specific insights and actionable recommendations based on the actual data.\n\nIf the user's query is unrelated to business data analysis, politely inform them that you can only assist with business data-related questions.",
+        system: "You are a data analyst AI assistant. Help analyze user and engagement metrics for this application. Provide clear, actionable insights based on the tools available to you.\n\nBe direct and data-driven. Report concrete numbers, trends, and metrics. Avoid vague or generic statements—focus on specific insights based on actual data.\n\nIf the user's query is unrelated to data analysis, politely inform them that you can only assist with data-related questions.",
         messages: convertToModelMessages(messages),
         stopWhen: stepCountIs(5),
         tools: chatTools,
@@ -137,17 +110,11 @@ Generate only the title, no quotes or extra text.`;
     return result.toUIMessageStreamResponse({
         originalMessages: messages,
         onFinish: async ({ messages }) => {
-            try {
-                await saveChat({
-                    messages,
-                    threadId,
-                    userId: user.id,
-                });
-            } catch (error) {
-                postHogClient?.captureException(error, user.id, {
-                    context: { threadId },
-                });
-            }
+            await saveChat({
+                messages,
+                threadId,
+                userId: user.id,
+            });
         },
     });
 }

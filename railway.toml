@@ -1,0 +1,94 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+numReplicas = 1
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+
+# ── Required variables ──────────────────────────────────────────────────────
+
+[[services.variables]]
+name = "BETTER_AUTH_SECRET"
+description = "Min 32-char secret for session encryption. Railway can auto-generate this."
+required = true
+
+[[services.variables]]
+name = "BETTER_AUTH_URL"
+description = "Your Railway app URL (e.g. https://myapp.up.railway.app). Set after first deploy."
+required = true
+
+[[services.variables]]
+name = "VITE_BETTER_AUTH_BASE_URL"
+description = "Same value as BETTER_AUTH_URL — required for client-side auth requests."
+required = true
+
+[[services.variables]]
+name = "DATABASE_URL"
+description = "Injected automatically by the Railway Postgres plugin."
+required = true
+
+[[services.variables]]
+name = "RESEND_API_KEY"
+description = "Required for transactional email (auth emails, notifications). Get key: https://resend.com/api-keys"
+required = true
+
+[[services.variables]]
+name = "RESEND_FROM_EMAIL"
+description = "Sender address for transactional emails (e.g. hello@yourdomain.com)"
+required = true
+
+# ── Optional variables ───────────────────────────────────────────────────────
+
+[[services.variables]]
+name = "AI_PROVIDER"
+description = "Optional. AI provider for the chat demo: openai, anthropic, or google. Defaults to openai."
+required = false
+
+[[services.variables]]
+name = "AI_MODEL"
+description = "Optional. Model to use (e.g. gpt-4o-mini, claude-3-5-sonnet-20241022). Defaults to gpt-4o-mini."
+required = false
+
+[[services.variables]]
+name = "OPENAI_API_KEY"
+description = "Optional. Required if AI_PROVIDER=openai. Get key: https://platform.openai.com/api-keys"
+required = false
+
+[[services.variables]]
+name = "ANTHROPIC_API_KEY"
+description = "Optional. Required if AI_PROVIDER=anthropic. Get key: https://console.anthropic.com/"
+required = false
+
+[[services.variables]]
+name = "GOOGLE_GENERATIVE_AI_API_KEY"
+description = "Optional. Required if AI_PROVIDER=google. Get key: https://aistudio.google.com/apikey"
+required = false
+
+[[services.variables]]
+name = "AWS_ACCESS_KEY_ID"
+description = "Optional. Enables file storage (Railway S3 or AWS S3)."
+required = false
+
+[[services.variables]]
+name = "AWS_SECRET_ACCESS_KEY"
+description = "Optional. Secret key for file storage."
+required = false
+
+[[services.variables]]
+name = "AWS_BUCKET_NAME"
+description = "Optional. S3 bucket name for file storage."
+required = false
+
+[[services.variables]]
+name = "AWS_ENDPOINT_URL"
+description = "Optional. S3 endpoint URL. Defaults to https://storage.railway.app for Railway S3."
+required = false
+
+[[services.variables]]
+name = "AWS_DEFAULT_REGION"
+description = "Optional. S3 region. Defaults to auto."
+required = false

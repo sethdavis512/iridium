@@ -1,10 +1,8 @@
-import { RFCDate } from '@polar-sh/sdk/types/rfcdate.js';
 import { tool } from 'ai';
 import { differenceInDays, subDays } from 'date-fns';
 import z from 'zod';
 
-import type { MoneyAmount, UserAnalyticsOutput } from '~/lib/chat-tools.types';
-import { polarClient } from '~/lib/polar';
+import type { UserAnalyticsOutput } from '~/lib/chat-tools.types';
 import { getUserAnalytics } from '~/models/analytics.server';
 import { Role } from '~/generated/prisma/client';
 
@@ -14,100 +12,14 @@ function toISODate(date: Date): string {
     return date.toISOString().split('T')[0]!;
 }
 
-function toMoneyAmount(cents: number): MoneyAmount {
-    return {
-        cents,
-        dollars: cents / 100,
-    };
-}
-
-interface DateRangeArgs {
-    startDate?: string;
-    endDate?: string;
-}
-
-function resolveDateRange({ startDate, endDate }: DateRangeArgs): {
-    start: RFCDate;
-    end: RFCDate;
-    startISO: string;
-    endISO: string;
-} {
-    const defaultEndDate = new Date();
-    const defaultStartDate = new Date();
-    defaultStartDate.setMonth(defaultStartDate.getMonth() - 3);
-
-    const startISO = startDate ?? toISODate(defaultStartDate);
-    const endISO = endDate ?? toISODate(defaultEndDate);
-
-    return {
-        start: new RFCDate(startISO),
-        end: new RFCDate(endISO),
-        startISO,
-        endISO,
-    };
-}
-
-const dateRangeInputSchema = z.object({
-    startDate: z
-        .string()
-        .regex(ISO_DATE_REGEX, 'Expected YYYY-MM-DD')
-        .optional()
-        .describe('Start date in YYYY-MM-DD format. Defaults to 3 months ago.'),
-    endDate: z
-        .string()
-        .regex(ISO_DATE_REGEX, 'Expected YYYY-MM-DD')
-        .optional()
-        .describe('End date in YYYY-MM-DD format. Defaults to today.'),
-});
-
 /**
- * AI Chat Tools - Demo implementations for Polar billing and user analytics.
+ * AI Chat Tools - Demo implementations for user analytics.
  *
- * These 2 tools demonstrate the pattern for building AI tools:
- * - getRevenueMetrics: External API integration (Polar billing)
- * - getUserAnalytics: Database queries (Prisma)
- *
- * Add more tools following these patterns as needed.
+ * Add more tools following the getUserAnalytics pattern as needed.
+ * For external API integrations (billing, CRM, etc.), follow the same
+ * tool() pattern with an execute function that calls your API.
  */
 export const chatTools = {
-    // ========================================================================
-    // Polar Billing Demo
-    // ========================================================================
-    getRevenueMetrics: tool({
-        description:
-            'Get core revenue and sales metrics including total revenue, net revenue, number of orders, average order value, and gross margin. Returns both cents and dollars. Defaults to last 3 months if no dates specified.',
-        inputSchema: dateRangeInputSchema,
-        execute: async ({ startDate, endDate }) => {
-            const { start, end, startISO, endISO } = resolveDateRange({
-                startDate,
-                endDate,
-            });
-
-            const metrics = await polarClient.metrics.get({
-                startDate: start,
-                endDate: end,
-                interval: 'month',
-                organizationId: null,
-            });
-
-            return {
-                startDate: startISO,
-                endDate: endISO,
-                orders: metrics.totals.orders,
-                revenue: toMoneyAmount(metrics.totals.revenue),
-                netRevenue: toMoneyAmount(metrics.totals.netRevenue),
-                averageOrderValue: toMoneyAmount(
-                    metrics.totals.averageOrderValue,
-                ),
-                netAverageOrderValue: toMoneyAmount(
-                    metrics.totals.netAverageOrderValue,
-                ),
-                grossMargin: toMoneyAmount(metrics.totals.grossMargin),
-                grossMarginPercentage: metrics.totals.grossMarginPercentage,
-                cashflow: toMoneyAmount(metrics.totals.cashflow),
-            };
-        },
-    }),
     // ========================================================================
     // Database Analytics Demo
     // ========================================================================

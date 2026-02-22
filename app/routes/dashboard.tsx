@@ -8,8 +8,7 @@ import {
 } from 'react-router';
 
 import { Container } from '~/components/layout/Container';
-import { Paths, PostHogEventNames } from '~/constants';
-import { getPostHogClient } from '~/lib/posthog';
+import { Paths } from '~/constants';
 import { getUserFromSession } from '~/lib/session.server';
 import {
     createThread,
@@ -50,7 +49,6 @@ const dashboardLayout = {
 
 export async function loader({ request }: Route.LoaderArgs) {
     const user = await getUserFromSession(request);
-    const postHogClient = getPostHogClient();
 
     if (!user) {
         throw new Response('Unauthorized', { status: 401 });
@@ -58,20 +56,9 @@ export async function loader({ request }: Route.LoaderArgs) {
 
     try {
         const threads = await getAllThreadsByUserId(user.id);
-
-        postHogClient?.capture({
-            distinctId: user.id,
-            event: PostHogEventNames.CHAT_THREADS_LOADED,
-            properties: {
-                threadCount: threads.length,
-            },
-        });
-
         return { threads };
     } catch (error) {
-        postHogClient?.captureException(error as Error, user.id, {
-            context: PostHogEventNames.CHAT_THREADS_LOADING_ERROR,
-        });
+        console.error('Failed to load threads:', error);
     }
 
     return { threads: [] };
@@ -79,7 +66,6 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
     const user = await getUserFromSession(request);
-    const postHogClient = getPostHogClient();
     const form = await request.formData();
 
     if (!user) {
@@ -90,68 +76,21 @@ export async function action({ request }: Route.ActionArgs) {
         const intent = String(form.get('intent'));
 
         if (intent === Intents.CREATE_THREAD) {
-            try {
-                const thread = await createThread(user.id);
-
-                postHogClient?.capture({
-                    distinctId: user.id,
-                    event: PostHogEventNames.CHAT_THREAD_CREATED,
-                    properties: {
-                        threadId: thread.id,
-                    },
-                });
-
-                return redirect(thread?.id);
-            } catch (error) {
-                postHogClient?.captureException(error as Error, user.id, {
-                    context: PostHogEventNames.CHAT_THREAD_CREATE_ERROR,
-                    timestamp: new Date().toISOString(),
-                });
-            }
+            const thread = await createThread(user.id);
+            return redirect(thread?.id);
         }
 
         if (intent === Intents.DELETE_THREAD) {
             const threadId = String(form.get('threadId'));
-            try {
-                await deleteThread(threadId);
-
-                postHogClient?.capture({
-                    distinctId: user.id,
-                    event: PostHogEventNames.CHAT_THREAD_DELETED,
-                    properties: {
-                        threadId,
-                    },
-                });
-
-                return redirect(Paths.DASHBOARD);
-            } catch (error) {
-                postHogClient?.captureException(error as Error, user.id, {
-                    context: PostHogEventNames.CHAT_THREAD_DELETE_ERROR,
-                });
-            }
+            await deleteThread(threadId);
+            return redirect(Paths.DASHBOARD);
         }
 
         if (intent === Intents.RENAME_THREAD) {
             const threadId = String(form.get('threadId'));
             const updatedThreadTitle = String(form.get('title'));
-
-            try {
-                postHogClient?.capture({
-                    distinctId: user.id,
-                    event: PostHogEventNames.CHAT_THREAD_RENAME,
-                    properties: {
-                        threadId,
-                    },
-                });
-
-                await updateThreadTitle(threadId, updatedThreadTitle);
-
-                return null;
-            } catch (error) {
-                postHogClient?.captureException(error as Error, user.id, {
-                    context: PostHogEventNames.CHAT_THREAD_RENAME_ERROR,
-                });
-            }
+            await updateThreadTitle(threadId, updatedThreadTitle);
+            return null;
         }
     }
 
