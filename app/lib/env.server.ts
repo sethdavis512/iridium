@@ -158,59 +158,19 @@ const resolved = validateEnv();
 export const env = resolved.env;
 
 /**
- * Build the list of notable unset env vars for the dev banner. Pure so it can
- * be unit-tested without touching process.env.
+ * Build the dev banner's warning list. Only *required* infra vars that are
+ * missing/invalid (and so running on a dev placeholder) are surfaced — optional
+ * feature keys degrade gracefully and are deliberately not shown. Pure so it
+ * can be unit-tested without touching process.env.
  */
-export function computeEnvWarnings(
-    e: Env,
-    placeholdered: string[],
-): EnvWarning[] {
-    const warnings: EnvWarning[] = [];
-
-    for (const key of placeholdered) {
-        warnings.push({
-            key,
-            severity: 'error',
-            effect: INFRA_EFFECTS[key] ?? 'Using a development placeholder.',
-        });
-    }
-
-    const feature = (unset: boolean, key: string, effect: string): void => {
-        if (unset) warnings.push({ key, severity: 'info', effect });
-    };
-
-    feature(!e.ANTHROPIC_API_KEY, 'ANTHROPIC_API_KEY', 'AI chat is disabled.');
-    feature(
-        !e.STRIPE_SECRET_KEY,
-        'STRIPE_SECRET_KEY',
-        'Billing runs in stub mode.',
-    );
-    feature(
-        !e.RESEND_API_KEY,
-        'RESEND_API_KEY',
-        'Emails are logged to the console.',
-    );
-    feature(
-        !e.GITHUB_CLIENT_ID || !e.GITHUB_CLIENT_SECRET,
-        'GITHUB_CLIENT_ID',
-        'GitHub social login is hidden.',
-    );
-    feature(
-        !e.GOOGLE_CLIENT_ID || !e.GOOGLE_CLIENT_SECRET,
-        'GOOGLE_CLIENT_ID',
-        'Google social login is hidden.',
-    );
-    feature(
-        !e.TRIGGER_SECRET_KEY,
-        'TRIGGER_SECRET_KEY',
-        'Background jobs run inline.',
-    );
-
-    return warnings;
+export function computeEnvWarnings(placeholdered: string[]): EnvWarning[] {
+    return placeholdered.map((key) => ({
+        key,
+        effect: INFRA_EFFECTS[key] ?? 'Using a development placeholder.',
+    }));
 }
 
 export const envWarnings: EnvWarning[] = computeEnvWarnings(
-    env,
     resolved.placeholdered,
 );
 
