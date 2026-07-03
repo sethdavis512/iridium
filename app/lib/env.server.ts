@@ -158,25 +158,19 @@ const resolved = validateEnv();
 export const env = resolved.env;
 
 /**
- * Build the list of notable unset env vars for the dev banner. Only the
- * required infrastructure vars are surfaced — when one is missing it's running
- * on a dev placeholder and the app genuinely won't work. Optional feature keys
- * degrade gracefully and are intentionally left out of the banner. Pure so it
+ * Build the dev banner's warning list. Only *required* infra vars that are
+ * missing/invalid (and so running on a dev placeholder) are surfaced — optional
+ * feature keys degrade gracefully and are deliberately not shown. Pure so it
  * can be unit-tested without touching process.env.
  */
-export function computeEnvWarnings(
-    _e: Env,
-    placeholdered: string[],
-): EnvWarning[] {
+export function computeEnvWarnings(placeholdered: string[]): EnvWarning[] {
     return placeholdered.map((key) => ({
         key,
-        severity: 'error',
         effect: INFRA_EFFECTS[key] ?? 'Using a development placeholder.',
     }));
 }
 
 export const envWarnings: EnvWarning[] = computeEnvWarnings(
-    env,
     resolved.placeholdered,
 );
 
