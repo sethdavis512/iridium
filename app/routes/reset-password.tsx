@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '~/lib/auth.server';
 import { redirectWithToast } from '~/lib/toast.server';
 import { requireAnonymous } from '~/models/session.server';
+import { APP_NAME } from '~/config';
 import { Spinner } from '~/components/Spinner';
 import { Field } from '~/components/forms/Field';
 import { FormAlert } from '~/components/forms/FormAlert';
@@ -83,10 +84,10 @@ export default function ResetPasswordRoute({
 
     return (
         <>
-            <title>Reset Password | Iridium</title>
+            <title>{`Reset Password | ${APP_NAME}`}</title>
             <meta
                 name="description"
-                content="Choose a new password for your Iridium account."
+                content={`Choose a new password for your ${APP_NAME} account.`}
             />
             <div className="bg-base-300 flex h-full items-center justify-center p-4">
                 <div className="card bg-base-100 w-full max-w-md shadow-lg">

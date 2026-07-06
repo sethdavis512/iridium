@@ -10,6 +10,7 @@ import { Link } from 'react-router';
 import { Card } from '~/components/Card';
 import { Container } from '~/components/Container';
 import { OgMeta } from '~/lib/seo';
+import { APP_NAME } from '~/config';
 
 const FEATURES = [
     {
@@ -62,18 +63,18 @@ const STACK = [
 export default function LandingPage() {
     return (
         <>
-            <title>Home | Iridium</title>
+            <title>{`Home | ${APP_NAME}`}</title>
             <meta
                 name="description"
-                content="Iridium is a full-stack React starter kit with authentication, AI chat, agent tools, and production-ready patterns."
+                content={`${APP_NAME} is a full-stack React starter kit with authentication, AI chat, agent tools, and production-ready patterns.`}
             />
             <OgMeta
-                title="Iridium"
+                title={APP_NAME}
                 description="A full-stack starter kit built for shipping AI-powered products."
             />
             <Container className="p-4">
                 <section className="py-12 text-center md:py-20">
-                    <h1 className="mb-4 text-5xl font-bold">Iridium</h1>
+                    <h1 className="mb-4 text-5xl font-bold">{APP_NAME}</h1>
                     <p className="mx-auto mb-8 max-w-2xl text-lg">
                         A full-stack starter kit built for shipping AI-powered
                         products. Clone the repo, configure your environment,

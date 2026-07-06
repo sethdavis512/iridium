@@ -5,6 +5,7 @@ import { Container } from '~/components/Container';
 import { Header } from '~/components/Header';
 import { ThemeToggle } from '~/components/ThemeToggle';
 import type { loader as rootLoader } from '~/root';
+import { APP_NAME } from '~/config';
 
 const MOBILE_NAV_ID = 'mobile-nav';
 
@@ -83,7 +84,7 @@ export function SiteHeader() {
                                 to="/"
                                 className="flex items-center gap-2 font-bold"
                             >
-                                <PentagonIcon aria-hidden="true" /> Iridium
+                                <PentagonIcon aria-hidden="true" /> {APP_NAME}
                             </Link>
                         </div>
                         <nav

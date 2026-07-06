@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { sendEmail } from '~/lib/email.server';
 import { ResetPasswordEmail } from '~/emails/ResetPasswordEmail';
 import { VerificationEmail } from '~/emails/VerificationEmail';
+import { APP_NAME } from '~/config';
 
 /**
  * Serializable payload for auth emails. React elements can't cross the
@@ -21,7 +22,7 @@ export async function deliverAuthEmail(payload: AuthEmailPayload) {
     if (kind === 'reset-password') {
         await sendEmail({
             to,
-            subject: 'Reset your Iridium password',
+            subject: `Reset your ${APP_NAME} password`,
             react: createElement(ResetPasswordEmail, { name, url }),
         });
         return;

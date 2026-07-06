@@ -9,6 +9,7 @@ import {
     Section,
     Text,
 } from '@react-email/components';
+import { APP_NAME } from '~/config';
 
 type Props = {
     name: string;
@@ -19,7 +20,7 @@ export function VerificationEmail({ name, url }: Props) {
     return (
         <Html lang="en">
             <Head />
-            <Preview>Verify your email address for Iridium</Preview>
+            <Preview>{`Verify your email address for ${APP_NAME}`}</Preview>
             <Body style={body}>
                 <Container style={container}>
                     <Heading as="h1" style={heading}>
@@ -27,8 +28,8 @@ export function VerificationEmail({ name, url }: Props) {
                     </Heading>
                     <Text style={text}>Hi {name},</Text>
                     <Text style={text}>
-                        Welcome to Iridium! Confirm this email address belongs
-                        to you by clicking the button below.
+                        Welcome to {APP_NAME}! Confirm this email address
+                        belongs to you by clicking the button below.
                     </Text>
                     <Section style={buttonSection}>
                         <Button href={url} style={button}>
