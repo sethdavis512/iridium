@@ -90,24 +90,28 @@ type Env = z.infer<typeof envSchema>;
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
- * Dev/test placeholders for required infrastructure vars. When one is missing
- * or invalid outside production, we substitute a placeholder so the app still
- * boots (and surface it in the dev banner) instead of crashing. Production
- * never uses these — it fails fast on misconfiguration.
+ * Dev/test fallbacks for required infrastructure vars. When one is missing or
+ * invalid outside production, we substitute a fallback so the app still boots
+ * (and surface it in the dev banner) instead of crashing. Production never uses
+ * these — it fails fast on misconfiguration.
+ *
+ * The database URLs mirror the docker-compose.dev.yml defaults, so a fresh
+ * clone + `bun run docker:up` + `bun run dev` connects with zero configuration.
  */
 const DEV_FALLBACKS: Record<string, string> = {
-    DATABASE_URL:
-        'postgresql://placeholder:placeholder@localhost:5432/placeholder',
+    DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/iridium',
     VOLTAGENT_DATABASE_URL:
-        'postgresql://placeholder:placeholder@localhost:5433/placeholder',
+        'postgresql://postgres:postgres@localhost:5433/voltagent',
     BETTER_AUTH_SECRET: 'dev-only-placeholder-secret-change-me-please',
     BETTER_AUTH_BASE_URL: 'http://localhost:5173',
 };
 
-/** Why a placeholdered infra var matters — shown in the dev banner. */
+/** Why a fallback-backed infra var matters — shown in the dev banner. */
 const INFRA_EFFECTS: Record<string, string> = {
-    DATABASE_URL: 'App database is unreachable; most pages will error.',
-    VOLTAGENT_DATABASE_URL: 'AI memory store is unreachable; chat will error.',
+    DATABASE_URL:
+        'Using the docker-compose default database — run `bun run docker:up`.',
+    VOLTAGENT_DATABASE_URL:
+        'Using the docker-compose default AI-memory database.',
     BETTER_AUTH_SECRET: 'Sessions use an insecure placeholder secret.',
     BETTER_AUTH_BASE_URL: 'Auth callbacks use a placeholder URL.',
 };
