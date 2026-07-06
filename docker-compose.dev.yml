@@ -1,3 +1,9 @@
+# Pin the project name so container/volume names stay deterministic regardless
+# of the working directory. Without this, Compose derives the name from the
+# folder, so cloning/renaming the repo orphans the old containers and volumes
+# (they become invisible to `docker compose down` / `docker:nuke`).
+name: iridium
+
 services:
     postgres:
         image: postgres:16-alpine

@@ -31,8 +31,8 @@
         "trigger:dev": "bunx trigger.dev@latest dev",
         "trigger:deploy": "bunx trigger.dev@latest deploy",
         "docker:up": "docker compose -f docker-compose.dev.yml up -d",
-        "docker:down": "docker compose -f docker-compose.dev.yml down",
-        "docker:nuke": "docker compose -f docker-compose.dev.yml down -v",
+        "docker:down": "docker compose -f docker-compose.dev.yml down --remove-orphans",
+        "docker:nuke": "docker compose -f docker-compose.dev.yml down -v --remove-orphans",
         "prepare": "husky"
     },
     "lint-staged": {
