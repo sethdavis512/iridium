@@ -10,6 +10,7 @@ import { ShieldIcon } from 'lucide-react';
 import { z } from 'zod';
 import { APIError } from 'better-auth';
 import { auth } from '~/lib/auth.server';
+import { APP_NAME } from '~/config';
 import { pageMeta, parsePage } from '~/lib/pagination';
 import { rateLimit } from '~/lib/rate-limit.server';
 import { redirectWithToast } from '~/lib/toast.server';
@@ -262,7 +263,7 @@ export default function AdminRoute({
 
     return (
         <>
-            <title>Admin | Iridium</title>
+            <title>{`Admin | ${APP_NAME}`}</title>
             <meta name="description" content="Manage users and roles." />
             <Container className="flex flex-col gap-4 p-4">
                 <PageHeader title="Admin" />

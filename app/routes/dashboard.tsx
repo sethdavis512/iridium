@@ -11,6 +11,7 @@ import {
     getAllThreadsByUserId,
 } from '~/models/thread.server';
 import { countNotesByUserId, getNotesByUserId } from '~/models/note.server';
+import { APP_NAME } from '~/config';
 import { Card } from '~/components/Card';
 import { Container } from '~/components/Container';
 import { EmptyState } from '~/components/EmptyState';
@@ -61,10 +62,10 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
 
     return (
         <>
-            <title>Dashboard | Iridium</title>
+            <title>{`Dashboard | ${APP_NAME}`}</title>
             <meta
                 name="description"
-                content="Your Iridium activity at a glance."
+                content={`Your ${APP_NAME} activity at a glance.`}
             />
             <Container className="flex flex-col gap-6 p-4">
                 <PageHeader title={`Hello ${name}!`}>

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { EnvWarning } from '~/lib/env-status';
+import { APP_NAME } from '~/config';
 
 const envSchema = z.object({
     DATABASE_URL: z.url({ message: 'DATABASE_URL must be a valid URL' }),
@@ -35,7 +36,7 @@ const envSchema = z.object({
      * console instead of sent. Set a real key in production.
      */
     RESEND_API_KEY: z.string().optional(),
-    EMAIL_FROM: z.string().default('Iridium <onboarding@resend.dev>'),
+    EMAIL_FROM: z.string().default(`${APP_NAME} <onboarding@resend.dev>`),
     /**
      * Optional OAuth providers: a provider's login button only renders when
      * both its client ID and secret are set. Callback URLs are

@@ -9,6 +9,7 @@ import {
     Section,
     Text,
 } from '@react-email/components';
+import { APP_NAME } from '~/config';
 
 type Props = {
     name: string;
@@ -19,7 +20,7 @@ export function ResetPasswordEmail({ name, url }: Props) {
     return (
         <Html lang="en">
             <Head />
-            <Preview>Reset your Iridium password</Preview>
+            <Preview>{`Reset your ${APP_NAME} password`}</Preview>
             <Body style={body}>
                 <Container style={container}>
                     <Heading as="h1" style={heading}>
@@ -27,7 +28,7 @@ export function ResetPasswordEmail({ name, url }: Props) {
                     </Heading>
                     <Text style={text}>Hi {name},</Text>
                     <Text style={text}>
-                        Someone requested a password reset for your Iridium
+                        Someone requested a password reset for your {APP_NAME}
                         account. Click the button below to choose a new
                         password. If this was not you, you can safely ignore
                         this email.

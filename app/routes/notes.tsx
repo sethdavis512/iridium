@@ -4,6 +4,7 @@ import { NotebookPenIcon, PlusCircleIcon, SearchXIcon } from 'lucide-react';
 import { z } from 'zod';
 import { rateLimit } from '~/lib/rate-limit.server';
 import { pageMeta, parsePage } from '~/lib/pagination';
+import { APP_NAME } from '~/config';
 import { redirectWithToast } from '~/lib/toast.server';
 import { requireUserFromContext } from '~/context';
 import { authMiddleware } from '~/middleware/auth';
@@ -196,7 +197,7 @@ export default function NotesRoute({
 
     return (
         <>
-            <title>Notes | Iridium</title>
+            <title>{`Notes | ${APP_NAME}`}</title>
             <meta
                 name="description"
                 content="Browse, search, and manage your notes."

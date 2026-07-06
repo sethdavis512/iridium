@@ -8,6 +8,7 @@ import { useDialog, usePendingIntent } from '~/hooks';
 import { authMiddleware } from '~/middleware/auth';
 import { rateLimit } from '~/lib/rate-limit.server';
 import { navLinkClassName } from '~/shared';
+import { APP_NAME } from '~/config';
 import type { Route } from './+types/chat';
 import {
     createThread,
@@ -165,7 +166,7 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
 
     return (
         <>
-            <title>Chat | Iridium</title>
+            <title>{`Chat | ${APP_NAME}`}</title>
             <meta name="description" content="This is the chat page" />
             <Container className="flex min-h-0 grow flex-col gap-4 p-4">
                 <PageHeader

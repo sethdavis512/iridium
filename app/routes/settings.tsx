@@ -9,6 +9,7 @@ import { redirectWithToast } from '~/lib/toast.server';
 import { requireUserFromContext } from '~/context';
 import { authMiddleware } from '~/middleware/auth';
 import { getUserById, updateUserProfile } from '~/models/user.server';
+import { APP_NAME } from '~/config';
 import { Card } from '~/components/Card';
 import { Container } from '~/components/Container';
 import { Modal, ModalActions } from '~/components/Modal';
@@ -220,10 +221,10 @@ export default function SettingsRoute({
 
     return (
         <>
-            <title>Settings | Iridium</title>
+            <title>{`Settings | ${APP_NAME}`}</title>
             <meta
                 name="description"
-                content="Manage your Iridium profile, password, and account."
+                content={`Manage your ${APP_NAME} profile, password, and account.`}
             />
             <Container className="flex flex-col gap-6 p-4">
                 <PageHeader title="Settings" />

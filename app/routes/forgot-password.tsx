@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { auth } from '~/lib/auth.server';
 import { log } from '~/lib/logger.server';
 import { requireAnonymous } from '~/models/session.server';
+import { APP_NAME } from '~/config';
 import { Spinner } from '~/components/Spinner';
 import { Field } from '~/components/forms/Field';
 import { Input } from '~/components/forms/Input';
@@ -53,10 +54,10 @@ export default function ForgotPasswordRoute({
 
     return (
         <>
-            <title>Forgot Password | Iridium</title>
+            <title>{`Forgot Password | ${APP_NAME}`}</title>
             <meta
                 name="description"
-                content="Request a password reset link for your Iridium account."
+                content={`Request a password reset link for your ${APP_NAME} account.`}
             />
             <div className="bg-base-300 flex h-full items-center justify-center p-4">
                 <div className="card bg-base-100 w-full max-w-md shadow-lg">
