@@ -1,6 +1,14 @@
 import type { LucideIcon } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { cx } from 'cva.config';
+import {
+    Empty,
+    EmptyContent,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+} from '~/components/ui/empty';
 
 type Props = {
     icon?: LucideIcon;
@@ -17,23 +25,19 @@ export function EmptyState({
     children,
 }: PropsWithChildren<Props>) {
     return (
-        <div
-            className={cx(
-                'flex flex-col items-center justify-center gap-2 p-8 text-center',
-                className,
-            )}
-        >
-            {Icon && (
-                <Icon
-                    aria-hidden="true"
-                    className="text-base-content/40 h-10 w-10"
-                />
-            )}
-            <h3 className="text-lg font-semibold">{title}</h3>
-            {description && (
-                <p className="text-base-content/60 text-sm">{description}</p>
-            )}
-            {children}
-        </div>
+        <Empty className={cx('gap-2 p-8 md:py-12', className)}>
+            <EmptyHeader>
+                {Icon && (
+                    <EmptyMedia variant="icon" className="mb-3">
+                        <Icon aria-hidden="true" />
+                    </EmptyMedia>
+                )}
+                <EmptyTitle>{title}</EmptyTitle>
+                {description && (
+                    <EmptyDescription>{description}</EmptyDescription>
+                )}
+            </EmptyHeader>
+            {children && <EmptyContent>{children}</EmptyContent>}
+        </Empty>
     );
 }

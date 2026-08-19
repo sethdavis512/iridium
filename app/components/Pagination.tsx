@@ -1,4 +1,11 @@
 import { Link, useSearchParams } from 'react-router';
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { Button } from '~/components/ui/button';
+import {
+    Pagination as UiPagination,
+    PaginationContent,
+    PaginationItem,
+} from '~/components/ui/pagination';
 
 type Props = {
     page: number;
@@ -18,38 +25,44 @@ export function Pagination({ page, totalPages, className }: Props) {
     };
 
     return (
-        <nav aria-label="Pagination" className={className}>
-            <div className="join">
-                {page > 1 ? (
-                    <Link
-                        to={linkTo(page - 1)}
-                        className="join-item btn"
+        <UiPagination aria-label="Pagination" className={className}>
+            <PaginationContent>
+                <PaginationItem>
+                    <Button
+                        variant="outline"
+                        size="icon"
                         aria-label="Previous page"
+                        disabled={page <= 1}
+                        render={
+                            page > 1 ? (
+                                <Link to={linkTo(page - 1)} />
+                            ) : undefined
+                        }
                     >
-                        «
-                    </Link>
-                ) : (
-                    <button className="join-item btn" disabled>
-                        «
-                    </button>
-                )}
-                <span className="join-item btn pointer-events-none">
-                    Page {page} of {totalPages}
-                </span>
-                {page < totalPages ? (
-                    <Link
-                        to={linkTo(page + 1)}
-                        className="join-item btn"
+                        <ChevronLeftIcon aria-hidden="true" />
+                    </Button>
+                </PaginationItem>
+                <PaginationItem>
+                    <span className="text-muted-foreground px-2 text-sm">
+                        Page {page} of {totalPages}
+                    </span>
+                </PaginationItem>
+                <PaginationItem>
+                    <Button
+                        variant="outline"
+                        size="icon"
                         aria-label="Next page"
+                        disabled={page >= totalPages}
+                        render={
+                            page < totalPages ? (
+                                <Link to={linkTo(page + 1)} />
+                            ) : undefined
+                        }
                     >
-                        »
-                    </Link>
-                ) : (
-                    <button className="join-item btn" disabled>
-                        »
-                    </button>
-                )}
-            </div>
-        </nav>
+                        <ChevronRightIcon aria-hidden="true" />
+                    </Button>
+                </PaginationItem>
+            </PaginationContent>
+        </UiPagination>
     );
 }
