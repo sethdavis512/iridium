@@ -1,49 +1,54 @@
-import { useCallback, useEffect, useState, type RefObject } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigation } from 'react-router';
 
 /**
- * Imperative <dialog> helper: open/close plus an optional "pending target"
- * (the row a confirm dialog is acting on). Takes the dialog's ref rather
- * than owning it so the ref itself stays a plain useRef at the call site
- * (returning a ref inside an object trips react-hooks/refs).
+ * Controlled dialog state for Base UI Dialog/AlertDialog: open flag plus an
+ * optional "pending target" (the row a confirm dialog is acting on).
  *
- * Wire `clearTarget` to the dialog's onClose so the target resets however
- * the dialog closes (Cancel, Esc, backdrop, form submit).
+ * Wire `open`/`onOpenChange` to the Dialog root so Esc, backdrop clicks, and
+ * the built-in close button all work. `target` is deliberately NOT cleared
+ * on close: it must survive a reopen-on-error cycle, and a stale target is
+ * harmless because `openDialog(next)` always sets a fresh one.
  */
-export function useDialog<T = void>(
-    ref: RefObject<HTMLDialogElement | null>,
-    options?: {
-        /**
-         * Reopens the dialog when this becomes truthy, e.g. a server
-         * validation error returned by the action after the submit closed
-         * the dialog.
-         */
-        reopenOnError?: unknown;
-    },
-) {
+export function useDialogState<T = void>(options?: {
+    /**
+     * Holds the dialog open when this is truthy, e.g. a server validation
+     * error returned by the action after the submit closed the dialog. The
+     * dialog reopens (derived state, no effect) until the user explicitly
+     * closes it again or a fresh error value replaces the dismissed one.
+     */
+    reopenOnError?: unknown;
+}) {
+    const [openState, setOpenState] = useState(false);
     const [target, setTarget] = useState<T | null>(null);
+    // The error value the user has already dismissed; compared by identity
+    // so a new error (fresh action data) reopens the dialog again.
+    const [dismissedError, setDismissedError] = useState<unknown>(null);
 
     const reopenOnError = options?.reopenOnError;
 
-    useEffect(() => {
-        if (reopenOnError) ref.current?.showModal();
-    }, [reopenOnError, ref]);
+    const open =
+        openState || Boolean(reopenOnError && reopenOnError !== dismissedError);
 
-    const open = useCallback(
-        (next?: T) => {
-            if (next !== undefined) setTarget(next);
-            ref.current?.showModal();
-        },
-        [ref],
-    );
+    const openDialog = useCallback((next?: T) => {
+        if (next !== undefined) setTarget(next);
+        setOpenState(true);
+    }, []);
 
     const close = useCallback(() => {
-        ref.current?.close();
-    }, [ref]);
+        setOpenState(false);
+        setDismissedError(reopenOnError ?? null);
+    }, [reopenOnError]);
 
-    const clearTarget = useCallback(() => setTarget(null), []);
+    const onOpenChange = useCallback(
+        (next: boolean) => {
+            setOpenState(next);
+            if (!next) setDismissedError(reopenOnError ?? null);
+        },
+        [reopenOnError],
+    );
 
-    return { target, open, close, clearTarget };
+    return { open, onOpenChange, openDialog, close, target };
 }
 
 /**

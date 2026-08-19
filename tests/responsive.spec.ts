@@ -246,7 +246,7 @@ test.describe('touch affordances', () => {
         await expect(deleteButton).toHaveCSS('opacity', '1');
 
         await deleteButton.tap();
-        const dialog = page.getByRole('dialog');
+        const dialog = page.getByRole('alertdialog');
         await expect(
             dialog.getByRole('heading', { name: 'Delete thread' }),
         ).toBeVisible();
