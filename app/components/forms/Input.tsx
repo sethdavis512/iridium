@@ -1,35 +1,13 @@
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
-import type { VariantProps } from 'cva';
-import { cva, cx } from 'cva.config';
+import type { ComponentPropsWithoutRef, Ref } from 'react';
+import { Input as UiInput } from '~/components/ui/input';
 
-export const inputVariants = cva({
-    base: 'input',
-    variants: {
-        inputSize: {
-            sm: 'input-sm',
-            md: '',
-            lg: 'input-lg',
-        },
-    },
-    defaultVariants: {
-        inputSize: 'md',
-    },
-});
+const SIZE_MAP = { sm: 'sm', md: 'default', lg: 'lg' } as const;
 
-type Props = ComponentPropsWithoutRef<'input'> &
-    VariantProps<typeof inputVariants>;
+type Props = Omit<ComponentPropsWithoutRef<'input'>, 'size'> & {
+    inputSize?: keyof typeof SIZE_MAP;
+    ref?: Ref<HTMLInputElement>;
+};
 
-export const Input = forwardRef<HTMLInputElement, Props>(function Input(
-    { className, inputSize, ...rest },
-    ref,
-) {
-    return (
-        <input
-            ref={ref}
-            className={cx(inputVariants({ inputSize, className }))}
-            {...rest}
-        />
-    );
-});
-
-Input.displayName = 'Input';
+export function Input({ inputSize = 'md', ...rest }: Props) {
+    return <UiInput size={SIZE_MAP[inputSize]} {...rest} />;
+}

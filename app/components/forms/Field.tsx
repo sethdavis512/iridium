@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cx } from 'cva.config';
+import { Fieldset, FieldsetLegend } from '~/components/ui/fieldset';
 
 export type FieldControlProps = {
     'aria-describedby'?: string;
@@ -31,14 +32,17 @@ export function Field({
     };
 
     return (
-        <fieldset className={cx('fieldset', className)} disabled={disabled}>
-            <legend className="fieldset-legend">{label}</legend>
+        <Fieldset
+            className={cx('flex flex-col gap-1.5 py-1', className)}
+            disabled={disabled}
+        >
+            <FieldsetLegend className="pb-1.5 text-sm">{label}</FieldsetLegend>
             {typeof children === 'function' ? children(controlProps) : children}
             {error && (
-                <p id={errorId} className="text-error text-sm">
+                <p id={errorId} className="text-destructive text-sm">
                     {error}
                 </p>
             )}
-        </fieldset>
+        </Fieldset>
     );
 }
