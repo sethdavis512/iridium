@@ -11,27 +11,14 @@ import {
 } from 'react-router';
 import { getSessionInfo } from '~/models/session.server';
 import { getTheme } from '~/lib/theme.server';
-import { THEME_NAMES } from '~/lib/theme';
 import { getToast } from '~/lib/toast.server';
 import { envWarnings, shouldShowEnvBanner } from '~/lib/env.server';
 import { Toaster } from '~/components/Toaster';
+import { ToastProvider, AnchoredToastProvider } from '~/components/ui/toast';
 import { EnvBanner } from '~/components/EnvBanner';
 import type { Route } from './+types/root';
 
 import './app.css';
-
-export const links: Route.LinksFunction = () => [
-    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-    {
-        rel: 'preconnect',
-        href: 'https://fonts.gstatic.com',
-        crossOrigin: 'anonymous',
-    },
-    {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap',
-    },
-];
 
 export async function loader({ request }: Route.LoaderArgs) {
     const [session, theme, { toast, headers }] = await Promise.all([
@@ -67,12 +54,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const theme = loaderData?.theme ?? 'system';
     const bannerWarnings = loaderData?.envWarnings ?? [];
 
+    // Pre-paint: only "system" needs JS. Explicit "dark" is already in the
+    // SSR payload as class="dark", so there is never a theme flash.
+    const themeScript = `(function(){try{if(${JSON.stringify(
+        theme,
+    )}==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.classList.add('dark')}catch(e){}})()`;
+
     return (
         <html
             lang="en"
-            className="h-full"
-            // "system" omits data-theme: CSS --prefersdark takes over.
-            data-theme={theme === 'system' ? undefined : THEME_NAMES[theme]}
+            className={theme === 'dark' ? 'dark h-full' : 'h-full'}
+            // TRANSITIONAL shim: keeps DaisyUI themes rendering on
+            // unconverted screens during the COSS UI migration. Removed
+            // with the daisyui plugin in the final cleanup phase.
+            data-theme={
+                theme === 'system'
+                    ? undefined
+                    : theme === 'dark'
+                      ? 'dracula'
+                      : 'emerald'
+            }
+            // The inline script may add .dark before hydration ("system").
+            suppressHydrationWarning
         >
             <head>
                 <meta charSet="utf-8" />
@@ -82,10 +85,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 />
                 <Meta />
                 <Links />
+                <script dangerouslySetInnerHTML={{ __html: themeScript }} />
             </head>
-            <body className="h-full">
-                <EnvBanner warnings={bannerWarnings} />
-                {children}
+            <body className="relative h-full">
+                {/* isolate: Base UI portals stack above page content. */}
+                <div className="relative isolate flex min-h-svh flex-col">
+                    <EnvBanner warnings={bannerWarnings} />
+                    {children}
+                </div>
                 <ScrollRestoration />
                 <Scripts />
             </body>
@@ -101,10 +108,12 @@ export default function App({ loaderData }: Route.ComponentProps) {
     }, []);
 
     return (
-        <>
-            <Outlet />
-            <Toaster toast={loaderData.toast} />
-        </>
+        <ToastProvider>
+            <AnchoredToastProvider>
+                <Outlet />
+                <Toaster toast={loaderData.toast} />
+            </AnchoredToastProvider>
+        </ToastProvider>
     );
 }
 
