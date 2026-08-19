@@ -90,7 +90,7 @@ test.describe('Notes', () => {
         await page.goto('/notes');
         await page.getByRole('button', { name: 'Delete' }).first().click();
 
-        const dialog = page.getByRole('dialog');
+        const dialog = page.getByRole('alertdialog');
         await expect(dialog).toBeVisible();
         await dialog.getByRole('button', { name: 'Delete' }).click();
 

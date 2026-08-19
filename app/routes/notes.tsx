@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { data, Form, useSearchParams } from 'react-router';
 import { NotebookPenIcon, PlusCircleIcon, SearchXIcon } from 'lucide-react';
 import { z } from 'zod';
@@ -19,14 +19,30 @@ import { Card } from '~/components/Card';
 import { Container } from '~/components/Container';
 import { EmptyState } from '~/components/EmptyState';
 import { FormattedDate } from '~/components/FormattedDate';
-import { Modal, ModalActions } from '~/components/Modal';
+import { Button } from '~/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogPopup,
+    AlertDialogTitle,
+} from '~/components/ui/alert-dialog';
+import {
+    Dialog,
+    DialogFooter,
+    DialogHeader,
+    DialogPanel,
+    DialogPopup,
+    DialogTitle,
+} from '~/components/ui/dialog';
 import { PageHeader } from '~/components/PageHeader';
 import { Pagination } from '~/components/Pagination';
 import { SearchForm } from '~/components/SearchForm';
 import { Field } from '~/components/forms/Field';
 import { Input } from '~/components/forms/Input';
 import { Textarea } from '~/components/forms/Textarea';
-import { useDialog, usePendingIntent } from '~/hooks';
+import { useDialogState, usePendingIntent } from '~/hooks';
 import type { Route } from './+types/notes';
 
 export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
@@ -170,26 +186,24 @@ export default function NotesRoute({
             ? actionData.errors
             : null;
 
-    const editorRef = useRef<HTMLDialogElement>(null);
-    const editorDialog = useDialog(editorRef, { reopenOnError: editorErrors });
-    const deleteRef = useRef<HTMLDialogElement>(null);
-    const deleteDialog = useDialog<string>(deleteRef);
+    const editorDialog = useDialogState({ reopenOnError: editorErrors });
+    const deleteDialog = useDialogState<string>();
 
     // ?new=1 (e.g. the dashboard quick action) opens the create dialog.
     const openOnLoad = searchParams.get('new') === '1';
-    const { open: openEditor } = editorDialog;
+    const { openDialog: openEditor } = editorDialog;
     useEffect(() => {
         if (openOnLoad) openEditor();
     }, [openOnLoad, openEditor]);
 
     function openCreate() {
         setEditor({ mode: 'create' });
-        editorDialog.open();
+        editorDialog.openDialog();
     }
 
     function openEdit(note: { id: string; title: string; content: string }) {
         setEditor({ mode: 'edit', note });
-        editorDialog.open();
+        editorDialog.openDialog();
     }
 
     const isSearching = query.length > 0;
@@ -292,7 +306,9 @@ export default function NotesRoute({
                                                 type="button"
                                                 className="btn btn-ghost btn-sm text-error"
                                                 onClick={() =>
-                                                    deleteDialog.open(note.id)
+                                                    deleteDialog.openDialog(
+                                                        note.id,
+                                                    )
                                                 }
                                             >
                                                 Delete
@@ -311,137 +327,151 @@ export default function NotesRoute({
                 )}
             </Container>
 
-            <Modal
-                ref={editorRef}
-                title={editor.mode === 'edit' ? 'Edit note' : 'New note'}
+            <Dialog
+                open={editorDialog.open}
+                onOpenChange={editorDialog.onOpenChange}
             >
-                <Form
-                    method="POST"
-                    className="space-y-4 pt-4"
-                    onSubmit={editorDialog.close}
-                >
-                    <input
-                        type="hidden"
-                        name="intent"
-                        value={
-                            editor.mode === 'edit'
-                                ? 'update-note'
-                                : 'create-note'
-                        }
-                    />
-                    {editor.mode === 'edit' && (
-                        <input
-                            type="hidden"
-                            name="noteId"
-                            value={editor.note.id}
-                        />
-                    )}
-                    <Field
-                        label="Title"
-                        name="title"
-                        error={editorErrors?.title?.[0]}
+                <DialogPopup>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {editor.mode === 'edit' ? 'Edit note' : 'New note'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <Form
+                        method="POST"
+                        className="contents"
+                        onSubmit={editorDialog.close}
                     >
-                        {(controlProps) => (
-                            <Input
-                                key={
+                        <DialogPanel className="space-y-4">
+                            <input
+                                type="hidden"
+                                name="intent"
+                                value={
                                     editor.mode === 'edit'
-                                        ? editor.note.id
-                                        : 'create'
+                                        ? 'update-note'
+                                        : 'create-note'
                                 }
-                                type="text"
+                            />
+                            {editor.mode === 'edit' && (
+                                <input
+                                    type="hidden"
+                                    name="noteId"
+                                    value={editor.note.id}
+                                />
+                            )}
+                            <Field
+                                label="Title"
                                 name="title"
-                                defaultValue={
-                                    editor.mode === 'edit'
-                                        ? editor.note.title
-                                        : ''
-                                }
-                                placeholder="Note title"
-                                className="w-full"
-                                {...controlProps}
-                            />
-                        )}
-                    </Field>
-                    <Field
-                        label="Content"
-                        name="content"
-                        error={editorErrors?.content?.[0]}
-                    >
-                        {(controlProps) => (
-                            <Textarea
-                                key={
-                                    editor.mode === 'edit'
-                                        ? editor.note.id
-                                        : 'create'
-                                }
+                                error={editorErrors?.title?.[0]}
+                            >
+                                {(controlProps) => (
+                                    <Input
+                                        key={
+                                            editor.mode === 'edit'
+                                                ? editor.note.id
+                                                : 'create'
+                                        }
+                                        type="text"
+                                        name="title"
+                                        defaultValue={
+                                            editor.mode === 'edit'
+                                                ? editor.note.title
+                                                : ''
+                                        }
+                                        placeholder="Note title"
+                                        className="w-full"
+                                        {...controlProps}
+                                    />
+                                )}
+                            </Field>
+                            <Field
+                                label="Content"
                                 name="content"
-                                rows={6}
-                                defaultValue={
-                                    editor.mode === 'edit'
-                                        ? editor.note.content
-                                        : ''
-                                }
-                                placeholder="Write something worth remembering"
-                                className="w-full"
-                                {...controlProps}
-                            />
-                        )}
-                    </Field>
-                    <ModalActions>
-                        <button
+                                error={editorErrors?.content?.[0]}
+                            >
+                                {(controlProps) => (
+                                    <Textarea
+                                        key={
+                                            editor.mode === 'edit'
+                                                ? editor.note.id
+                                                : 'create'
+                                        }
+                                        name="content"
+                                        rows={6}
+                                        defaultValue={
+                                            editor.mode === 'edit'
+                                                ? editor.note.content
+                                                : ''
+                                        }
+                                        placeholder="Write something worth remembering"
+                                        className="w-full"
+                                        {...controlProps}
+                                    />
+                                )}
+                            </Field>
+                        </DialogPanel>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={editorDialog.close}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                loading={pendingIntent !== null}
+                            >
+                                {editor.mode === 'edit'
+                                    ? 'Save changes'
+                                    : 'Create note'}
+                            </Button>
+                        </DialogFooter>
+                    </Form>
+                </DialogPopup>
+            </Dialog>
+
+            <AlertDialog
+                open={deleteDialog.open}
+                onOpenChange={deleteDialog.onOpenChange}
+            >
+                <AlertDialogPopup>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete note</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will delete the note.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <Button
                             type="button"
-                            className="btn"
-                            onClick={editorDialog.close}
+                            variant="ghost"
+                            onClick={deleteDialog.close}
                         >
                             Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="btn btn-accent"
-                            disabled={pendingIntent !== null}
-                        >
-                            {editor.mode === 'edit'
-                                ? 'Save changes'
-                                : 'Create note'}
-                        </button>
-                    </ModalActions>
-                </Form>
-            </Modal>
-
-            <Modal
-                ref={deleteRef}
-                title="Delete note"
-                onClose={deleteDialog.clearTarget}
-            >
-                <p className="py-4">This will delete the note.</p>
-                <ModalActions>
-                    <button
-                        type="button"
-                        className="btn"
-                        onClick={deleteDialog.close}
-                    >
-                        Cancel
-                    </button>
-                    <Form method="POST" onSubmit={deleteDialog.close}>
-                        <input
-                            type="hidden"
-                            name="intent"
-                            value="delete-note"
-                        />
-                        <input
-                            type="hidden"
-                            name="noteId"
-                            value={deleteDialog.target ?? ''}
-                        />
-                        <button
-                            type="submit"
-                            className="btn btn-error"
-                            disabled={pendingIntent === 'delete-note'}
-                        >
-                            Delete
-                        </button>
-                    </Form>
-                </ModalActions>
-            </Modal>
+                        </Button>
+                        <Form method="POST" onSubmit={deleteDialog.close}>
+                            <input
+                                type="hidden"
+                                name="intent"
+                                value="delete-note"
+                            />
+                            <input
+                                type="hidden"
+                                name="noteId"
+                                value={deleteDialog.target ?? ''}
+                            />
+                            <Button
+                                type="submit"
+                                variant="destructive"
+                                loading={pendingIntent === 'delete-note'}
+                            >
+                                Delete
+                            </Button>
+                        </Form>
+                    </AlertDialogFooter>
+                </AlertDialogPopup>
+            </AlertDialog>
         </>
     );
 }

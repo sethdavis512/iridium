@@ -1,10 +1,17 @@
-import { useRef } from 'react';
 import { Container } from '~/components/Container';
 import { EmptyState } from '~/components/EmptyState';
-import { Modal, ModalActions } from '~/components/Modal';
 import { PageHeader } from '~/components/PageHeader';
 import { SearchForm } from '~/components/SearchForm';
-import { useDialog, usePendingIntent } from '~/hooks';
+import { Button } from '~/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogPopup,
+    AlertDialogTitle,
+} from '~/components/ui/alert-dialog';
+import { useDialogState, usePendingIntent } from '~/hooks';
 import { authMiddleware } from '~/middleware/auth';
 import { rateLimit } from '~/lib/rate-limit.server';
 import { navLinkClassName } from '~/shared';
@@ -154,8 +161,7 @@ function getThreadLabel(thread: {
 export default function ChatRoute({ loaderData }: Route.ComponentProps) {
     const navigation = useNavigation();
     const pendingIntent = usePendingIntent();
-    const deleteDialogRef = useRef<HTMLDialogElement>(null);
-    const deleteDialog = useDialog<string>(deleteDialogRef);
+    const deleteDialog = useDialogState<string>();
 
     const isCreating = pendingIntent === 'new-thread';
     const deletingThreadId =
@@ -233,7 +239,9 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
                                                     thread.id
                                                 }
                                                 onClick={() =>
-                                                    deleteDialog.open(thread.id)
+                                                    deleteDialog.openDialog(
+                                                        thread.id,
+                                                    )
                                                 }
                                             >
                                                 {deletingThreadId ===
@@ -273,40 +281,44 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
                 </div>
             </Container>
 
-            <Modal
-                ref={deleteDialogRef}
-                title="Delete thread"
-                onClose={deleteDialog.clearTarget}
-                backdrop
+            <AlertDialog
+                open={deleteDialog.open}
+                onOpenChange={deleteDialog.onOpenChange}
             >
-                <p className="py-4">
-                    This will delete this conversation and all its messages.
-                </p>
-                <ModalActions>
-                    <button
-                        type="button"
-                        className="btn"
-                        onClick={deleteDialog.close}
-                    >
-                        Cancel
-                    </button>
-                    <Form method="POST" onSubmit={deleteDialog.close}>
-                        <input
-                            type="hidden"
-                            name="intent"
-                            value="delete-thread"
-                        />
-                        <input
-                            type="hidden"
-                            name="threadId"
-                            value={deleteDialog.target ?? ''}
-                        />
-                        <button type="submit" className="btn btn-error">
-                            Delete
-                        </button>
-                    </Form>
-                </ModalActions>
-            </Modal>
+                <AlertDialogPopup>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete thread</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will delete this conversation and all its
+                            messages.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={deleteDialog.close}
+                        >
+                            Cancel
+                        </Button>
+                        <Form method="POST" onSubmit={deleteDialog.close}>
+                            <input
+                                type="hidden"
+                                name="intent"
+                                value="delete-thread"
+                            />
+                            <input
+                                type="hidden"
+                                name="threadId"
+                                value={deleteDialog.target ?? ''}
+                            />
+                            <Button type="submit" variant="destructive">
+                                Delete
+                            </Button>
+                        </Form>
+                    </AlertDialogFooter>
+                </AlertDialogPopup>
+            </AlertDialog>
         </>
     );
 }
