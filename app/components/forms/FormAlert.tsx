@@ -1,6 +1,6 @@
 import { CircleXIcon } from 'lucide-react';
-import { cx } from 'cva.config';
 import type { PropsWithChildren } from 'react';
+import { Alert, AlertAction, AlertTitle } from '~/components/ui/alert';
 
 type Props = PropsWithChildren<{
     message: string | null | undefined;
@@ -11,10 +11,10 @@ export function FormAlert({ message, className, children }: Props) {
     if (!message) return null;
 
     return (
-        <div role="alert" className={cx('alert alert-error', className)}>
-            <CircleXIcon aria-hidden="true" className="h-6 w-6" />
-            <span>{message}</span>
-            {children}
-        </div>
+        <Alert variant="error" className={className}>
+            <CircleXIcon aria-hidden="true" />
+            <AlertTitle>{message}</AlertTitle>
+            {children && <AlertAction>{children}</AlertAction>}
+        </Alert>
     );
 }

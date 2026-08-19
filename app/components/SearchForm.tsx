@@ -2,6 +2,12 @@ import type { PropsWithChildren } from 'react';
 import { Form } from 'react-router';
 import { SearchIcon } from 'lucide-react';
 import { cx } from 'cva.config';
+import { Button } from '~/components/ui/button';
+import {
+    InputGroup,
+    InputGroupAddon,
+    InputGroupInput,
+} from '~/components/ui/input-group';
 
 type Props = PropsWithChildren<{
     /** Current ?q= value; rendered as the input's defaultValue. */
@@ -12,7 +18,7 @@ type Props = PropsWithChildren<{
     inputSize?: 'sm' | 'md';
     /** Omit for an icon-only input that submits on Enter. */
     submitLabel?: string;
-    /** Classes for the input + button join group. */
+    /** Classes for the input + button group. */
     groupClassName?: string;
     className?: string;
 }>;
@@ -32,32 +38,33 @@ export function SearchForm({
     children,
 }: Props) {
     const input = (
-        <label
-            className={cx(
-                'input flex grow items-center gap-2',
-                inputSize === 'sm' && 'input-sm',
-                submitLabel ? 'join-item' : 'w-full',
-            )}
-        >
-            <SearchIcon aria-hidden="true" className="h-4 w-4 opacity-60" />
-            <input
+        <InputGroup className="grow">
+            <InputGroupAddon>
+                <SearchIcon aria-hidden="true" />
+            </InputGroupAddon>
+            <InputGroupInput
                 type="search"
                 name="q"
+                size={inputSize === 'sm' ? 'sm' : 'default'}
                 placeholder={placeholder}
                 defaultValue={query}
                 aria-label={inputLabel}
             />
-        </label>
+        </InputGroup>
     );
 
     return (
         <Form method="GET" role="search" className={className}>
             {submitLabel ? (
-                <div className={cx('join', groupClassName)}>
+                <div className={cx('flex items-center gap-2', groupClassName)}>
                     {input}
-                    <button type="submit" className="btn join-item">
+                    <Button
+                        type="submit"
+                        variant="outline"
+                        size={inputSize === 'sm' ? 'sm' : 'default'}
+                    >
                         {submitLabel}
-                    </button>
+                    </Button>
                 </div>
             ) : (
                 input

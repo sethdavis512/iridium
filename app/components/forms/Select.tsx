@@ -1,37 +1,31 @@
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
-import type { VariantProps } from 'cva';
-import { cva, cx } from 'cva.config';
+import type { ComponentPropsWithoutRef, Ref } from 'react';
+import { cx } from 'cva.config';
 
-export const selectVariants = cva({
-    base: 'select',
-    variants: {
-        selectSize: {
-            sm: 'select-sm',
-            md: '',
-            lg: 'select-lg',
-        },
-    },
-    defaultVariants: {
-        selectSize: 'md',
-    },
-});
+/*
+ * Token-styled native <select>: keeps uncontrolled <Form> posts working
+ * without the items-driven COSS Select. Interactive pickers that warrant
+ * the richer listbox should use ~/components/ui/select directly.
+ */
+type Props = ComponentPropsWithoutRef<'select'> & {
+    selectSize?: 'sm' | 'md' | 'lg';
+    ref?: Ref<HTMLSelectElement>;
+};
 
-type Props = ComponentPropsWithoutRef<'select'> &
-    VariantProps<typeof selectVariants>;
+const SIZE_CLASSES = {
+    sm: 'h-7.5 sm:h-6.5 px-2',
+    md: 'h-8.5 sm:h-7.5 px-2.5',
+    lg: 'h-9.5 sm:h-8.5 px-3',
+} as const;
 
-export const Select = forwardRef<HTMLSelectElement, Props>(function Select(
-    { className, selectSize, children, ...rest },
-    ref,
-) {
+export function Select({ selectSize = 'md', className, ...rest }: Props) {
     return (
         <select
-            ref={ref}
-            className={cx(selectVariants({ selectSize, className }))}
+            className={cx(
+                'border-input bg-background text-foreground focus-visible:border-ring focus-visible:ring-ring/24 dark:bg-input/32 w-full rounded-lg border text-base shadow-xs/5 transition-shadow outline-none focus-visible:ring-[3px] disabled:opacity-64 sm:text-sm',
+                SIZE_CLASSES[selectSize],
+                className,
+            )}
             {...rest}
-        >
-            {children}
-        </select>
+        />
     );
-});
-
-Select.displayName = 'Select';
+}

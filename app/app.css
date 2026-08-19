@@ -125,6 +125,12 @@
             translate: 0 0;
         }
     }
+    --animate-skeleton: skeleton 2s -1s infinite linear;
+    @keyframes skeleton {
+        to {
+            background-position: -200% 0;
+        }
+    }
 }
 :root {
     --accent: --alpha(var(--color-black) / 4%);
