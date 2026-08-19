@@ -1,16 +1,26 @@
 import { test, expect } from './fixtures';
 
 test.describe('Theme switching', () => {
-    test('defaults to system (no data-theme attribute)', async ({ page }) => {
+    test('defaults to system (no dark class in light color scheme)', async ({
+        page,
+    }) => {
         await page.goto('/');
 
-        await expect(page.locator('html')).not.toHaveAttribute(
-            'data-theme',
-            /./,
-        );
+        await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
     });
 
-    test('selecting dark sets data-theme and persists across reload without FOUC', async ({
+    test('system preference applies dark before hydration', async ({
+        browser,
+    }) => {
+        const context = await browser.newContext({ colorScheme: 'dark' });
+        const page = await context.newPage();
+        await page.goto('/');
+
+        await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+        await context.close();
+    });
+
+    test('selecting dark sets the dark class and persists across reload without FOUC', async ({
         page,
     }) => {
         await page.goto('/');
@@ -18,33 +28,33 @@ test.describe('Theme switching', () => {
         await page.getByRole('button', { name: 'Change theme' }).click();
         await page.getByRole('button', { name: 'Dark' }).click();
 
-        await expect(page.locator('html')).toHaveAttribute(
-            'data-theme',
-            'night',
-        );
+        await expect(page.locator('html')).toHaveClass(/\bdark\b/);
 
-        // SSR must set the attribute in the initial HTML payload (no flash):
+        // SSR must emit the class in the initial HTML payload (no flash):
         // fetch the document directly instead of waiting for hydration.
         const response = await page.request.get('/');
-        expect(await response.text()).toContain('data-theme="night"');
+        expect(await response.text()).toMatch(/<html[^>]*class="[^"]*\bdark\b/);
 
         await page.reload();
-        await expect(page.locator('html')).toHaveAttribute(
-            'data-theme',
-            'night',
-        );
+        await expect(page.locator('html')).toHaveClass(/\bdark\b/);
     });
 
-    test('selecting light sets the light theme', async ({ page }) => {
+    test('selecting light removes the dark class', async ({ page }) => {
         await page.goto('/');
+
+        await page.getByRole('button', { name: 'Change theme' }).click();
+        await page.getByRole('button', { name: 'Dark' }).click();
+        await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+
+        // Blur the (transitional DaisyUI) dropdown so it closes before the
+        // toggle is clicked again; it stays open on focus otherwise.
+        await page.keyboard.press('Escape');
+        await page.locator('body').click({ position: { x: 5, y: 200 } });
 
         await page.getByRole('button', { name: 'Change theme' }).click();
         await page.getByRole('button', { name: 'Light' }).click();
 
-        await expect(page.locator('html')).toHaveAttribute(
-            'data-theme',
-            'emerald',
-        );
+        await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
     });
 
     test('rejects an invalid theme value', async ({ page }) => {
