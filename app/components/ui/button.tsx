@@ -72,7 +72,13 @@ export function Button({
             <>
                 {children}
                 {loading && (
+                    // Decorative: the button already exposes loading via
+                    // aria-disabled, and a role="status" here collides with
+                    // page-level status regions (toasts) in queries.
                     <Spinner
+                        aria-hidden="true"
+                        aria-label={undefined}
+                        role="presentation"
                         className="pointer-events-none absolute"
                         data-slot="button-loading-indicator"
                     />

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import {
     data,
     Form,
@@ -20,7 +20,16 @@ import { countUsers, listUsers, updateUserRole } from '~/models/user.server';
 import { Container } from '~/components/Container';
 import { EmptyState } from '~/components/EmptyState';
 import { FormattedDate } from '~/components/FormattedDate';
-import { Modal, ModalActions } from '~/components/Modal';
+import { Button } from '~/components/ui/button';
+import {
+    Dialog,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogPanel,
+    DialogPopup,
+    DialogTitle,
+} from '~/components/ui/dialog';
 import { PageHeader } from '~/components/PageHeader';
 import { Pagination } from '~/components/Pagination';
 import { SearchForm } from '~/components/SearchForm';
@@ -28,7 +37,7 @@ import { Field } from '~/components/forms/Field';
 import { FormAlert } from '~/components/forms/FormAlert';
 import { Input } from '~/components/forms/Input';
 import { Select } from '~/components/forms/Select';
-import { useDialog } from '~/hooks';
+import { useDialogState } from '~/hooks';
 import type { Route } from './+types/admin';
 
 export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
@@ -247,19 +256,17 @@ export default function AdminRoute({
         totalCount,
     } = loaderData;
     const roleFetcher = useFetcher();
-    const banDialogRef = useRef<HTMLDialogElement>(null);
-    const banDialog = useDialog<{ id: string; email: string }>(banDialogRef);
+    const banDialog = useDialogState<{ id: string; email: string }>();
 
     const formError = actionData?.formError ?? null;
     const banTarget = banDialog.target;
+    const { openDialog: openBanDialog } = banDialog;
 
     // Reopen the ban dialog when the server rejected the ban form. Only
     // while a target is set: other action errors have no row context.
     useEffect(() => {
-        if (formError && banTarget) {
-            banDialogRef.current?.showModal();
-        }
-    }, [formError, banTarget]);
+        if (formError && banTarget) openBanDialog();
+    }, [formError, banTarget, openBanDialog]);
 
     return (
         <>
@@ -474,7 +481,7 @@ export default function AdminRoute({
                                                                 type="button"
                                                                 className="btn btn-ghost btn-xs text-error pointer-coarse:btn-sm"
                                                                 onClick={() =>
-                                                                    banDialog.open(
+                                                                    banDialog.openDialog(
                                                                         user,
                                                                     )
                                                                 }
@@ -500,52 +507,59 @@ export default function AdminRoute({
                 />
             </Container>
 
-            <Modal
-                ref={banDialogRef}
-                title={`Ban ${banTarget?.email ?? ''}`}
-                onClose={banDialog.clearTarget}
-            >
-                <p className="py-2">
-                    Banning revokes the user&apos;s sessions and blocks sign-in
-                    until they are unbanned.
-                </p>
-                <Form
-                    method="POST"
-                    className="space-y-4"
-                    onSubmit={banDialog.close}
-                >
-                    <input type="hidden" name="intent" value="ban-user" />
-                    <input
-                        type="hidden"
-                        name="userId"
-                        value={banTarget?.id ?? ''}
-                    />
-                    <Field label="Reason" name="banReason">
-                        {(controlProps) => (
-                            <Input
-                                type="text"
-                                name="banReason"
-                                placeholder="Why is this user being banned?"
-                                required
-                                className="w-full"
-                                {...controlProps}
+            <Dialog open={banDialog.open} onOpenChange={banDialog.onOpenChange}>
+                <DialogPopup>
+                    <DialogHeader>
+                        <DialogTitle>Ban {banTarget?.email ?? ''}</DialogTitle>
+                        <DialogDescription>
+                            Banning revokes the user&apos;s sessions and blocks
+                            sign-in until they are unbanned.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <Form
+                        method="POST"
+                        className="contents"
+                        onSubmit={banDialog.close}
+                    >
+                        <DialogPanel className="space-y-4">
+                            <input
+                                type="hidden"
+                                name="intent"
+                                value="ban-user"
                             />
-                        )}
-                    </Field>
-                    <ModalActions>
-                        <button
-                            type="button"
-                            className="btn"
-                            onClick={banDialog.close}
-                        >
-                            Cancel
-                        </button>
-                        <button type="submit" className="btn btn-error">
-                            Ban user
-                        </button>
-                    </ModalActions>
-                </Form>
-            </Modal>
+                            <input
+                                type="hidden"
+                                name="userId"
+                                value={banTarget?.id ?? ''}
+                            />
+                            <Field label="Reason" name="banReason">
+                                {(controlProps) => (
+                                    <Input
+                                        type="text"
+                                        name="banReason"
+                                        placeholder="Why is this user being banned?"
+                                        required
+                                        className="w-full"
+                                        {...controlProps}
+                                    />
+                                )}
+                            </Field>
+                        </DialogPanel>
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={banDialog.close}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit" variant="destructive">
+                                Ban user
+                            </Button>
+                        </DialogFooter>
+                    </Form>
+                </DialogPopup>
+            </Dialog>
         </>
     );
 }
