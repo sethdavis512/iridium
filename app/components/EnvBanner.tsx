@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { TriangleAlertIcon, XIcon } from 'lucide-react';
+import { Badge } from '~/components/ui/badge';
+import { Button } from '~/components/ui/button';
 import type { EnvWarning } from '~/lib/env-status';
 
 /**
@@ -17,7 +19,7 @@ export function EnvBanner({ warnings }: { warnings: EnvWarning[] }) {
     return (
         <div
             role="status"
-            className="bg-warning text-warning-content px-4 py-2 text-sm"
+            className="bg-warning/16 text-foreground border-warning/32 border-b px-4 py-2 text-sm"
         >
             <div className="mx-auto flex max-w-6xl items-start gap-3">
                 <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" />
@@ -32,17 +34,18 @@ export function EnvBanner({ warnings }: { warnings: EnvWarning[] }) {
                                 key={w.key}
                                 className="flex items-center gap-1.5"
                             >
-                                <span
-                                    className={
+                                <Badge
+                                    variant={
                                         w.severity === 'error'
-                                            ? 'badge badge-error badge-xs'
-                                            : 'badge badge-xs'
+                                            ? 'error'
+                                            : 'secondary'
                                     }
+                                    className="text-xs"
                                 >
                                     {w.severity === 'error'
                                         ? 'required'
                                         : 'optional'}
-                                </span>
+                                </Badge>
                                 <code className="font-mono font-semibold">
                                     {w.key}
                                 </code>
@@ -51,14 +54,14 @@ export function EnvBanner({ warnings }: { warnings: EnvWarning[] }) {
                         ))}
                     </ul>
                 </div>
-                <button
-                    type="button"
+                <Button
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => setDismissed(true)}
                     aria-label="Dismiss environment warning"
-                    className="btn btn-ghost btn-xs btn-square focus-visible:ring-warning-content/50 focus-visible:ring-2"
                 >
                     <XIcon className="size-4" />
-                </button>
+                </Button>
             </div>
         </div>
     );

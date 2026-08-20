@@ -26,7 +26,7 @@ test.describe('Theme switching', () => {
         await page.goto('/');
 
         await page.getByRole('button', { name: 'Change theme' }).click();
-        await page.getByRole('button', { name: 'Dark' }).click();
+        await page.getByRole('menuitem', { name: 'Dark' }).click();
 
         await expect(page.locator('html')).toHaveClass(/\bdark\b/);
 
@@ -43,16 +43,11 @@ test.describe('Theme switching', () => {
         await page.goto('/');
 
         await page.getByRole('button', { name: 'Change theme' }).click();
-        await page.getByRole('button', { name: 'Dark' }).click();
+        await page.getByRole('menuitem', { name: 'Dark' }).click();
         await expect(page.locator('html')).toHaveClass(/\bdark\b/);
 
-        // Blur the (transitional DaisyUI) dropdown so it closes before the
-        // toggle is clicked again; it stays open on focus otherwise.
-        await page.keyboard.press('Escape');
-        await page.locator('body').click({ position: { x: 5, y: 200 } });
-
         await page.getByRole('button', { name: 'Change theme' }).click();
-        await page.getByRole('button', { name: 'Light' }).click();
+        await page.getByRole('menuitem', { name: 'Light' }).click();
 
         await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
     });
