@@ -10,6 +10,7 @@ import { authMiddleware } from '~/middleware/auth';
 import { getUserById, updateUserProfile } from '~/models/user.server';
 import { Card } from '~/components/Card';
 import { Container } from '~/components/Container';
+import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import {
     Dialog,
@@ -234,16 +235,16 @@ export default function SettingsRoute({
                 <PageHeader title="Settings" />
 
                 <Card title="Profile" bordered>
-                    <p className="text-base-content/60 text-sm">
+                    <p className="text-muted-foreground text-sm">
                         Signed in as {user.email}
                         {user.emailVerified ? (
-                            <span className="badge badge-success badge-sm ml-2">
+                            <Badge variant="success" className="ml-2">
                                 Verified
-                            </span>
+                            </Badge>
                         ) : (
-                            <span className="badge badge-ghost badge-sm ml-2">
+                            <Badge variant="secondary" className="ml-2">
                                 Unverified
-                            </span>
+                            </Badge>
                         )}
                     </p>
                     <Form method="POST" className="space-y-4">
@@ -289,15 +290,12 @@ export default function SettingsRoute({
                                 />
                             )}
                         </Field>
-                        <button
-                            className="btn btn-accent"
+                        <Button
                             type="submit"
-                            disabled={pendingIntent === 'update-profile'}
+                            loading={pendingIntent === 'update-profile'}
                         >
-                            {pendingIntent === 'update-profile'
-                                ? 'Saving…'
-                                : 'Save profile'}
-                        </button>
+                            Save profile
+                        </Button>
                     </Form>
                 </Card>
 
@@ -352,31 +350,33 @@ export default function SettingsRoute({
                                 />
                             )}
                         </Field>
-                        <button
-                            className="btn"
+                        <Button
                             type="submit"
-                            disabled={pendingIntent === 'change-password'}
+                            variant="outline"
+                            loading={pendingIntent === 'change-password'}
                         >
-                            {pendingIntent === 'change-password'
-                                ? 'Changing…'
-                                : 'Change password'}
-                        </button>
+                            Change password
+                        </Button>
                     </Form>
                 </Card>
 
-                <Card title="Danger zone" bordered className="border-error">
+                <Card
+                    title="Danger zone"
+                    bordered
+                    className="border-destructive/48"
+                >
                     <p>
                         Deleting your account removes your profile, threads,
                         messages, and notes. There is no way back.
                     </p>
-                    <div className="card-actions">
-                        <button
+                    <div className="flex">
+                        <Button
                             type="button"
-                            className="btn btn-error btn-outline"
+                            variant="destructive-outline"
                             onClick={() => deleteDialog.openDialog()}
                         >
                             Delete account
-                        </button>
+                        </Button>
                     </div>
                 </Card>
             </Container>
