@@ -39,6 +39,24 @@ test.describe('Theme switching', () => {
         await expect(page.locator('html')).toHaveClass(/\bdark\b/);
     });
 
+    test('system dark preference then selecting light clears the dark class', async ({
+        browser,
+    }) => {
+        // Regression: the pre-paint script adds .dark imperatively for
+        // "system", which React's vDOM never sees; switching to Light must
+        // still remove it (root.tsx reconciliation effect).
+        const context = await browser.newContext({ colorScheme: 'dark' });
+        const page = await context.newPage();
+        await page.goto('/');
+        await expect(page.locator('html')).toHaveClass(/\bdark\b/);
+
+        await page.getByRole('button', { name: 'Change theme' }).click();
+        await page.getByRole('menuitem', { name: 'Light' }).click();
+
+        await expect(page.locator('html')).not.toHaveClass(/\bdark\b/);
+        await context.close();
+    });
+
     test('selecting light removes the dark class', async ({ page }) => {
         await page.goto('/');
 

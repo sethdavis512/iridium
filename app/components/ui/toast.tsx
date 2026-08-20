@@ -7,6 +7,7 @@ import {
     InfoIcon,
     LoaderCircleIcon,
     TriangleAlertIcon,
+    XIcon,
 } from 'lucide-react';
 import type React from 'react';
 import { cn } from '~/lib/utils';
@@ -174,6 +175,27 @@ function Toasts({
                                         {toast.actionProps.children}
                                     </Toast.Action>
                                 )}
+                                {/* LOCAL PATCH: explicit dismiss affordance
+                                    (upstream relies on swipe/timeout only);
+                                    keeps the app's "Dismiss notification"
+                                    a11y contract. Re-apply after registry
+                                    re-installs. */}
+                                <Toast.Close
+                                    aria-label="Dismiss notification"
+                                    className={cn(
+                                        buttonVariants({
+                                            size: 'icon-xs',
+                                            variant: 'ghost',
+                                        }),
+                                        '-me-1.5 shrink-0 pointer-coarse:size-8',
+                                    )}
+                                    data-slot="toast-close"
+                                >
+                                    <XIcon
+                                        aria-hidden="true"
+                                        className="size-4"
+                                    />
+                                </Toast.Close>
                             </Toast.Content>
                         </Toast.Root>
                     );

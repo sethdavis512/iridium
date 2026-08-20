@@ -14,6 +14,7 @@ import {
 import { useDialogState, usePendingIntent } from '~/hooks';
 import { authMiddleware } from '~/middleware/auth';
 import { rateLimit } from '~/lib/rate-limit.server';
+import { redirectWithToast } from '~/lib/toast.server';
 import { navLinkClassName } from '~/shared';
 import type { Route } from './+types/chat';
 import {
@@ -26,14 +27,7 @@ import {
 } from '~/models/thread.server';
 import { modelIdSchema } from '~/lib/ai-models';
 import { requireUserFromContext } from '~/context';
-import {
-    data,
-    Form,
-    NavLink,
-    Outlet,
-    redirect,
-    useNavigation,
-} from 'react-router';
+import { data, Form, NavLink, Outlet, useNavigation } from 'react-router';
 import {
     LoaderCircleIcon,
     MessagesSquareIcon,
@@ -78,7 +72,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
         try {
             const thread = await createThread(user.id);
-            return redirect(thread.id);
+            return redirectWithToast(thread.id, {
+                type: 'success',
+                message: 'Thread created.',
+            });
         } catch {
             throw new Response('Failed to create thread', { status: 500 });
         }
@@ -131,7 +128,10 @@ export async function action({ request, context }: Route.ActionArgs) {
 
         await deleteThread(threadId);
 
-        return redirect('/chat');
+        return redirectWithToast('/chat', {
+            type: 'success',
+            message: 'Thread deleted.',
+        });
     }
 
     throw new Response('Unknown intent', { status: 400 });
