@@ -184,24 +184,10 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
                                 name="intent"
                                 value="new-thread"
                             />
-                            <button
-                                className="btn btn-accent"
-                                type="submit"
-                                disabled={isCreating}
-                            >
-                                {isCreating ? (
-                                    <LoaderCircleIcon
-                                        aria-hidden="true"
-                                        className="mr-2 h-6 w-6 animate-spin"
-                                    />
-                                ) : (
-                                    <PlusCircleIcon
-                                        aria-hidden="true"
-                                        className="mr-2 h-6 w-6"
-                                    />
-                                )}
+                            <Button type="submit" loading={isCreating}>
+                                <PlusCircleIcon aria-hidden="true" />
                                 New Thread
-                            </button>
+                            </Button>
                         </Form>
                     }
                 />
@@ -231,10 +217,12 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
                                                     {getThreadLabel(thread)}
                                                 </span>
                                             </NavLink>
-                                            <button
+                                            <Button
                                                 type="button"
+                                                variant="ghost"
+                                                size="icon-xs"
                                                 aria-label="Delete thread"
-                                                className="btn btn-ghost btn-xs text-error pointer-coarse:btn-sm absolute top-1/2 right-2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
+                                                className="text-destructive absolute top-1/2 right-2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100"
                                                 disabled={
                                                     deletingThreadId ===
                                                     thread.id
@@ -247,11 +235,11 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
                                             >
                                                 {deletingThreadId ===
                                                 thread.id ? (
-                                                    <LoaderCircleIcon className="h-4 w-4 animate-spin" />
+                                                    <LoaderCircleIcon className="size-4 animate-spin" />
                                                 ) : (
-                                                    <Trash2Icon className="h-4 w-4" />
+                                                    <Trash2Icon className="size-4" />
                                                 )}
-                                            </button>
+                                            </Button>
                                         </li>
                                     ))
                                 ) : loaderData.query ? (

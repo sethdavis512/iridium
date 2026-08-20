@@ -33,7 +33,7 @@ export function Markdown({ children }: { children: string }) {
 
                     return isSafe ? (
                         <a
-                            className="link"
+                            className="underline underline-offset-4"
                             href={href}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -45,7 +45,7 @@ export function Markdown({ children }: { children: string }) {
                         <span>{children}</span>
                     );
                 },
-                hr: () => <hr className="border-base-content/20 my-4" />,
+                hr: () => <hr className="border-border my-4" />,
             }}
         >
             {children}

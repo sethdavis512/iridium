@@ -3,11 +3,11 @@ import type { VariantProps } from 'cva';
 import { cva, cx } from 'cva.config';
 
 export const chatBubbleContainerVariants = cva({
-    base: 'chat',
+    base: 'flex w-full',
     variants: {
         placement: {
-            start: 'chat-start',
-            end: 'chat-end',
+            start: 'justify-start',
+            end: 'justify-end',
         },
     },
     defaultVariants: {
@@ -16,13 +16,13 @@ export const chatBubbleContainerVariants = cva({
 });
 
 export const chatBubbleVariants = cva({
-    base: 'chat-bubble',
+    base: 'max-w-[85%] rounded-xl px-4 py-2 text-sm sm:max-w-[75%]',
     variants: {
         variant: {
-            primary: 'chat-bubble-primary',
-            secondary: 'chat-bubble-secondary',
-            accent: 'chat-bubble-accent',
-            default: '',
+            primary: 'bg-primary text-primary-foreground rounded-br-sm',
+            secondary: 'bg-secondary text-secondary-foreground rounded-br-sm',
+            accent: 'bg-accent text-accent-foreground rounded-br-sm',
+            default: 'bg-muted text-foreground rounded-bl-sm',
         },
     },
     defaultVariants: {
@@ -47,13 +47,7 @@ export function ChatBubble({
             aria-label={senderLabel}
             className={cx(chatBubbleContainerVariants({ placement }))}
         >
-            <div
-                className={cx(
-                    chatBubbleVariants({
-                        variant,
-                    }),
-                )}
-            >
+            <div className={cx(chatBubbleVariants({ variant }))}>
                 {children}
             </div>
         </div>
