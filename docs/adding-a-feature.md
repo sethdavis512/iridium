@@ -115,7 +115,7 @@ The pieces:
 - Validation errors return `400` with `fieldErrors`; the component shows them
   through the `Field` component's `error` prop
 - `redirectWithToast` (`~/lib/toast.server`) flashes a message that
-  `root.tsx` renders as a DaisyUI toast on the next page
+  `root.tsx` renders as a flash toast (COSS Alert) on the next page
 - Ownership checks load the row first (`getNoteById`) and compare `userId`
   before mutating — never trust an id from the client
 
@@ -140,7 +140,7 @@ Follow the patterns in `app/routes/notes.tsx`:
 - Form fields built from `~/components/forms/` (`Field`, `Input`,
   `Textarea`, `FormAlert`) — `Field` wires `aria-describedby` to the error
 - `useNavigation()` for pending UI; disable the submitting form's controls
-- `<dialog>` elements (DaisyUI `modal`) for create/edit/delete confirms
+- COSS `Dialog` (forms) / `AlertDialog` (confirms) driven by `useDialogState` (`~/hooks`) for create/edit/delete flows
 - `EmptyState` for zero-data and zero-results views
 - `Pagination` under the list; it preserves other search params
 - Inline `<title>` and `<meta>` in JSX (no `meta` export)
