@@ -19,15 +19,15 @@ A full-stack starter kit for shipping AI-powered products. Clone the repo, confi
 
 ## Tech Stack
 
-| Layer      | Technology                                  |
-| ---------- | ------------------------------------------- |
-| Framework  | React Router v7 (SSR, config-based routing) |
-| UI         | React 19, Tailwind CSS v4, DaisyUI v5       |
-| Database   | PostgreSQL via Prisma ORM                   |
-| Auth       | Better Auth                                 |
-| AI         | VoltAgent, Vercel AI SDK, Anthropic Claude  |
-| Validation | Zod, React Hook Form                        |
-| Runtime    | Bun (dev), Node 20 Alpine (production)      |
+| Layer      | Technology                                   |
+| ---------- | -------------------------------------------- |
+| Framework  | React Router v7 (SSR, config-based routing)  |
+| UI         | React 19, Tailwind CSS v4, COSS UI (Base UI) |
+| Database   | PostgreSQL via Prisma ORM                    |
+| Auth       | Better Auth                                  |
+| AI         | VoltAgent, Vercel AI SDK, Anthropic Claude   |
+| Validation | Zod, React Hook Form                         |
+| Runtime    | Bun (dev), Node 20 Alpine (production)       |
 
 ## Getting Started
 

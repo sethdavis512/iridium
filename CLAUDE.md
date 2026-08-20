@@ -73,7 +73,7 @@ Environment variables are validated at startup by `app/lib/env.server.ts` -- mis
 - **Database**: PostgreSQL via Prisma ORM (schema at `prisma/schema.prisma`, generated client at `app/generated/prisma/`)
 - **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`) + VoltAgent. Per-thread model selection against the allowlist in `app/lib/ai-models.ts` (Haiku 4.5 default)
 - **Email**: Resend + react-email behind `app/lib/email.server.ts` (console fallback without `RESEND_API_KEY`)
-- **Styling**: Tailwind CSS v4 + DaisyUI v5, CVA with tailwind-merge
+- **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives, copy-owned in `app/components/ui/` via the shadcn CLI and the `@coss` registry). Installed ui/ files use `cn()` from `app/lib/utils.ts`; app-authored components use CVA from `cva.config`
 - **Runtime**: Bun (dev), Node 20 Alpine (Docker/prod)
 - **Validation**: Zod + React Hook Form
 - **Icons**: lucide-react
@@ -166,11 +166,12 @@ Auth is explicit per test: the `authedPage` fixture in `tests/fixtures.ts` signs
 
 ### Components
 
-- Use CVA from `cva.config` (not the raw `cva` package) — it integrates `tailwind-merge`
+- Use CVA from `cva.config` (not the raw `cva` package) — it integrates `tailwind-merge` — for app-authored components; copy-owned files in `app/components/ui/` keep their upstream `cn()`/`class-variance-authority` conventions
 - Export both variant definitions and a named function component
 - Type props with `PropsWithChildren<Props>`
-- Use DaisyUI v5 class names (`card`, `btn`, `chat-bubble`, `drawer`, `badge`, etc.)
-- No hover-only interactive controls: anything revealed by `group-hover:`/`hover:` also needs `focus-visible:` and `pointer-coarse:` fallbacks (touchscreens never hover). Use the `pointer-coarse:` variant for touch-only sizing too (e.g. `btn-xs pointer-coarse:btn-sm`)
+- Use COSS UI primitives from `~/components/ui/` (Button, Dialog, AlertDialog, Menu, Sheet, Badge, Alert, Table, etc.). Polymorphism is `render={<Link to=... />}`, never `asChild`; menu items take `onClick`; Base UI sets `data-disabled`, so style disabled states with `data-[disabled]:`
+- Semantic tokens only (`bg-background`, `bg-card`, `bg-muted`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-destructive`, `bg-info/success/warning` + `-foreground`) — never raw palette classes or DaisyUI names. Tokens live in `app/app.css` on `:root` and `.dark`
+- No hover-only interactive controls: anything revealed by `group-hover:`/`hover:` also needs `focus-visible:` and `pointer-coarse:` fallbacks (touchscreens never hover). COSS Buttons ship a built-in `pointer-coarse` 44px hit area; for custom controls use `pointer-coarse:` sizing utilities (e.g. `size-7 pointer-coarse:size-11`)
 
 ### Routes
 
@@ -183,11 +184,11 @@ Auth is explicit per test: the `authedPage` fixture in `tests/fixtures.ts` signs
 
 - `app/context.ts` — `userContext` via React Router's `createContext<SessionUser | null>`
 - `app/shared.ts` — shared className helpers (`listItemClassName`, `navLinkClassName`)
-- `app/hooks.ts` — shared hooks: `useDialog` (imperative `<dialog>` open/close + pending target + reopen-on-error; takes the ref from the call site — returning a ref inside the hook's object trips the react-hooks/refs compiler rule), `usePendingIntent`, `useIsSubmitting`
+- `app/hooks.ts` — shared hooks: `useDialogState` (controlled Base UI Dialog/AlertDialog state: `open`/`onOpenChange`/`openDialog(target?)`/`close`/`target`, with derived reopen-on-error — no setState-in-effect), `usePendingIntent`, `useIsSubmitting`
 
 ### Shared UI building blocks
 
-Reuse these instead of re-rolling the markup: `Modal`/`ModalActions` (native dialog chrome), `SearchForm` (GET ?q= form, filters as children), `PageHeader` (h1 + action/subtitle slots), `Spinner`, `FormAlert` (error alert, accepts action-button children; also used by ErrorBoundaries), `ToolPartShell` + `isToolLoading`/`isToolDone` (chat tool-call chrome), `FormattedDate`, `EmptyState`, `Card`, `Pagination`.
+Reuse these instead of re-rolling the markup: the COSS primitives in `app/components/ui/` (Dialog/AlertDialog with `useDialogState`, Button, Badge, Alert, Menu, Sheet, Table), plus the app wrappers: `SearchForm` (GET ?q= form, filters as children), `PageHeader` (h1 + action/subtitle slots), `StatTile` (dashboard stats, `data-slot="stat"`), `Spinner`, `FormAlert` (error alert, accepts action-button children; also used by ErrorBoundaries), `ToolPartShell` + `isToolLoading`/`isToolDone` (chat tool-call chrome), `FormattedDate`, `EmptyState`, `Card`, `Pagination`, `ChatBubble`. Dialog composition: `DialogHeader` outside the `<Form className="contents">`, form wraps `DialogPanel` + `DialogFooter`; Cancel is `variant="ghost"`.
 
 ### Layout
 
@@ -197,7 +198,7 @@ Reuse these instead of re-rolling the markup: `Modal`/`ModalActions` (native dia
 - `layouts/marketing.tsx` — growable document (`min-h-dvh` flex column, footer at content's end). Wraps `/` (landing).
 - `layouts/auth.tsx` — full-bleed, no header/footer. Wraps `/login`, `/forgot-password`, `/reset-password`.
 
-Shared chrome is extracted into `SiteHeader` and `SiteFooter` (`app/components/`). `SiteHeader` reads auth state via `useRouteLoaderData<typeof rootLoader>('root')` rather than props, and owns the skip link, the labeled Site/Main navs, the theme toggle, and the mobile nav overlay (hamburger with `aria-expanded`). Root also renders the flash `Toaster` and sets `data-theme` on `<html>` from the theme cookie.
+Shared chrome is extracted into `SiteHeader` and `SiteFooter` (`app/components/`). `SiteHeader` reads auth state via `useRouteLoaderData<typeof rootLoader>('root')` rather than props, and owns the skip link, the labeled Site/Main navs, the theme toggle (Base UI Menu), and the mobile nav Sheet. Root renders the flash `Toaster` and drives dark mode by putting `class="dark"` on `<html>` from the theme cookie; `theme === 'system'` resolves via a pre-paint inline script reading `prefers-color-scheme` (with `suppressHydrationWarning` on `<html>`). Gotcha: an open Sheet/Dialog makes the rest of the page inert, so tests must assert on the popup, not the trigger.
 
 **Definite height matters:** app/auth shells use `h-dvh` (a fixed height) so the `min-h-0` + `overflow-y-auto` chain can scroll children internally. `min-h-screen` is a minimum, not a definite height, and silently breaks internal scrolling once content exceeds the viewport.
 
