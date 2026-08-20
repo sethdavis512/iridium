@@ -16,16 +16,22 @@
             "sourceType": "github",
             "computedHash": "a24359053259e55a75972cab4bf0b0e37e1393bac5f3756ec2e3a7b4b3778d2a"
         },
+        "coss": {
+            "source": "cosscom/coss",
+            "sourceType": "github",
+            "skillPath": "apps/ui/skills/coss/SKILL.md",
+            "computedHash": "064a11fe3bc909430830e0ab1ee9dd3a363c48b4b7df909c6b364e5e76ef2363"
+        },
+        "coss-particles": {
+            "source": "cosscom/coss",
+            "sourceType": "github",
+            "skillPath": "apps/ui/skills/coss-particles/SKILL.md",
+            "computedHash": "a3448e835713342e4625d1f97a38265fea03cf840723ad23eeef0b53dcc21609"
+        },
         "create-voltagent": {
             "source": "VoltAgent/skills",
             "sourceType": "github",
             "computedHash": "fd2fc9877afada74de4387c95d74ae7c0ee90723d8f78c2e16730272b5c6a29c"
-        },
-        "daisyui": {
-            "source": "saadeghi/daisyui",
-            "sourceType": "github",
-            "skillPath": "skills/daisyui/SKILL.md",
-            "computedHash": "a98221a5c8f50bfb0dbaf4d0e52982598981bc5e472806814e118ee7df2a9712"
         },
         "database": {
             "source": "railwayapp/railway-skills",

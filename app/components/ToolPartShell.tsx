@@ -23,7 +23,7 @@ type Props = PropsWithChildren<{
  */
 export function ToolPartShell({ icon: Icon, label, state, children }: Props) {
     return (
-        <div className="rounded-box border-base-300 bg-base-200 mt-2 border p-3 text-sm">
+        <div className="border-border bg-muted mt-2 rounded-lg border p-3 text-sm">
             <div className="flex items-center gap-2">
                 {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
                 <span className="font-medium">{label}</span>
