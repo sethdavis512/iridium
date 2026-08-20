@@ -4,7 +4,7 @@ import { auth } from '~/lib/auth.server';
 import { redirectWithToast } from '~/lib/toast.server';
 import { requireAnonymous } from '~/models/session.server';
 import { APP_NAME } from '~/config';
-import { Spinner } from '~/components/Spinner';
+import { Button } from '~/components/ui/button';
 import { Field } from '~/components/forms/Field';
 import { FormAlert } from '~/components/forms/FormAlert';
 import { Input } from '~/components/forms/Input';
@@ -89,9 +89,9 @@ export default function ResetPasswordRoute({
                 name="description"
                 content={`Choose a new password for your ${APP_NAME} account.`}
             />
-            <div className="bg-base-300 flex h-full items-center justify-center p-4">
-                <div className="card bg-base-100 w-full max-w-md shadow-lg">
-                    <div className="card-body">
+            <div className="bg-muted flex h-full items-center justify-center p-4">
+                <div className="bg-card border-border w-full max-w-md rounded-xl border shadow-lg">
+                    <div className="flex flex-col gap-3 p-6">
                         <h1 className="mb-2 text-2xl font-bold">
                             Choose a new password
                         </h1>
@@ -139,13 +139,9 @@ export default function ResetPasswordRoute({
                                     />
                                 )}
                             </Field>
-                            <button
-                                className="btn btn-accent"
-                                type="submit"
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? <Spinner /> : 'Reset password'}
-                            </button>
+                            <Button type="submit" loading={isSubmitting}>
+                                Reset password
+                            </Button>
                         </Form>
                     </div>
                 </div>
