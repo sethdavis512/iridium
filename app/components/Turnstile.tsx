@@ -5,10 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { authClient } from '~/lib/auth.client';
 import type { SocialProvider } from '~/lib/auth.server';
-import { Spinner } from '~/components/Spinner';
 import { Field } from '~/components/forms/Field';
 import { FormAlert } from '~/components/forms/FormAlert';
 import { Input } from '~/components/forms/Input';
+import { Button } from '~/components/ui/button';
+import { Separator } from '~/components/ui/separator';
 
 const formSchema = z.object({
     name: z.string().optional(),
@@ -156,33 +157,42 @@ export function Turnstile({ socialProviders = [] }: Props) {
                 <>
                     <div className="space-y-2">
                         {socialProviders.map((provider) => (
-                            <button
+                            <Button
                                 key={provider}
                                 type="button"
-                                className="btn btn-outline w-full"
+                                variant="outline"
+                                className="w-full"
+                                loading={pendingProvider === provider}
                                 disabled={
                                     isSubmitting || pendingProvider !== null
                                 }
                                 onClick={() => handleSocialSignIn(provider)}
                             >
-                                {pendingProvider === provider ? (
-                                    <Spinner />
-                                ) : provider === 'github' ? (
+                                {provider === 'github' ? (
                                     <GitHubMark />
                                 ) : (
                                     <GoogleMark />
                                 )}
                                 Continue with {PROVIDER_LABELS[provider]}
-                            </button>
+                            </Button>
                         ))}
                     </div>
-                    <div className="divider">or</div>
+                    <div className="my-4 flex items-center gap-3">
+                        <Separator className="flex-1" />
+                        <span className="text-muted-foreground text-xs">
+                            or
+                        </span>
+                        <Separator className="flex-1" />
+                    </div>
                 </>
             )}
             <div>
-                <div className="join mb-4">
+                {/* Native radios (tests .check() them) styled as a
+                    segmented control; the visible text comes from the
+                    aria-label via after:content. */}
+                <div className="border-input bg-muted mb-4 inline-flex gap-0.5 rounded-lg border p-0.5">
                     <input
-                        className="join-item btn"
+                        className="text-muted-foreground checked:bg-background checked:text-foreground focus-visible:ring-ring flex h-7 cursor-pointer appearance-none items-center rounded-md px-4 text-sm outline-none after:content-[attr(aria-label)] checked:font-medium checked:shadow-sm focus-visible:ring-2 disabled:opacity-64"
                         type="radio"
                         name="loginOptions"
                         aria-label="Login"
@@ -191,7 +201,7 @@ export function Turnstile({ socialProviders = [] }: Props) {
                         defaultChecked
                     />
                     <input
-                        className="join-item btn"
+                        className="text-muted-foreground checked:bg-background checked:text-foreground focus-visible:ring-ring flex h-7 cursor-pointer appearance-none items-center rounded-md px-4 text-sm outline-none after:content-[attr(aria-label)] checked:font-medium checked:shadow-sm focus-visible:ring-2 disabled:opacity-64"
                         type="radio"
                         name="loginOptions"
                         aria-label="Register"
@@ -248,23 +258,13 @@ export function Turnstile({ socialProviders = [] }: Props) {
                         )}
                     </Field>
                     <div className="flex items-center justify-between">
-                        <button
-                            className="btn btn-accent"
-                            type="submit"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <Spinner />
-                            ) : isSignIn ? (
-                                'Login'
-                            ) : (
-                                'Register'
-                            )}
-                        </button>
+                        <Button type="submit" loading={isSubmitting}>
+                            {isSignIn ? 'Login' : 'Register'}
+                        </Button>
                         {isSignIn && (
                             <Link
                                 to="/forgot-password"
-                                className="link text-sm"
+                                className="text-sm underline underline-offset-4"
                             >
                                 Forgot password?
                             </Link>

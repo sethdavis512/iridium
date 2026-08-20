@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { auth } from '~/lib/auth.server';
 import { log } from '~/lib/logger.server';
 import { requireAnonymous } from '~/models/session.server';
-import { Spinner } from '~/components/Spinner';
+import { Button } from '~/components/ui/button';
 import { Field } from '~/components/forms/Field';
 import { Input } from '~/components/forms/Input';
 import { useIsSubmitting } from '~/hooks';
@@ -58,9 +58,9 @@ export default function ForgotPasswordRoute({
                 name="description"
                 content="Request a password reset link for your Iridium account."
             />
-            <div className="bg-base-300 flex h-full items-center justify-center p-4">
-                <div className="card bg-base-100 w-full max-w-md shadow-lg">
-                    <div className="card-body">
+            <div className="bg-muted flex h-full items-center justify-center p-4">
+                <div className="bg-card border-border w-full max-w-md rounded-xl border shadow-lg">
+                    <div className="flex flex-col gap-3 p-6">
                         {actionData?.status === 'sent' ? (
                             <div className="flex flex-col items-center gap-4 py-4 text-center">
                                 <MailCheckIcon
@@ -74,7 +74,10 @@ export default function ForgotPasswordRoute({
                                     If an account exists for that address, a
                                     password reset link is on its way.
                                 </p>
-                                <Link to="/login" className="link">
+                                <Link
+                                    to="/login"
+                                    className="underline underline-offset-4"
+                                >
                                     Back to login
                                 </Link>
                             </div>
@@ -105,19 +108,17 @@ export default function ForgotPasswordRoute({
                                             />
                                         )}
                                     </Field>
-                                    <button
-                                        className="btn btn-accent"
+                                    <Button
                                         type="submit"
-                                        disabled={isSubmitting}
+                                        loading={isSubmitting}
                                     >
-                                        {isSubmitting ? (
-                                            <Spinner />
-                                        ) : (
-                                            'Send reset link'
-                                        )}
-                                    </button>
+                                        Send reset link
+                                    </Button>
                                 </Form>
-                                <Link to="/login" className="link mt-2">
+                                <Link
+                                    to="/login"
+                                    className="mt-2 underline underline-offset-4"
+                                >
                                     Back to login
                                 </Link>
                             </>

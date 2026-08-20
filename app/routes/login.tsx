@@ -22,8 +22,8 @@ export default function LoginRoute({ loaderData }: Route.ComponentProps) {
                 description="Login or sign up to access your Iridium account."
             />
             <div className="grid h-full grid-cols-2">
-                <div className="bg-base-300 flex flex-col items-center justify-center gap-6 p-8">
-                    <div className="bg-base-100 min-w-[500px] shadow-lg">
+                <div className="bg-muted flex flex-col items-center justify-center gap-6 p-8">
+                    <div className="bg-card border-border min-w-[500px] rounded-xl border shadow-lg">
                         <Turnstile
                             socialProviders={loaderData.socialProviders}
                         />
