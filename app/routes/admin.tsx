@@ -19,6 +19,7 @@ import { countUsers, listUsers, updateUserRole } from '~/models/user.server';
 import { Container } from '~/components/Container';
 import { EmptyState } from '~/components/EmptyState';
 import { FormattedDate } from '~/components/FormattedDate';
+import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import {
     Dialog,
@@ -29,6 +30,14 @@ import {
     DialogPopup,
     DialogTitle,
 } from '~/components/ui/dialog';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '~/components/ui/table';
 import { PageHeader } from '~/components/PageHeader';
 import { Pagination } from '~/components/Pagination';
 import { SearchForm } from '~/components/SearchForm';
@@ -314,7 +323,7 @@ export default function AdminRoute({
                     </Select>
                 </SearchForm>
 
-                <p className="text-base-content/60 text-sm">
+                <p className="text-muted-foreground text-sm">
                     {totalCount} user{totalCount === 1 ? '' : 's'}
                     {query ? ` matching "${query}"` : ''}
                     {role ? ` with role ${role}` : ''}
@@ -330,173 +339,171 @@ export default function AdminRoute({
                         }
                     />
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Joined</th>
-                                    <th className="text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.map((user) => {
-                                    const isSelf = user.id === adminId;
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>User</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Joined</TableHead>
+                                <TableHead className="text-right">
+                                    Actions
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {users.map((user) => {
+                                const isSelf = user.id === adminId;
 
-                                    return (
-                                        <tr key={user.id}>
-                                            <td>
-                                                <div className="font-semibold">
-                                                    {user.name}
-                                                    {isSelf && (
-                                                        <span className="badge badge-ghost badge-sm ml-2">
-                                                            You
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="text-base-content/60 text-sm">
-                                                    {user.email}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                {isSelf ? (
-                                                    <span className="badge">
-                                                        {user.role}
-                                                    </span>
-                                                ) : (
-                                                    <roleFetcher.Form method="POST">
+                                return (
+                                    <TableRow key={user.id}>
+                                        <TableCell>
+                                            <div className="font-semibold">
+                                                {user.name}
+                                                {isSelf && (
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="ml-2"
+                                                    >
+                                                        You
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="text-muted-foreground text-sm">
+                                                {user.email}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {isSelf ? (
+                                                <Badge variant="outline">
+                                                    {user.role}
+                                                </Badge>
+                                            ) : (
+                                                <roleFetcher.Form method="POST">
+                                                    <input
+                                                        type="hidden"
+                                                        name="intent"
+                                                        value="set-role"
+                                                    />
+                                                    <input
+                                                        type="hidden"
+                                                        name="userId"
+                                                        value={user.id}
+                                                    />
+                                                    <Select
+                                                        name="role"
+                                                        selectSize="sm"
+                                                        aria-label={`Role for ${user.email}`}
+                                                        defaultValue={
+                                                            user.role ?? 'USER'
+                                                        }
+                                                        onChange={(event) =>
+                                                            roleFetcher.submit(
+                                                                event
+                                                                    .currentTarget
+                                                                    .form,
+                                                            )
+                                                        }
+                                                    >
+                                                        {ROLES.map((role) => (
+                                                            <option
+                                                                key={role}
+                                                                value={role}
+                                                            >
+                                                                {role}
+                                                            </option>
+                                                        ))}
+                                                    </Select>
+                                                </roleFetcher.Form>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.banned ? (
+                                                <Badge
+                                                    variant="error"
+                                                    title={
+                                                        user.banReason ??
+                                                        undefined
+                                                    }
+                                                >
+                                                    Banned
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="success">
+                                                    Active
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground text-sm">
+                                            <FormattedDate
+                                                date={user.createdAt}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            {!isSelf && (
+                                                <div className="flex justify-end gap-1">
+                                                    <Form method="POST">
                                                         <input
                                                             type="hidden"
                                                             name="intent"
-                                                            value="set-role"
+                                                            value="impersonate-user"
                                                         />
                                                         <input
                                                             type="hidden"
                                                             name="userId"
                                                             value={user.id}
                                                         />
-                                                        <Select
-                                                            name="role"
-                                                            selectSize="sm"
-                                                            aria-label={`Role for ${user.email}`}
-                                                            defaultValue={
-                                                                user.role ??
-                                                                'USER'
-                                                            }
-                                                            onChange={(event) =>
-                                                                roleFetcher.submit(
-                                                                    event
-                                                                        .currentTarget
-                                                                        .form,
-                                                                )
-                                                            }
+                                                        <Button
+                                                            type="submit"
+                                                            variant="ghost"
+                                                            size="xs"
                                                         >
-                                                            {ROLES.map(
-                                                                (role) => (
-                                                                    <option
-                                                                        key={
-                                                                            role
-                                                                        }
-                                                                        value={
-                                                                            role
-                                                                        }
-                                                                    >
-                                                                        {role}
-                                                                    </option>
-                                                                ),
-                                                            )}
-                                                        </Select>
-                                                    </roleFetcher.Form>
-                                                )}
-                                            </td>
-                                            <td>
-                                                {user.banned ? (
-                                                    <span
-                                                        className="badge badge-error"
-                                                        title={
-                                                            user.banReason ??
-                                                            undefined
-                                                        }
-                                                    >
-                                                        Banned
-                                                    </span>
-                                                ) : (
-                                                    <span className="badge badge-success badge-outline">
-                                                        Active
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="text-base-content/60 text-sm">
-                                                <FormattedDate
-                                                    date={user.createdAt}
-                                                />
-                                            </td>
-                                            <td>
-                                                {!isSelf && (
-                                                    <div className="flex justify-end gap-1">
+                                                            Impersonate
+                                                        </Button>
+                                                    </Form>
+                                                    {user.banned ? (
                                                         <Form method="POST">
                                                             <input
                                                                 type="hidden"
                                                                 name="intent"
-                                                                value="impersonate-user"
+                                                                value="unban-user"
                                                             />
                                                             <input
                                                                 type="hidden"
                                                                 name="userId"
                                                                 value={user.id}
                                                             />
-                                                            <button
+                                                            <Button
                                                                 type="submit"
-                                                                className="btn btn-ghost btn-xs pointer-coarse:btn-sm"
+                                                                variant="ghost"
+                                                                size="xs"
                                                             >
-                                                                Impersonate
-                                                            </button>
+                                                                Unban
+                                                            </Button>
                                                         </Form>
-                                                        {user.banned ? (
-                                                            <Form method="POST">
-                                                                <input
-                                                                    type="hidden"
-                                                                    name="intent"
-                                                                    value="unban-user"
-                                                                />
-                                                                <input
-                                                                    type="hidden"
-                                                                    name="userId"
-                                                                    value={
-                                                                        user.id
-                                                                    }
-                                                                />
-                                                                <button
-                                                                    type="submit"
-                                                                    className="btn btn-ghost btn-xs pointer-coarse:btn-sm"
-                                                                >
-                                                                    Unban
-                                                                </button>
-                                                            </Form>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                className="btn btn-ghost btn-xs text-error pointer-coarse:btn-sm"
-                                                                onClick={() =>
-                                                                    banDialog.openDialog(
-                                                                        user,
-                                                                    )
-                                                                }
-                                                            >
-                                                                Ban
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                    ) : (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="xs"
+                                                            className="text-destructive"
+                                                            onClick={() =>
+                                                                banDialog.openDialog(
+                                                                    user,
+                                                                )
+                                                            }
+                                                        >
+                                                            Ban
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
                 )}
 
                 <Pagination
