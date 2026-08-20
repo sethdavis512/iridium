@@ -3,6 +3,8 @@ import { useFetcher, useRouteLoaderData } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
 import type { Theme } from '~/lib/theme';
 import type { loader as rootLoader } from '~/root';
+import { Button } from '~/components/ui/button';
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from '~/components/ui/menu';
 
 const OPTIONS: { value: Theme; label: string; icon: LucideIcon }[] = [
     { value: 'light', label: 'Light', icon: SunIcon },
@@ -23,37 +25,37 @@ export function ThemeToggle() {
         OPTIONS.find((option) => option.value === theme)?.icon ?? MonitorIcon;
 
     return (
-        <div className="dropdown dropdown-end">
-            <div
-                tabIndex={0}
-                role="button"
-                aria-label="Change theme"
-                className="btn btn-square btn-ghost"
+        <Menu>
+            <MenuTrigger
+                render={
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Change theme"
+                    />
+                }
             >
-                <ActiveIcon aria-hidden="true" className="h-5 w-5" />
-            </div>
-            <ul
-                tabIndex={0}
-                className="dropdown-content menu bg-base-200 text-base-content rounded-box z-50 w-36 p-2 shadow"
-            >
+                <ActiveIcon aria-hidden="true" className="size-5" />
+            </MenuTrigger>
+            <MenuPopup align="end" className="w-36">
                 {OPTIONS.map(({ value, label, icon: Icon }) => (
-                    <li key={value}>
-                        <button
-                            type="button"
-                            className={value === theme ? 'menu-active' : ''}
-                            onClick={() =>
-                                fetcher.submit(
-                                    { theme: value },
-                                    { method: 'POST', action: '/api/theme' },
-                                )
-                            }
-                        >
-                            <Icon aria-hidden="true" className="h-4 w-4" />
-                            {label}
-                        </button>
-                    </li>
+                    <MenuItem
+                        key={value}
+                        className={
+                            value === theme ? 'bg-accent font-medium' : ''
+                        }
+                        onClick={() =>
+                            fetcher.submit(
+                                { theme: value },
+                                { method: 'POST', action: '/api/theme' },
+                            )
+                        }
+                    >
+                        <Icon aria-hidden="true" className="size-4" />
+                        {label}
+                    </MenuItem>
                 ))}
-            </ul>
-        </div>
+            </MenuPopup>
+        </Menu>
     );
 }

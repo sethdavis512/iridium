@@ -90,15 +90,18 @@ test.describe('Mobile navigation', () => {
         ).toBeHidden();
 
         await hamburger.click();
-        await expect(hamburger).toHaveAttribute('aria-expanded', 'true');
 
+        // The open sheet makes the rest of the page inert, so the trigger
+        // drops out of the accessibility tree; assert on the drawer itself.
         const drawer = page.getByRole('navigation', {
             name: 'Mobile navigation',
         });
+        await expect(drawer).toBeVisible();
         await expect(drawer.getByRole('link', { name: 'Home' })).toBeVisible();
         await expect(drawer.getByRole('link', { name: 'Chat' })).toBeVisible();
 
         await page.keyboard.press('Escape');
+        await expect(drawer).toBeHidden();
         await expect(hamburger).toHaveAttribute('aria-expanded', 'false');
     });
 

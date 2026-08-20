@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react';
-import { cx } from 'cva.config';
+import {
+    CircleCheckIcon,
+    CircleXIcon,
+    InfoIcon,
+    XIcon,
+    type LucideIcon,
+} from 'lucide-react';
+import { Alert, AlertAction, AlertTitle } from '~/components/ui/alert';
+import { Button } from '~/components/ui/button';
 
 export type Toast = {
     type: 'success' | 'error' | 'info';
     message: string;
 };
 
-const ALERT_CLASS: Record<Toast['type'], string> = {
-    success: 'alert-success',
-    error: 'alert-error',
-    info: 'alert-info',
+const ICONS: Record<Toast['type'], LucideIcon> = {
+    success: CircleCheckIcon,
+    error: CircleXIcon,
+    info: InfoIcon,
 };
 
 const AUTO_DISMISS_MS = 5_000;
@@ -29,19 +37,29 @@ export function Toaster({ toast }: { toast: Toast | null }) {
 
     if (!toast || dismissed === toast) return null;
 
+    const Icon = ICONS[toast.type];
+
     return (
-        <div className="toast toast-end z-50">
-            <div role="status" className={cx('alert', ALERT_CLASS[toast.type])}>
-                <span>{toast.message}</span>
-                <button
-                    type="button"
-                    aria-label="Dismiss notification"
-                    className="btn btn-ghost btn-xs pointer-coarse:btn-sm"
-                    onClick={() => setDismissed(toast)}
-                >
-                    ✕
-                </button>
-            </div>
+        <div className="fixed right-4 bottom-4 z-50 max-w-sm">
+            <Alert
+                role="status"
+                variant={toast.type}
+                className="bg-popover shadow-lg"
+            >
+                <Icon aria-hidden="true" />
+                <AlertTitle>{toast.message}</AlertTitle>
+                <AlertAction>
+                    <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="pointer-coarse:size-8"
+                        aria-label="Dismiss notification"
+                        onClick={() => setDismissed(toast)}
+                    >
+                        <XIcon aria-hidden="true" className="size-4" />
+                    </Button>
+                </AlertAction>
+            </Alert>
         </div>
     );
 }

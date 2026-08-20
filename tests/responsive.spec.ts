@@ -136,16 +136,15 @@ test.describe('mobile navigation completes', () => {
             name: 'Open navigation menu',
         });
         await hamburger.click();
-        await expect(hamburger).toHaveAttribute('aria-expanded', 'true');
 
-        // Two controls share this label; the backdrop overlay is first in
-        // DOM order (SiteHeader renders it before the drawer's X button).
-        // Click right of the 288px drawer, since the element center is
-        // covered by the drawer itself.
-        await page
-            .getByRole('button', { name: 'Close navigation menu' })
-            .first()
-            .click({ position: { x: 350, y: 400 } });
+        const drawer = page.getByRole('navigation', {
+            name: 'Mobile navigation',
+        });
+        await expect(drawer).toBeVisible();
+
+        // Click the backdrop (right of the sheet) to dismiss.
+        await page.mouse.click(360, 400);
+        await expect(drawer).toBeHidden();
         await expect(hamburger).toHaveAttribute('aria-expanded', 'false');
     });
 });
