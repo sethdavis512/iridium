@@ -193,6 +193,18 @@
 }
 
 @layer base {
+    /*
+     * Tailwind v4 defaults bare `border`/`divide` utilities to currentColor,
+     * which paints white borders in dark mode. Map the default to the
+     * border token, as the coss/shadcn base styles expect.
+     */
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-border, currentColor);
+    }
     :root {
         color-scheme: light;
     }
