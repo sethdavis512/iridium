@@ -15,11 +15,11 @@ test.describe('Dashboard', () => {
         await page.goto('/dashboard');
 
         await expect(
-            page.locator('.stat', { hasText: 'Conversations' }),
+            page.locator('[data-slot="stat"]', { hasText: 'Conversations' }),
         ).toContainText('0');
-        await expect(page.locator('.stat', { hasText: 'Notes' })).toContainText(
-            '0',
-        );
+        await expect(
+            page.locator('[data-slot="stat"]', { hasText: 'Notes' }),
+        ).toContainText('0');
         await expect(page.getByText('No conversations yet')).toBeVisible();
         await expect(page.getByText('No notes yet')).toBeVisible();
     });
@@ -36,11 +36,11 @@ test.describe('Dashboard', () => {
         await page.goto('/dashboard');
 
         await expect(
-            page.locator('.stat', { hasText: 'Conversations' }),
+            page.locator('[data-slot="stat"]', { hasText: 'Conversations' }),
         ).toContainText('1');
-        await expect(page.locator('.stat', { hasText: 'Notes' })).toContainText(
-            '1',
-        );
+        await expect(
+            page.locator('[data-slot="stat"]', { hasText: 'Notes' }),
+        ).toContainText('1');
         await expect(page.getByText('Dashboard note')).toBeVisible();
         await expect(page.locator(`a[href="/chat/${threadId}"]`)).toBeVisible();
     });
