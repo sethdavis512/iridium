@@ -91,7 +91,6 @@
         "@types/pg": "^8.20.0",
         "@types/react": "^19.2.15",
         "@types/react-dom": "^19.2.3",
-        "daisyui": "^5.5.20",
         "eslint": "^10.4.0",
         "eslint-plugin-react-hooks": "^7.1.1",
         "husky": "^9.1.7",

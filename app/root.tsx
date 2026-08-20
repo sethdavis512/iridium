@@ -64,16 +64,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <html
             lang="en"
             className={theme === 'dark' ? 'dark h-full' : 'h-full'}
-            // TRANSITIONAL shim: keeps DaisyUI themes rendering on
-            // unconverted screens during the COSS UI migration. Removed
-            // with the daisyui plugin in the final cleanup phase.
-            data-theme={
-                theme === 'system'
-                    ? undefined
-                    : theme === 'dark'
-                      ? 'dracula'
-                      : 'emerald'
-            }
             // The inline script may add .dark before hydration ("system").
             suppressHydrationWarning
         >

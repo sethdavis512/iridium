@@ -11,17 +11,6 @@
 
 @plugin '@tailwindcss/typography';
 
-/*
- * TRANSITIONAL: DaisyUI stays enabled (driven by the data-theme shim in
- * root.tsx) until the COSS UI conversion finishes, so unconverted screens
- * keep their styling. Removed in the final cleanup phase.
- */
-@plugin 'daisyui' {
-    themes:
-        emerald --default,
-        dracula --prefersdark;
-}
-
 @theme inline {
     --font-sans:
         'Inter Variable', ui-sans-serif, system-ui, sans-serif,
@@ -201,4 +190,17 @@
     --success-foreground: var(--color-emerald-400);
     --warning: var(--color-amber-500);
     --warning-foreground: var(--color-amber-400);
+}
+
+@layer base {
+    :root {
+        color-scheme: light;
+    }
+    .dark {
+        color-scheme: dark;
+    }
+    body {
+        background-color: var(--background);
+        color: var(--foreground);
+    }
 }
