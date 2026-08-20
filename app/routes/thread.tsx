@@ -15,6 +15,8 @@ import { Markdown } from '~/components/Markdown';
 import { NoteToolPart } from '~/components/NoteToolPart';
 import { isToolDone, isToolLoading } from '~/components/ToolPartShell';
 import { FormAlert } from '~/components/forms/FormAlert';
+import { Select } from '~/components/forms/Select';
+import { Button } from '~/components/ui/button';
 import type { CardData } from '~/voltagent/tools/cards';
 import type { Route } from './+types/thread';
 import { getThreadById } from '~/models/thread.server';
@@ -178,13 +180,14 @@ export default function ThreadRoute({
             <div className="flex items-center justify-end gap-2 px-1">
                 <label
                     htmlFor="thread-model"
-                    className="text-base-content/60 text-xs"
+                    className="text-muted-foreground text-xs"
                 >
                     Model
                 </label>
-                <select
+                <Select
                     id="thread-model"
-                    className="select select-sm"
+                    selectSize="sm"
+                    className="w-auto"
                     value={currentModel}
                     disabled={status === 'streaming' || status === 'submitted'}
                     onChange={(event) =>
@@ -203,28 +206,27 @@ export default function ThreadRoute({
                             {model.label}
                         </option>
                     ))}
-                </select>
+                </Select>
             </div>
             {error && (
                 <FormAlert message="Something went wrong.">
                     <div className="flex gap-1">
-                        <button
-                            className="btn btn-sm"
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => regenerate()}
                         >
-                            <RefreshCwIcon
-                                aria-hidden="true"
-                                className="h-4 w-4"
-                            />
+                            <RefreshCwIcon aria-hidden="true" />
                             Retry
-                        </button>
-                        <button
-                            className="btn btn-ghost btn-sm"
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => clearError()}
                         >
-                            <XIcon aria-hidden="true" className="h-4 w-4" />
+                            <XIcon aria-hidden="true" />
                             Dismiss
-                        </button>
+                        </Button>
                     </div>
                 </FormAlert>
             )}
@@ -232,7 +234,7 @@ export default function ThreadRoute({
                 ref={messageRef}
                 aria-live="polite"
                 aria-busy={status === 'streaming'}
-                className="rounded-box bg-base-100 border-base-300 flex min-h-0 grow flex-col gap-4 overflow-y-auto border p-4"
+                className="bg-card border-border flex min-h-0 grow flex-col gap-4 overflow-y-auto rounded-xl border p-4"
             >
                 {/* Spacer pushes messages to the bottom. Using justify-end with
                    overflow-y-auto causes upward overflow that is unreachable
@@ -335,23 +337,25 @@ export default function ThreadRoute({
                                 {!isUser &&
                                     isLastMessage &&
                                     status === 'ready' && (
-                                        <button
+                                        <Button
                                             type="button"
-                                            className="btn btn-ghost btn-xs pointer-coarse:btn-sm mt-1"
+                                            variant="ghost"
+                                            size="xs"
+                                            className="mt-1"
                                             onClick={() => regenerate()}
                                         >
                                             <RefreshCwIcon
                                                 aria-hidden="true"
-                                                className="h-3 w-3"
+                                                className="size-3"
                                             />
                                             Regenerate
-                                        </button>
+                                        </Button>
                                     )}
                             </div>
                         );
                     })
                 ) : (
-                    <div className="text-center text-gray-500">
+                    <div className="text-muted-foreground text-center">
                         No messages yet
                     </div>
                 )}
@@ -359,24 +363,25 @@ export default function ThreadRoute({
             <div className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap gap-1.5 px-1">
                     {PRESET_MESSAGES.map(({ label, value }) => (
-                        <button
+                        <Button
                             key={label}
                             type="button"
-                            className="btn btn-content rounded-box btn-xs pointer-coarse:btn-sm"
+                            variant="outline"
+                            size="xs"
                             onClick={() => sendMessage({ text: value })}
                             disabled={status !== 'ready'}
                             title={value}
                         >
                             {label}
-                        </button>
+                        </Button>
                     ))}
                 </div>
-                <div className="rounded-box border-base-300 bg-base-100 flex items-center gap-2 border p-2">
+                <div className="border-border bg-card flex items-center gap-2 rounded-xl border p-2">
                     <input
                         id="chat-message-input"
                         type="text"
                         aria-label="Message"
-                        className="input rounded-field grow"
+                        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/24 h-9 min-w-0 grow rounded-lg border px-3 text-sm outline-none focus-visible:ring-[3px] disabled:opacity-64"
                         placeholder="Your message here..."
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
@@ -388,30 +393,20 @@ export default function ThreadRoute({
                         }}
                         disabled={status !== 'ready'}
                     />
-                    <button
-                        className="btn btn-default"
+                    <Button
+                        variant="outline"
                         onClick={stop}
                         disabled={
                             status !== 'streaming' && status !== 'submitted'
                         }
                     >
-                        <StopCircleIcon
-                            aria-hidden="true"
-                            className="h-6 w-6"
-                        />{' '}
-                        Stop
-                    </button>
-                    <button
-                        className="btn btn-secondary"
-                        onClick={handleSend}
-                        disabled={status !== 'ready'}
-                    >
-                        <SendHorizonalIcon
-                            aria-hidden="true"
-                            className="h-6 w-6"
-                        />{' '}
-                        Send
-                    </button>
+                        <StopCircleIcon aria-hidden="true" />
+                        <span className="max-sm:sr-only">Stop</span>
+                    </Button>
+                    <Button onClick={handleSend} disabled={status !== 'ready'}>
+                        <SendHorizonalIcon aria-hidden="true" />
+                        <span className="max-sm:sr-only">Send</span>
+                    </Button>
                 </div>
             </div>
         </>

@@ -52,7 +52,7 @@ function InfoCard({
     items?: string[];
 }) {
     return (
-        <div className="rounded-box border-info/30 bg-info/10 mt-2 border p-4">
+        <div className="border-info/32 bg-info/8 mt-2 rounded-lg border p-4">
             <div className="flex items-center gap-2">
                 <InfoIcon
                     className="text-info h-5 w-5 shrink-0"
@@ -82,7 +82,7 @@ function InfoCard({
 
 function StepsCard({ title, steps }: { title: string; steps: string[] }) {
     return (
-        <div className="rounded-box border-primary/30 bg-primary/10 mt-2 border p-4">
+        <div className="border-primary/32 bg-primary/8 mt-2 rounded-lg border p-4">
             <div className="flex items-center gap-2">
                 <ListOrderedIcon
                     className="text-primary h-5 w-5 shrink-0"
@@ -93,7 +93,7 @@ function StepsCard({ title, steps }: { title: string; steps: string[] }) {
             <ol className="mt-3 space-y-2">
                 {steps.map((step, i) => (
                     <li key={i} className="flex items-start gap-3 text-sm">
-                        <span className="bg-primary text-primary-content flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+                        <span className="bg-primary text-primary-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold">
                             {i + 1}
                         </span>
                         <span className="pt-0.5">{step}</span>
@@ -114,7 +114,7 @@ function ProsConsCard({
     cons: string[];
 }) {
     return (
-        <div className="rounded-box border-base-300 bg-base-200 mt-2 border p-4">
+        <div className="border-border bg-muted mt-2 rounded-lg border p-4">
             <div className="flex items-center gap-2">
                 <ScaleIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
                 <h3 className="font-bold">{title}</h3>
@@ -140,7 +140,7 @@ function ProsConsCard({
                     </ul>
                 </div>
                 <div>
-                    <h4 className="text-error mb-1 text-sm font-semibold">
+                    <h4 className="text-destructive mb-1 text-sm font-semibold">
                         Cons
                     </h4>
                     <ul className="space-y-1">
@@ -150,7 +150,7 @@ function ProsConsCard({
                                 className="flex items-start gap-2 text-sm"
                             >
                                 <XCircleIcon
-                                    className="text-error mt-0.5 h-4 w-4 shrink-0"
+                                    className="text-destructive mt-0.5 h-4 w-4 shrink-0"
                                     aria-hidden="true"
                                 />
                                 {con}
