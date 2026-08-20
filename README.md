@@ -14,6 +14,7 @@ A full-stack starter kit for shipping AI-powered products. Clone the repo, confi
 - **Notes** — A full CRUD notes page at `/notes` with search and pagination; the agent writes to the same store
 - **Working memory** — VoltAgent remembers user preferences and context across conversations via PostgreSQL-backed working memory
 - **UX patterns** — Light/dark/system theme switching (cookie-based, no flash), flash toast notifications, empty states, reusable form components, offset pagination
+- **Component library** — [COSS UI](https://coss.com/ui) (Base UI primitives styled with Tailwind v4), installed as copy-owned source in `app/components/ui/` via the shadcn CLI: `bunx shadcn@latest add @coss/<name>`
 - **Production patterns** — Soft deletes, Zod-validated env, structured logging, rate limiting, SEO (robots/sitemap/OG tags), husky + lint-staged pre-commit hooks
 - **Type-safe end to end** — Prisma generates types from the schema, Zod validates runtime data, React Router 7 types routes and loaders, CVA ensures type-safe component variants
 
@@ -105,6 +106,9 @@ bun run db:migrate              # Apply migrations
 bun run db:seed                 # Seed with demo users
 ```
 
+Seeded demo users (password `password123` for all): `alice@iridium.dev`,
+`bob@iridium.dev`, and `admin@iridium.dev` (ADMIN role).
+
 ### Development
 
 ```bash
@@ -154,6 +158,7 @@ runs the same functions inline and the purge job simply doesn't run.
 ```
 app/
 ├── components/          # Shared UI components
+│   └── ui/              # Copy-owned COSS UI primitives (@coss registry)
 ├── generated/prisma/    # Generated Prisma client
 ├── lib/                 # Prisma client, auth config
 ├── middleware/           # Auth middleware

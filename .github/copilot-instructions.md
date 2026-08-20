@@ -8,7 +8,7 @@ Full-stack AI chat app built with React Router v7, Better Auth, Prisma, and Verc
 - **Auth**: Better Auth with Prisma adapter, admin plugin (roles: USER, EDITOR, ADMIN)
 - **Database**: PostgreSQL via Prisma (schema at `prisma/schema.prisma`, client generated to `app/generated/prisma/`)
 - **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`), VoltAgent — model: `anthropic/claude-3-haiku-20240307`
-- **Styling**: Tailwind CSS v4 + DaisyUI v5, CVA with tailwind-merge
+- **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives, copy-owned in `app/components/ui/`), CVA with tailwind-merge for app components
 - **Runtime**: Bun (local dev), Node 20 Alpine (Docker/prod)
 - **Validation**: Zod
 - **Icons**: lucide-react
@@ -88,7 +88,8 @@ Plain exported async functions in `app/models/*.server.ts` — no classes, no OR
 - Use CVA from `cva.config` (not the raw `cva` package) — it integrates `tailwind-merge`
 - Export variant definitions AND a named function component
 - Type props with `PropsWithChildren<Props>`
-- Use DaisyUI v5 class names (`card`, `btn`, `chat-bubble`, `drawer`, `badge`, etc.)
+- Use COSS UI primitives from `~/components/ui/` (Button, Dialog, AlertDialog, Menu, Sheet, Badge, Alert, Table); polymorphism via `render={<Link/>}`, never `asChild`
+- Semantic tokens only (`bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-destructive`) — never raw palette classes
 
 ### Routes
 
@@ -104,5 +105,5 @@ Plain exported async functions in `app/models/*.server.ts` — no classes, no OR
 
 ### Layout
 
-- Root layout in `app/root.tsx`: header nav → 3/9 grid (sidebar + content) → footer
-- Auth-conditional nav items, right-side DaisyUI `Drawer`
+- `app/root.tsx` renders only the HTML document; page chrome lives in `app/routes/layouts/` (app/marketing/auth shells)
+- Auth-conditional nav items; the mobile nav is a COSS `Sheet`

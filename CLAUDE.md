@@ -53,6 +53,8 @@ bun run db:seed             # seed demo users
 bun run dev
 ```
 
+Seeded users (all password `password123`): `alice@iridium.dev`, `bob@iridium.dev`, `admin@iridium.dev` (ADMIN).
+
 ### Two-Database Setup
 
 The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
@@ -73,7 +75,7 @@ Environment variables are validated at startup by `app/lib/env.server.ts` -- mis
 - **Database**: PostgreSQL via Prisma ORM (schema at `prisma/schema.prisma`, generated client at `app/generated/prisma/`)
 - **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`) + VoltAgent. Per-thread model selection against the allowlist in `app/lib/ai-models.ts` (Haiku 4.5 default)
 - **Email**: Resend + react-email behind `app/lib/email.server.ts` (console fallback without `RESEND_API_KEY`)
-- **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives, copy-owned in `app/components/ui/` via the shadcn CLI and the `@coss` registry). Installed ui/ files use `cn()` from `app/lib/utils.ts`; app-authored components use CVA from `cva.config`
+- **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives, copy-owned in `app/components/ui/` via the shadcn CLI and the `@coss` registry — `bunx shadcn@latest add @coss/<name>`, config in `components.json`). Installed ui/ files use `cn()` from `app/lib/utils.ts`; app-authored components use CVA from `cva.config`. **Gotcha:** after adding a ui primitive, add any new client dep (including each `@base-ui/react/<subpath>` import) to `optimizeDeps.include` in `vite.config.ts` — late Vite dep discovery re-optimizes mid-session and splits React across module graphs, crashing hydration ("Invalid hook call") in dev and E2E
 - **Runtime**: Bun (dev), Node 20 Alpine (Docker/prod)
 - **Validation**: Zod + React Hook Form
 - **Icons**: lucide-react
