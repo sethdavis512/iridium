@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { TriangleAlertIcon, XIcon } from 'lucide-react';
+import { Button } from '~/components/ui/button';
 import type { EnvWarning } from '~/lib/env-status';
 
 /**
@@ -21,7 +22,7 @@ export function EnvBanner({ warnings }: { warnings: EnvWarning[] }) {
     return (
         <div
             role="status"
-            className="border-warning/25 bg-warning/10 text-base-content border-b"
+            className="border-warning/25 bg-warning/10 text-foreground border-b"
         >
             <div className="mx-auto flex max-w-6xl items-start gap-3 px-4 py-3 sm:gap-4 sm:px-6">
                 <span className="bg-warning/20 text-warning mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full">
@@ -33,11 +34,11 @@ export function EnvBanner({ warnings }: { warnings: EnvWarning[] }) {
                         <h2 className="text-sm font-semibold">
                             Environment notice
                         </h2>
-                        <span className="text-base-content/50 text-[0.65rem] font-semibold tracking-wider uppercase">
+                        <span className="text-muted-foreground text-[0.65rem] font-semibold tracking-wider uppercase">
                             dev only
                         </span>
                     </div>
-                    <p className="text-base-content/60 mt-0.5 text-xs">
+                    <p className="text-muted-foreground mt-0.5 text-xs">
                         {summary}
                     </p>
 
@@ -49,13 +50,13 @@ export function EnvBanner({ warnings }: { warnings: EnvWarning[] }) {
                             >
                                 <span
                                     aria-hidden
-                                    className="bg-error mt-1.5 size-1.5 shrink-0 rounded-full"
+                                    className="bg-destructive mt-1.5 size-1.5 shrink-0 rounded-full"
                                 />
                                 <span className="min-w-0 leading-relaxed">
                                     <code className="font-mono font-semibold">
                                         {w.key}
                                     </code>
-                                    <span className="text-base-content/55">
+                                    <span className="text-muted-foreground">
                                         {' '}
                                         — {w.effect}
                                     </span>
@@ -65,14 +66,15 @@ export function EnvBanner({ warnings }: { warnings: EnvWarning[] }) {
                     </ul>
                 </div>
 
-                <button
-                    type="button"
+                <Button
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => setDismissed(true)}
                     aria-label="Dismiss environment notice"
-                    className="btn btn-ghost btn-sm btn-circle text-base-content/50 hover:text-base-content -mt-1 -mr-2 shrink-0"
+                    className="text-muted-foreground hover:text-foreground -mt-1 -mr-2 shrink-0"
                 >
                     <XIcon className="size-4" />
-                </button>
+                </Button>
             </div>
         </div>
     );

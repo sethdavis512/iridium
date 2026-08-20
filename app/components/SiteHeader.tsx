@@ -1,13 +1,36 @@
-import { useEffect, useState } from 'react';
-import { MenuIcon, PentagonIcon, XIcon } from 'lucide-react';
+import { useState } from 'react';
+import { MenuIcon, PentagonIcon } from 'lucide-react';
 import { Form, Link, NavLink, useRouteLoaderData } from 'react-router';
+import { cx } from 'cva.config';
 import { Container } from '~/components/Container';
-import { Header } from '~/components/Header';
 import { ThemeToggle } from '~/components/ThemeToggle';
+import { Button } from '~/components/ui/button';
+import {
+    Sheet,
+    SheetHeader,
+    SheetPanel,
+    SheetPopup,
+    SheetTitle,
+    SheetTrigger,
+} from '~/components/ui/sheet';
 import type { loader as rootLoader } from '~/root';
 import { APP_NAME } from '~/config';
 
 const MOBILE_NAV_ID = 'mobile-nav';
+
+const desktopNavLinkClassName = ({ isActive }: { isActive: boolean }) =>
+    cx(
+        'rounded-lg px-3 py-1.5 text-sm transition-colors',
+        isActive ? 'bg-accent font-semibold' : 'hover:bg-accent/60',
+    );
+
+const mobileNavLinkClassName = ({ isActive }: { isActive: boolean }) =>
+    cx(
+        'block rounded-lg px-3 py-2 text-sm transition-colors',
+        isActive
+            ? 'bg-accent font-semibold'
+            : 'hover:bg-accent text-foreground',
+    );
 
 export function SiteHeader() {
     const data = useRouteLoaderData<typeof rootLoader>('root');
@@ -31,36 +54,27 @@ export function SiteHeader() {
 
     const closeMenu = () => setIsMenuOpen(false);
 
-    useEffect(() => {
-        if (!isMenuOpen) return;
-
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') setIsMenuOpen(false);
-        };
-
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [isMenuOpen]);
-
     return (
         <div>
             {isImpersonating && (
-                <div className="alert alert-warning min-h-0 justify-center gap-4 rounded-none py-1.5 text-sm">
+                <div className="bg-warning text-warning-foreground flex min-h-0 items-center justify-center gap-4 py-1.5 text-sm">
                     <span>You are impersonating this account.</span>
                     <Form method="POST" action="/stop-impersonating">
-                        <button
-                            className="btn btn-xs pointer-coarse:btn-sm"
+                        <Button
                             type="submit"
+                            variant="outline"
+                            size="xs"
+                            className="pointer-coarse:h-8"
                         >
                             Stop impersonating
-                        </button>
+                        </Button>
                     </Form>
                 </div>
             )}
-            <Header>
+            <header className="bg-card text-foreground flex min-h-16 items-center border-b">
                 <a
                     href="#main-content"
-                    className="btn btn-sm btn-accent sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50"
+                    className="bg-primary text-primary-foreground sr-only rounded-lg px-3 py-1.5 text-sm font-medium focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50"
                 >
                     Skip to main content
                 </a>
@@ -70,16 +84,81 @@ export function SiteHeader() {
                         className="flex w-full items-center justify-between gap-4"
                     >
                         <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                aria-label="Open navigation menu"
-                                aria-expanded={isMenuOpen}
-                                aria-controls={MOBILE_NAV_ID}
-                                className="btn btn-square btn-ghost lg:hidden"
-                                onClick={() => setIsMenuOpen((open) => !open)}
+                            <Sheet
+                                open={isMenuOpen}
+                                onOpenChange={setIsMenuOpen}
                             >
-                                <MenuIcon aria-hidden="true" />
-                            </button>
+                                <SheetTrigger
+                                    render={
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            aria-label="Open navigation menu"
+                                            aria-controls={MOBILE_NAV_ID}
+                                            className="lg:hidden"
+                                        />
+                                    }
+                                >
+                                    <MenuIcon aria-hidden="true" />
+                                </SheetTrigger>
+                                <SheetPopup
+                                    side="left"
+                                    closeProps={{
+                                        'aria-label': 'Close navigation menu',
+                                    }}
+                                >
+                                    <SheetHeader>
+                                        <SheetTitle>Navigation</SheetTitle>
+                                    </SheetHeader>
+                                    <SheetPanel>
+                                        <nav
+                                            id={MOBILE_NAV_ID}
+                                            aria-label="Mobile navigation"
+                                        >
+                                            <ul className="flex flex-col gap-1">
+                                                {navItems.map((item) => (
+                                                    <li key={item.to}>
+                                                        <NavLink
+                                                            to={item.to}
+                                                            onClick={closeMenu}
+                                                            className={
+                                                                mobileNavLinkClassName
+                                                            }
+                                                        >
+                                                            {item.label}
+                                                        </NavLink>
+                                                    </li>
+                                                ))}
+                                                {isAuthenticated ? (
+                                                    <li>
+                                                        <Form
+                                                            method="POST"
+                                                            action="/logout"
+                                                        >
+                                                            <button
+                                                                type="submit"
+                                                                className="hover:bg-accent block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors"
+                                                            >
+                                                                Logout
+                                                            </button>
+                                                        </Form>
+                                                    </li>
+                                                ) : (
+                                                    <li>
+                                                        <Link
+                                                            to="/login"
+                                                            onClick={closeMenu}
+                                                            className="hover:bg-accent block rounded-lg px-3 py-2 text-sm transition-colors"
+                                                        >
+                                                            Login
+                                                        </Link>
+                                                    </li>
+                                                )}
+                                            </ul>
+                                        </nav>
+                                    </SheetPanel>
+                                </SheetPopup>
+                            </Sheet>
                             <Link
                                 to="/"
                                 className="flex items-center gap-2 font-bold"
@@ -91,16 +170,12 @@ export function SiteHeader() {
                             aria-label="Main navigation"
                             className="hidden lg:block"
                         >
-                            <ul className="menu menu-horizontal gap-1 p-0">
+                            <ul className="flex items-center gap-1">
                                 {navItems.map((item) => (
                                     <li key={item.to}>
                                         <NavLink
                                             to={item.to}
-                                            className={({ isActive }) =>
-                                                isActive
-                                                    ? 'menu-active bg-neutral-content/15 font-semibold'
-                                                    : ''
-                                            }
+                                            className={desktopNavLinkClassName}
                                         >
                                             {item.label}
                                         </NavLink>
@@ -113,82 +188,23 @@ export function SiteHeader() {
                             <div className="hidden lg:block">
                                 {isAuthenticated ? (
                                     <Form method="POST" action="/logout">
-                                        <button className="btn" type="submit">
+                                        <Button type="submit" variant="outline">
                                             Logout
-                                        </button>
+                                        </Button>
                                     </Form>
                                 ) : (
-                                    <Link className="btn" to="/login">
+                                    <Button
+                                        variant="outline"
+                                        render={<Link to="/login" />}
+                                    >
                                         Login
-                                    </Link>
+                                    </Button>
                                 )}
                             </div>
                         </div>
                     </nav>
                 </Container>
-                {isMenuOpen && (
-                    <div className="fixed inset-0 z-30 lg:hidden">
-                        <button
-                            type="button"
-                            aria-label="Close navigation menu"
-                            className="absolute inset-0 cursor-default bg-black/50"
-                            onClick={closeMenu}
-                        />
-                        <nav
-                            id={MOBILE_NAV_ID}
-                            aria-label="Mobile navigation"
-                            className="bg-base-200 text-base-content absolute inset-y-0 left-0 w-72 overflow-y-auto p-4"
-                        >
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="menu-title px-0">
-                                    Navigation
-                                </span>
-                                <button
-                                    type="button"
-                                    aria-label="Close navigation menu"
-                                    className="btn btn-square btn-ghost btn-sm"
-                                    onClick={closeMenu}
-                                >
-                                    <XIcon
-                                        aria-hidden="true"
-                                        className="h-4 w-4"
-                                    />
-                                </button>
-                            </div>
-                            <ul className="menu w-full gap-1 p-0">
-                                {navItems.map((item) => (
-                                    <li key={item.to}>
-                                        <NavLink
-                                            to={item.to}
-                                            onClick={closeMenu}
-                                            className={({ isActive }) =>
-                                                isActive ? 'menu-active' : ''
-                                            }
-                                        >
-                                            {item.label}
-                                        </NavLink>
-                                    </li>
-                                ))}
-                                {isAuthenticated ? (
-                                    <li>
-                                        <Form method="POST" action="/logout">
-                                            <button type="submit">
-                                                Logout
-                                            </button>
-                                        </Form>
-                                    </li>
-                                ) : (
-                                    <li>
-                                        <Link to="/login" onClick={closeMenu}>
-                                            Login
-                                        </Link>
-                                    </li>
-                                )}
-                            </ul>
-                        </nav>
-                    </div>
-                )}
-            </Header>
+            </header>
         </div>
     );
 }
