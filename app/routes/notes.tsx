@@ -220,17 +220,10 @@ export default function NotesRoute({
                 <PageHeader
                     title="Notes"
                     action={
-                        <button
-                            type="button"
-                            className="btn btn-accent"
-                            onClick={openCreate}
-                        >
-                            <PlusCircleIcon
-                                aria-hidden="true"
-                                className="mr-2 h-6 w-6"
-                            />
+                        <Button type="button" onClick={openCreate}>
+                            <PlusCircleIcon aria-hidden="true" />
                             New Note
-                        </button>
+                        </Button>
                     }
                 />
 
@@ -250,9 +243,13 @@ export default function NotesRoute({
                             description={`Nothing found for "${query}".`}
                         >
                             <Form method="GET">
-                                <button type="submit" className="btn btn-sm">
+                                <Button
+                                    type="submit"
+                                    variant="outline"
+                                    size="sm"
+                                >
                                     Clear search
-                                </button>
+                                </Button>
                             </Form>
                         </EmptyState>
                     ) : (
@@ -261,18 +258,18 @@ export default function NotesRoute({
                             title="No notes yet"
                             description="Create your first note, or ask the chat agent to save one for you."
                         >
-                            <button
+                            <Button
                                 type="button"
-                                className="btn btn-accent btn-sm"
+                                size="sm"
                                 onClick={openCreate}
                             >
                                 New Note
-                            </button>
+                            </Button>
                         </EmptyState>
                     )
                 ) : (
                     <>
-                        <p className="text-base-content/60 text-sm">
+                        <p className="text-muted-foreground text-sm">
                             {totalCount} note{totalCount === 1 ? '' : 's'}
                             {isSearching ? ` matching "${query}"` : ''}
                         </p>
@@ -283,16 +280,17 @@ export default function NotesRoute({
                                         <p className="line-clamp-3 whitespace-pre-wrap">
                                             {note.content}
                                         </p>
-                                        <p className="text-base-content/50 text-xs">
+                                        <p className="text-muted-foreground text-xs">
                                             Updated{' '}
                                             <FormattedDate
                                                 date={note.updatedAt}
                                             />
                                         </p>
-                                        <div className="card-actions justify-end">
-                                            <button
+                                        <div className="flex justify-end gap-1">
+                                            <Button
                                                 type="button"
-                                                className="btn btn-ghost btn-sm"
+                                                variant="ghost"
+                                                size="sm"
                                                 onClick={() =>
                                                     openEdit({
                                                         id: note.id,
@@ -302,10 +300,12 @@ export default function NotesRoute({
                                                 }
                                             >
                                                 Edit
-                                            </button>
-                                            <button
+                                            </Button>
+                                            <Button
                                                 type="button"
-                                                className="btn btn-ghost btn-sm text-error"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-destructive"
                                                 onClick={() =>
                                                     deleteDialog.openDialog(
                                                         note.id,
@@ -313,7 +313,7 @@ export default function NotesRoute({
                                                 }
                                             >
                                                 Delete
-                                            </button>
+                                            </Button>
                                         </div>
                                     </Card>
                                 </li>
