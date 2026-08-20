@@ -14,7 +14,7 @@ import { getTheme } from '~/lib/theme.server';
 import { getToast } from '~/lib/toast.server';
 import { envWarnings, shouldShowEnvBanner } from '~/lib/env.server';
 import { Toaster } from '~/components/Toaster';
-import { ToastProvider, AnchoredToastProvider } from '~/components/ui/toast';
+import { ToastProvider } from '~/components/ui/toast';
 import { EnvBanner } from '~/components/EnvBanner';
 import type { Route } from './+types/root';
 
@@ -97,12 +97,30 @@ export default function App({ loaderData }: Route.ComponentProps) {
         document.documentElement.dataset.hydrated = 'true';
     }, []);
 
+    // Reconcile the .dark class on <html>. The pre-paint script adds it
+    // imperatively for "system", so React's vDOM never knows about it and a
+    // system -> light switch would produce no className diff, leaving .dark
+    // stuck until a full reload. Also tracks live OS scheme changes.
+    const theme = loaderData.theme;
+    useEffect(() => {
+        const root = document.documentElement;
+
+        if (theme !== 'system') {
+            root.classList.toggle('dark', theme === 'dark');
+            return;
+        }
+
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const apply = () => root.classList.toggle('dark', mq.matches);
+        apply();
+        mq.addEventListener('change', apply);
+        return () => mq.removeEventListener('change', apply);
+    }, [theme]);
+
     return (
         <ToastProvider>
-            <AnchoredToastProvider>
-                <Outlet />
-                <Toaster toast={loaderData.toast} />
-            </AnchoredToastProvider>
+            <Outlet />
+            <Toaster toast={loaderData.toast} />
         </ToastProvider>
     );
 }

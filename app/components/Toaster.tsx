@@ -1,65 +1,35 @@
-import { useEffect, useState } from 'react';
-import {
-    CircleCheckIcon,
-    CircleXIcon,
-    InfoIcon,
-    XIcon,
-    type LucideIcon,
-} from 'lucide-react';
-import { Alert, AlertAction, AlertTitle } from '~/components/ui/alert';
-import { Button } from '~/components/ui/button';
+import { useEffect } from 'react';
+import { toastManager } from '~/components/ui/toast';
 
 export type Toast = {
     type: 'success' | 'error' | 'info';
     message: string;
 };
 
-const ICONS: Record<Toast['type'], LucideIcon> = {
-    success: CircleCheckIcon,
-    error: CircleXIcon,
-    info: InfoIcon,
-};
-
 const AUTO_DISMISS_MS = 5_000;
 
+/**
+ * Bridges the server flash toast (root loader / toast.server.ts) into the
+ * Base UI toast manager. Renders nothing itself; the ToastProvider viewport
+ * in root.tsx displays it. The stable id makes back-to-back flashes replace
+ * and re-animate the existing toast instead of stacking, so at most one
+ * flash is ever on screen (tests query getByRole('status') in strict mode).
+ */
 export function Toaster({ toast }: { toast: Toast | null }) {
-    // Track which toast was dismissed (by identity) instead of a visible
-    // flag so the effect never sets state synchronously.
-    const [dismissed, setDismissed] = useState<Toast | null>(null);
-
     useEffect(() => {
         if (!toast) return;
 
-        const timer = setTimeout(() => setDismissed(toast), AUTO_DISMISS_MS);
-
-        return () => clearTimeout(timer);
+        toastManager.add({
+            id: 'flash',
+            title: toast.message,
+            type: toast.type,
+            timeout: AUTO_DISMISS_MS,
+            // Base UI defaults the root to role="dialog"; flashes are
+            // passive announcements, and tests (and screen readers) expect
+            // a single role="status" region.
+            data: { rootProps: { role: 'status' } },
+        });
     }, [toast]);
 
-    if (!toast || dismissed === toast) return null;
-
-    const Icon = ICONS[toast.type];
-
-    return (
-        <div className="fixed right-4 bottom-4 z-50 max-w-sm">
-            <Alert
-                role="status"
-                variant={toast.type}
-                className="bg-popover shadow-lg"
-            >
-                <Icon aria-hidden="true" />
-                <AlertTitle>{toast.message}</AlertTitle>
-                <AlertAction>
-                    <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        className="pointer-coarse:size-8"
-                        aria-label="Dismiss notification"
-                        onClick={() => setDismissed(toast)}
-                    >
-                        <XIcon aria-hidden="true" className="size-4" />
-                    </Button>
-                </AlertAction>
-            </Alert>
-        </div>
-    );
+    return null;
 }
