@@ -9,6 +9,7 @@ import {
 import { Link } from 'react-router';
 import { Card } from '~/components/Card';
 import { Container } from '~/components/Container';
+import { Button } from '~/components/ui/button';
 import { OgMeta } from '~/lib/seo';
 import { APP_NAME } from '~/config';
 
@@ -35,7 +36,7 @@ const FEATURES = [
         icon: PaletteIcon,
         title: 'Theming and UX patterns',
         description:
-            'DaisyUI light/dark/system themes, flash toasts, reusable form components, and pagination.',
+            'COSS UI light/dark/system themes, flash toasts, reusable form components, and pagination.',
     },
     {
         icon: TestTubesIcon,
@@ -56,7 +57,7 @@ const STACK = [
     ['Better Auth', 'Authentication with admin plugin'],
     ['Prisma + PostgreSQL', 'Type-safe data layer'],
     ['Vercel AI SDK + VoltAgent', 'Streaming agents with memory'],
-    ['Tailwind CSS v4 + DaisyUI v5', 'Utility styling with components'],
+    ['Tailwind CSS v4 + COSS UI', 'Utility styling with components'],
     ['Bun', 'Fast runtime and tooling'],
 ];
 
@@ -82,15 +83,18 @@ export default function LandingPage() {
                         chat, and agent tools in minutes.
                     </p>
                     <div className="flex justify-center gap-4">
-                        <Link to="/login" className="btn btn-accent">
+                        <Button size="lg" render={<Link to="/login" />}>
                             Get started
-                        </Link>
-                        <a
-                            href="https://github.com/sethdavis512/iridium"
-                            className="btn btn-outline"
+                        </Button>
+                        <Button
+                            size="lg"
+                            variant="outline"
+                            render={
+                                <a href="https://github.com/sethdavis512/iridium" />
+                            }
                         >
                             View source
-                        </a>
+                        </Button>
                     </div>
                 </section>
 
@@ -103,10 +107,14 @@ export default function LandingPage() {
                             <Card key={title} bordered>
                                 <Icon
                                     aria-hidden="true"
-                                    className="text-accent h-8 w-8"
+                                    className="text-primary h-8 w-8"
                                 />
-                                <h3 className="card-title">{title}</h3>
-                                <p>{description}</p>
+                                <h3 className="font-heading text-lg font-semibold">
+                                    {title}
+                                </h3>
+                                <p className="text-muted-foreground text-sm">
+                                    {description}
+                                </p>
                             </Card>
                         ))}
                     </div>
@@ -118,10 +126,10 @@ export default function LandingPage() {
                         {STACK.map(([name, blurb]) => (
                             <li
                                 key={name}
-                                className="bg-base-200 rounded-box flex items-baseline justify-between gap-4 px-4 py-3"
+                                className="bg-card border-border flex items-baseline justify-between gap-4 rounded-lg border px-4 py-3"
                             >
                                 <span className="font-semibold">{name}</span>
-                                <span className="text-base-content/60 text-sm">
+                                <span className="text-muted-foreground text-sm">
                                     {blurb}
                                 </span>
                             </li>
