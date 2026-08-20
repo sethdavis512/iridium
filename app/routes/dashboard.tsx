@@ -16,6 +16,8 @@ import { Container } from '~/components/Container';
 import { EmptyState } from '~/components/EmptyState';
 import { FormattedDate } from '~/components/FormattedDate';
 import { PageHeader } from '~/components/PageHeader';
+import { StatTile } from '~/components/StatTile';
+import { Button } from '~/components/ui/button';
 import type { Route } from './+types/dashboard';
 
 export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
@@ -68,46 +70,36 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
             />
             <Container className="flex flex-col gap-6 p-4">
                 <PageHeader title={`Hello ${name}!`}>
-                    <p className="text-base-content/60">
+                    <p className="text-muted-foreground">
                         Here is what is happening in your workspace.
                     </p>
                 </PageHeader>
 
-                <div className="stats stats-vertical md:stats-horizontal bg-base-200 shadow">
-                    <div className="stat">
-                        <div className="stat-title">Conversations</div>
-                        <div className="stat-value">{threadCount}</div>
-                    </div>
-                    <div className="stat">
-                        <div className="stat-title">Notes</div>
-                        <div className="stat-value">{noteCount}</div>
-                    </div>
-                    <div className="stat">
-                        <div className="stat-title">Member since</div>
-                        <div className="stat-value text-lg">
+                <div className="grid gap-4 md:grid-cols-3">
+                    <StatTile title="Conversations">{threadCount}</StatTile>
+                    <StatTile title="Notes">{noteCount}</StatTile>
+                    <StatTile title="Member since">
+                        <span className="text-lg">
                             <FormattedDate date={memberSince} />
-                        </div>
-                    </div>
+                        </span>
+                    </StatTile>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                     <Form method="POST" action="/chat">
                         <input type="hidden" name="intent" value="new-thread" />
-                        <button type="submit" className="btn btn-accent">
-                            <PlusCircleIcon
-                                aria-hidden="true"
-                                className="mr-1 h-5 w-5"
-                            />
+                        <Button type="submit">
+                            <PlusCircleIcon aria-hidden="true" />
                             New Thread
-                        </button>
+                        </Button>
                     </Form>
-                    <Link to="/notes?new=1" className="btn">
-                        <NotebookPenIcon
-                            aria-hidden="true"
-                            className="mr-1 h-5 w-5"
-                        />
+                    <Button
+                        variant="outline"
+                        render={<Link to="/notes?new=1" />}
+                    >
+                        <NotebookPenIcon aria-hidden="true" />
                         New Note
-                    </Link>
+                    </Button>
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -119,17 +111,17 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
                                 description="Start a thread and chat with the agent."
                             />
                         ) : (
-                            <ul className="divide-base-300 divide-y">
+                            <ul className="divide-border divide-y">
                                 {recentThreads.map((thread) => (
                                     <li key={thread.id}>
                                         <Link
                                             to={`/chat/${thread.id}`}
-                                            className="hover:bg-base-200 flex items-center justify-between gap-4 rounded px-2 py-3"
+                                            className="hover:bg-accent flex items-center justify-between gap-4 rounded px-2 py-3"
                                         >
                                             <span className="truncate">
                                                 {thread.title}
                                             </span>
-                                            <span className="text-base-content/50 shrink-0 text-xs">
+                                            <span className="text-muted-foreground shrink-0 text-xs">
                                                 <FormattedDate
                                                     date={thread.createdAt}
                                                 />
@@ -150,7 +142,7 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
                             />
                         ) : (
                             <>
-                                <ul className="divide-base-300 divide-y">
+                                <ul className="divide-border divide-y">
                                     {recentNotes.map((note) => (
                                         <li
                                             key={note.id}
@@ -159,7 +151,7 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
                                             <span className="truncate">
                                                 {note.title}
                                             </span>
-                                            <span className="text-base-content/50 shrink-0 text-xs">
+                                            <span className="text-muted-foreground shrink-0 text-xs">
                                                 <FormattedDate
                                                     date={note.updatedAt}
                                                 />
@@ -167,8 +159,11 @@ export default function DashboardRoute({ loaderData }: Route.ComponentProps) {
                                         </li>
                                     ))}
                                 </ul>
-                                <div className="card-actions">
-                                    <Link to="/notes" className="link text-sm">
+                                <div className="flex justify-end">
+                                    <Link
+                                        to="/notes"
+                                        className="text-sm underline underline-offset-4"
+                                    >
                                         View all notes
                                     </Link>
                                 </div>
