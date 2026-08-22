@@ -33,7 +33,7 @@
         "docker:up": "docker compose -f docker-compose.dev.yml up -d",
         "docker:down": "docker compose -f docker-compose.dev.yml down --remove-orphans",
         "docker:nuke": "docker compose -f docker-compose.dev.yml down -v --remove-orphans",
-        "prepare": "husky"
+        "prepare": "husky || true"
     },
     "lint-staged": {
         "*.{ts,tsx}": [
