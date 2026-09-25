@@ -168,6 +168,86 @@ jobs:
                       playwright-report/
                   retention-days: 14
 
+    # Builds the production image and boots it the way Railway does, so a
+    # broken production install, build, migration, or env check fails CI
+    # instead of the deploy.
+    docker:
+        name: Docker image
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        services:
+            postgres:
+                image: postgres:16-alpine
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: iridium_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
+                    --health-timeout 5s
+                    --health-retries 15
+
+            voltagent:
+                image: postgres:16-alpine
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: voltagent_test
+                ports:
+                    - 5433:5432
+                options: >-
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
+                    --health-timeout 5s
+                    --health-retries 15
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: docker/setup-buildx-action@v4
+
+            - name: Build image
+              uses: docker/build-push-action@v7
+              with:
+                  context: .
+                  push: false
+                  load: true
+                  tags: iridium:ci
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            # Host networking lets the container reach the service databases
+            # at the workflow's localhost DATABASE_URL and VOLTAGENT_DATABASE_URL.
+            # The image's CMD runs `prisma migrate deploy` before serving.
+            - name: Boot image and wait for /healthcheck
+              run: |
+                  docker run -d --name iridium --network host \
+                      -e NODE_ENV=production \
+                      -e DATABASE_URL \
+                      -e VOLTAGENT_DATABASE_URL \
+                      -e BETTER_AUTH_SECRET \
+                      -e BETTER_AUTH_BASE_URL=http://localhost:3000 \
+                      iridium:ci
+                  for _ in $(seq 1 45); do
+                      if curl -fsS --max-time 5 http://localhost:3000/healthcheck; then
+                          echo
+                          exit 0
+                      fi
+                      if [ "$(docker inspect -f '{{.State.Running}}' iridium)" != true ]; then
+                          echo "::error::The container exited before /healthcheck returned 200"
+                          docker logs iridium
+                          exit 1
+                      fi
+                      sleep 2
+                  done
+                  echo "::error::/healthcheck did not return 200 within 90s"
+                  docker logs iridium
+                  exit 1
+
     deploy:
         name: Deploy (Railway)
         runs-on: ubuntu-latest
