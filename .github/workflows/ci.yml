@@ -24,27 +24,10 @@ env:
     ANTHROPIC_API_KEY: test-key-not-used-in-e2e
 
 jobs:
+    # Unit tests share this job's install and Prisma setup: they take a few
+    # seconds, less than a separate job spends on setup.
     validate:
-        name: Typecheck + Lint + Format
-        runs-on: ubuntu-latest
-        timeout-minutes: 5
-        steps:
-            - uses: actions/checkout@v4
-            - uses: oven-sh/setup-bun@v2
-              with:
-                  bun-version-file: package.json
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 24
-            - name: Install dependencies
-              run: bun install --frozen-lockfile
-            - name: Generate Prisma client
-              run: bunx --bun prisma generate
-            - name: Validate
-              run: bun run validate
-
-    unit:
-        name: Unit Tests
+        name: Validate + Unit Tests
         runs-on: ubuntu-latest
         timeout-minutes: 10
         steps:
@@ -55,10 +38,18 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version: 24
+            - name: Cache Bun packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.bun/install/cache
+                  key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: bun-${{ runner.os }}-
             - name: Install dependencies
               run: bun install --frozen-lockfile
             - name: Generate Prisma client
               run: bunx --bun prisma generate
+            - name: Validate
+              run: bun run validate
             - name: Run unit tests
               run: bun run test
 
@@ -66,9 +57,12 @@ jobs:
         name: Playwright
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        # No `needs`: e2e runs alongside validate and unit to keep the critical
-        # path short. Railway's Wait for CI still waits for the whole run.
+        # No `needs`: e2e runs alongside validate to keep the critical path
+        # short. Railway's Wait for CI still waits for the whole run.
 
+        # The health checks probe over TCP: during first-boot init the image
+        # runs a socket-only temporary server that a plain `pg_isready` would
+        # report as ready.
         services:
             postgres:
                 image: postgres:16-alpine
@@ -79,10 +73,10 @@ jobs:
                 ports:
                     - 5432:5432
                 options: >-
-                    --health-cmd "pg_isready -U postgres"
-                    --health-interval 10s
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
                     --health-timeout 5s
-                    --health-retries 5
+                    --health-retries 15
 
             voltagent:
                 image: postgres:16-alpine
@@ -93,10 +87,10 @@ jobs:
                 ports:
                     - 5433:5432
                 options: >-
-                    --health-cmd "pg_isready -U postgres"
-                    --health-interval 10s
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
                     --health-timeout 5s
-                    --health-retries 5
+                    --health-retries 15
 
         steps:
             - uses: actions/checkout@v4
@@ -107,6 +101,12 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version: 24
+            - name: Cache Bun packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.bun/install/cache
+                  key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: bun-${{ runner.os }}-
 
             - name: Install dependencies
               run: bun install --frozen-lockfile
@@ -117,8 +117,29 @@ jobs:
             - name: Run migrations
               run: bunx --bun prisma migrate deploy
 
+            # Browser builds depend on the Playwright version and the runner
+            # image (ImageOS changes when ubuntu-latest moves to a new release).
+            - name: Resolve Playwright cache key
+              id: playwright
+              run: |
+                  version=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+                  echo "cache-key=playwright-${ImageOS}-${RUNNER_ARCH}-${version}-chromium" >> "$GITHUB_OUTPUT"
+
+            - name: Cache Playwright browsers
+              id: playwright-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: ${{ steps.playwright.outputs.cache-key }}
+
             - name: Install Playwright browsers
+              if: steps.playwright-cache.outputs.cache-hit != 'true'
               run: bunx playwright install --with-deps chromium
+
+            # The cache holds the browsers but not their apt packages.
+            - name: Install Playwright system dependencies
+              if: steps.playwright-cache.outputs.cache-hit == 'true'
+              run: bunx playwright install-deps chromium
 
             - name: Run e2e tests
               run: bunx playwright test --project=chromium
