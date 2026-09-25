@@ -1,3 +1,4 @@
+import { redirect } from 'react-router';
 import type { Route } from './+types/login';
 import { Turnstile } from '~/components/Turnstile';
 import { enabledSocialProviders } from '~/lib/auth.server';
@@ -8,6 +9,13 @@ import { requireAnonymous } from '~/models/session.server';
 export async function loader({ request }: Route.LoaderArgs) {
     await requireAnonymous(request);
     return { socialProviders: enabledSocialProviders };
+}
+
+// Sign-in runs client-side through Better Auth. A native submit (before
+// hydration, or with JavaScript off) posts here; send the browser back to the
+// form so the credentials never reach the URL or access logs.
+export async function action() {
+    return redirect('/login', 303);
 }
 
 export default function LoginRoute({ loaderData }: Route.ComponentProps) {
