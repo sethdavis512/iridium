@@ -28,7 +28,7 @@ import {
     useFetcher,
     useRouteError,
 } from 'react-router';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { ALLOWED_MODELS, DEFAULT_MODEL_ID } from '~/lib/ai-models';
 
 const transport = new DefaultChatTransport({
@@ -154,6 +154,109 @@ function ToolPartFallback({ part }: { part: ToolPart }) {
     );
 }
 
+type ChatMessageProps = {
+    message: UIMessage;
+    /** The last message while a reply is in flight. */
+    isPending: boolean;
+    /** The last assistant message once the reply is done. */
+    canRegenerate: boolean;
+    onRegenerate: () => void;
+};
+
+function ChatMessage({
+    message,
+    isPending,
+    canRegenerate,
+    onRegenerate,
+}: ChatMessageProps) {
+    const isUser = message.role === 'user';
+
+    const textContent = message.parts
+        .filter((part) => part.type === 'text' && 'text' in part)
+        .map((part) => part.text)
+        .join('\n\n');
+
+    const toolParts = message.parts.filter((part) =>
+        isToolPart(part),
+    ) as unknown as ToolPart[];
+
+    return (
+        <div>
+            <ChatBubble
+                variant={isUser ? 'primary' : 'default'}
+                placement={isUser ? 'end' : 'start'}
+            >
+                {textContent && <Markdown>{textContent}</Markdown>}
+                {toolParts.map((part) => {
+                    const output =
+                        part.state === 'output-available'
+                            ? (
+                                  part as unknown as {
+                                      output: Record<string, unknown>;
+                                  }
+                              ).output
+                            : undefined;
+
+                    if (NOTE_TOOLS.has(part.toolName)) {
+                        return (
+                            <NoteToolPart
+                                key={part.toolCallId}
+                                toolName={part.toolName}
+                                state={part.state}
+                                output={output}
+                            />
+                        );
+                    }
+
+                    if (part.toolName === 'render_card') {
+                        return (
+                            <CardToolPart
+                                key={part.toolCallId}
+                                state={part.state}
+                                output={output as unknown as CardData}
+                            />
+                        );
+                    }
+
+                    return (
+                        <ToolPartFallback key={part.toolCallId} part={part} />
+                    );
+                })}
+                {!textContent &&
+                    toolParts.length === 0 &&
+                    !isUser &&
+                    isPending && (
+                        <span role="status" aria-label="Loading response">
+                            <LoaderCircleIcon
+                                aria-hidden="true"
+                                className="h-5 w-5 animate-spin"
+                            />
+                        </span>
+                    )}
+            </ChatBubble>
+            {canRegenerate && (
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    className="mt-1"
+                    onClick={() => onRegenerate()}
+                >
+                    <RefreshCwIcon aria-hidden="true" className="size-3" />
+                    Regenerate
+                </Button>
+            )}
+        </div>
+    );
+}
+
+/**
+ * useChat replaces only the message being streamed, so finished messages
+ * keep their identity and skip re-rendering (and Markdown parsing) on every
+ * chunk. Keep the other props primitive or stable to preserve that.
+ */
+const MemoizedChatMessage = memo(ChatMessage);
+
 export default function ThreadRoute({
     loaderData,
     params,
@@ -180,6 +283,8 @@ export default function ThreadRoute({
         id: params.threadId,
         messages: loaderData?.thread.messages,
         transport,
+        // Batch streamed chunks into at most one render per 50 ms.
+        experimental_throttle: 50,
         onError: (error) => {
             console.error('Chat error:', error);
         },
@@ -263,117 +368,21 @@ export default function ThreadRoute({
                    by scrolling, so we use a grow spacer instead. */}
                 <div className="grow" />
                 {messages.length > 0 ? (
-                    messages.map((message) => {
-                        const isUser = message.role === 'user';
-
-                        const textContent = message.parts
-                            .filter(
-                                (part) =>
-                                    part.type === 'text' && 'text' in part,
-                            )
-                            .map((part) => part.text)
-                            .join('\n\n');
-
-                        const toolParts = message.parts.filter((part) =>
-                            isToolPart(part),
-                        ) as unknown as ToolPart[];
-
-                        const content = (
-                            <>
-                                {textContent && (
-                                    <Markdown>{textContent}</Markdown>
-                                )}
-                                {toolParts.map((part) => {
-                                    const output =
-                                        part.state === 'output-available'
-                                            ? (
-                                                  part as unknown as {
-                                                      output: Record<
-                                                          string,
-                                                          unknown
-                                                      >;
-                                                  }
-                                              ).output
-                                            : undefined;
-
-                                    if (NOTE_TOOLS.has(part.toolName)) {
-                                        return (
-                                            <NoteToolPart
-                                                key={part.toolCallId}
-                                                toolName={part.toolName}
-                                                state={part.state}
-                                                output={output}
-                                            />
-                                        );
-                                    }
-
-                                    if (part.toolName === 'render_card') {
-                                        return (
-                                            <CardToolPart
-                                                key={part.toolCallId}
-                                                state={part.state}
-                                                output={
-                                                    output as unknown as CardData
-                                                }
-                                            />
-                                        );
-                                    }
-
-                                    return (
-                                        <ToolPartFallback
-                                            key={part.toolCallId}
-                                            part={part}
-                                        />
-                                    );
-                                })}
-                                {!textContent &&
-                                    toolParts.length === 0 &&
-                                    !isUser &&
-                                    status !== 'ready' &&
-                                    message ===
-                                        messages[messages.length - 1] && (
-                                        <span
-                                            role="status"
-                                            aria-label="Loading response"
-                                        >
-                                            <LoaderCircleIcon
-                                                aria-hidden="true"
-                                                className="h-5 w-5 animate-spin"
-                                            />
-                                        </span>
-                                    )}
-                            </>
-                        );
-
-                        const isLastMessage =
-                            message === messages[messages.length - 1];
+                    messages.map((message, index) => {
+                        const isLast = index === messages.length - 1;
 
                         return (
-                            <div key={message.id}>
-                                <ChatBubble
-                                    variant={isUser ? 'primary' : 'default'}
-                                    placement={isUser ? 'end' : 'start'}
-                                >
-                                    {content}
-                                </ChatBubble>
-                                {!isUser &&
-                                    isLastMessage &&
-                                    status === 'ready' && (
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="xs"
-                                            className="mt-1"
-                                            onClick={() => regenerate()}
-                                        >
-                                            <RefreshCwIcon
-                                                aria-hidden="true"
-                                                className="size-3"
-                                            />
-                                            Regenerate
-                                        </Button>
-                                    )}
-                            </div>
+                            <MemoizedChatMessage
+                                key={message.id}
+                                message={message}
+                                isPending={isLast && status !== 'ready'}
+                                canRegenerate={
+                                    isLast &&
+                                    message.role !== 'user' &&
+                                    status === 'ready'
+                                }
+                                onRegenerate={regenerate}
+                            />
                         );
                     })
                 ) : (
