@@ -5,7 +5,10 @@ import { DEFAULT_MODEL_ID } from '~/lib/ai-models';
 import { enqueueThreadTitle } from '~/lib/jobs.server';
 import { log } from '~/lib/logger.server';
 import { rateLimit } from '~/lib/rate-limit.server';
-import { buildTitleContext } from '~/lib/thread-title.server';
+import {
+    buildFallbackTitle,
+    buildTitleContext,
+} from '~/lib/thread-title.server';
 import { getUserFromSession } from '~/models/session.server';
 import {
     deleteTrailingAssistantMessages,
@@ -87,16 +90,6 @@ export async function action({ request }: Route.ActionArgs) {
         );
     }
 
-    // Auto-generate thread title once per thread, after a few messages.
-    // With Trigger.dev configured this runs as a background job; otherwise
-    // enqueueThreadTitle runs it inline (best-effort, never throws).
-    if (messages.length > 3 && thread.title === 'Untitled') {
-        await enqueueThreadTitle({
-            threadId,
-            context: buildTitleContext(messages),
-        });
-    }
-
     // Only send the latest user message — VoltAgent memory provides
     // conversation context and regenerate may end with an assistant message.
     const latestUserMessage = [...messages]
@@ -173,6 +166,19 @@ export async function action({ request }: Route.ActionArgs) {
                     threadId,
                     userId: user.id,
                     messageCount: messages.length,
+                });
+            }
+
+            // Title the thread after its first reply, off the response path:
+            // not awaited, so it never delays the stream. A title (or its
+            // fallback) is always stored, so this runs once per thread. With
+            // Trigger.dev configured it is a background job; otherwise it runs
+            // inline (best-effort, never throws).
+            if (thread.title === 'Untitled') {
+                void enqueueThreadTitle({
+                    threadId,
+                    context: buildTitleContext(messages),
+                    fallbackTitle: buildFallbackTitle(messages),
                 });
             }
         },

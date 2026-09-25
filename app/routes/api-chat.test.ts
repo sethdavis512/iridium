@@ -35,6 +35,7 @@ vi.mock('~/lib/jobs.server', () => ({
 // The real module pulls in VoltAgent + Prisma (and env validation with them).
 vi.mock('~/lib/thread-title.server', () => ({
     buildTitleContext: () => 'mock conversation context',
+    buildFallbackTitle: () => 'mock fallback title',
 }));
 
 vi.mock('~/voltagent', () => ({
@@ -92,6 +93,20 @@ function makeRequest(body: unknown, method = 'POST'): Request {
 function actionCall(request: Request) {
     // The Route.ActionArgs type isn't exposed easily in tests; cast pragmatically.
     return action({ request } as unknown as Parameters<typeof action>[0]);
+}
+
+type OnFinish = (args: { messages: unknown[] }) => Promise<void>;
+
+/** Stub a successful stream and capture the onFinish it was given. */
+function captureOnFinish() {
+    const captured: { current: OnFinish | null } = { current: null };
+    streamText.mockResolvedValue({
+        toUIMessageStreamResponse: (opts: { onFinish: OnFinish }) => {
+            captured.current = opts.onFinish;
+            return new Response('ok', { status: 200 });
+        },
+    });
+    return captured;
 }
 
 const validBody = {
@@ -264,52 +279,54 @@ describe('/api/chat action', () => {
             createdById: 'u1',
             title: 'Existing Title',
         });
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: () =>
-                new Response('ok', { status: 200 }),
-        });
+        const onFinish = captureOnFinish();
 
-        const longBody = {
-            id: 'thread-1',
-            messages: Array.from({ length: 4 }, (_, i) => ({
-                id: `m${i}`,
-                role: 'user' as const,
-                parts: [{ type: 'text', text: 'hi' }],
-            })),
-        };
-
-        await actionCall(makeRequest(longBody));
+        await actionCall(makeRequest(validBody));
+        await onFinish.current!({ messages: [] });
 
         expect(generateText).not.toHaveBeenCalled();
         expect(enqueueThreadTitle).not.toHaveBeenCalled();
     });
 
-    it('enqueues title generation for untitled threads after a few messages', async () => {
+    it('titles an untitled thread once the reply finishes, not before streaming', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
         getThreadById.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
         });
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: () =>
-                new Response('ok', { status: 200 }),
-        });
+        const onFinish = captureOnFinish();
 
-        const longBody = {
-            id: 'thread-1',
-            messages: Array.from({ length: 4 }, (_, i) => ({
-                id: `m${i}`,
-                role: 'user' as const,
-                parts: [{ type: 'text', text: 'hi' }],
-            })),
-        };
+        await actionCall(makeRequest(validBody));
 
-        await actionCall(makeRequest(longBody));
+        // Nothing on the request path: the response is returned first.
+        expect(enqueueThreadTitle).not.toHaveBeenCalled();
+
+        await onFinish.current!({ messages: [] });
 
         expect(enqueueThreadTitle).toHaveBeenCalledWith({
             threadId: 'thread-1',
             context: 'mock conversation context',
+            fallbackTitle: 'mock fallback title',
         });
+    });
+
+    it('does not wait for title generation to finish the stream', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadById.mockResolvedValue({
+            id: 'thread-1',
+            createdById: 'u1',
+            title: 'Untitled',
+        });
+        // A title call that never settles must not hold up onFinish.
+        enqueueThreadTitle.mockReturnValue(new Promise(() => {}));
+        const onFinish = captureOnFinish();
+
+        await actionCall(makeRequest(validBody));
+
+        await expect(
+            onFinish.current!({ messages: [] }),
+        ).resolves.toBeUndefined();
+        expect(enqueueThreadTitle).toHaveBeenCalledTimes(1);
     });
 });
