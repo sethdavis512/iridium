@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { consumeStream, streamText as aiStreamText, type UIMessage } from 'ai';
+import { MockLanguageModelV3 } from 'ai/test';
 
 const {
     getUserFromSession,
@@ -328,5 +330,190 @@ describe('/api/chat action', () => {
             onFinish.current!({ messages: [] }),
         ).resolves.toBeUndefined();
         expect(enqueueThreadTitle).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('/api/chat abort handling', () => {
+    beforeEach(() => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue({
+            id: 'thread-1',
+            createdById: 'u1',
+            title: 'Existing Title',
+        });
+    });
+
+    it('ties generation to the request signal with a timeout, and drains the stream server-side', async () => {
+        let responseOptions: Record<string, unknown> = {};
+        streamText.mockResolvedValue({
+            toUIMessageStreamResponse: (opts: Record<string, unknown>) => {
+                responseOptions = opts;
+                return new Response('ok', { status: 200 });
+            },
+        });
+        const request = makeRequest(validBody);
+
+        await actionCall(request);
+
+        const options = streamText.mock.calls[0][1];
+        expect(options.abortSignal).toBe(request.signal);
+        expect(options.timeout).toEqual(
+            expect.objectContaining({ totalMs: expect.any(Number) }),
+        );
+        expect(responseOptions.consumeSseStream).toBe(consumeStream);
+    });
+
+    it('saves the partial reply when the client disconnects mid-stream', async () => {
+        // A model that streams part of a reply, then hangs until aborted.
+        let modelSignal: AbortSignal | undefined;
+        const model = new MockLanguageModelV3({
+            doStream: async ({ abortSignal }) => ({
+                stream: new ReadableStream({
+                    start(controller) {
+                        controller.enqueue({
+                            type: 'stream-start',
+                            warnings: [],
+                        });
+                        controller.enqueue({ type: 'text-start', id: 't1' });
+                        controller.enqueue({
+                            type: 'text-delta',
+                            id: 't1',
+                            delta: 'Partial reply',
+                        });
+                        modelSignal = abortSignal;
+                        abortSignal?.addEventListener('abort', () =>
+                            controller.error(abortSignal.reason),
+                        );
+                    },
+                }),
+            }),
+        });
+        streamText.mockImplementation(
+            async (_input: unknown, options: { abortSignal: AbortSignal }) =>
+                aiStreamText({
+                    model,
+                    prompt: 'hi',
+                    abortSignal: options.abortSignal,
+                }),
+        );
+
+        const client = new AbortController();
+        const request = new Request('http://localhost/api/chat', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(validBody),
+            signal: client.signal,
+        });
+
+        const res = await actionCall(request);
+        expect(res.status).toBe(200);
+
+        // The client reads until the partial reply arrives, then stops
+        // reading and disconnects, as a closed tab or Stop would.
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let received = '';
+        while (!received.includes('Partial reply')) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            received += decoder.decode(value, { stream: true });
+        }
+        client.abort();
+
+        await vi.waitFor(() => expect(saveChat).toHaveBeenCalledTimes(1));
+        const saved = saveChat.mock.calls[0][0].messages as UIMessage[];
+        expect(saved.map((m) => m.role)).toEqual(['user', 'assistant']);
+        expect(saved[1].parts).toContainEqual(
+            expect.objectContaining({ type: 'text', text: 'Partial reply' }),
+        );
+        // The disconnect reached the model call, so generation stopped.
+        expect(modelSignal?.aborted).toBe(true);
+    });
+
+    it('still saves the reply when the client stops reading the stream', async () => {
+        // A long reply: enough chunks to back up an unread response stream.
+        const deltas = Array.from({ length: 500 }, (_, i) => ({
+            type: 'text-delta' as const,
+            id: 't1',
+            delta: i === 0 ? 'Start' : '.',
+        }));
+        const model = new MockLanguageModelV3({
+            doStream: async () => ({
+                stream: new ReadableStream({
+                    start(controller) {
+                        controller.enqueue({
+                            type: 'stream-start',
+                            warnings: [],
+                        });
+                        controller.enqueue({ type: 'text-start', id: 't1' });
+                        deltas.forEach((delta) => controller.enqueue(delta));
+                        controller.enqueue({ type: 'text-end', id: 't1' });
+                        controller.enqueue({
+                            type: 'finish',
+                            finishReason: { unified: 'stop', raw: 'stop' },
+                            usage: {
+                                inputTokens: {
+                                    total: 1,
+                                    noCache: 1,
+                                    cacheRead: 0,
+                                    cacheWrite: 0,
+                                },
+                                outputTokens: {
+                                    total: 500,
+                                    text: 500,
+                                    reasoning: 0,
+                                },
+                            },
+                        });
+                        controller.close();
+                    },
+                }),
+            }),
+        });
+        streamText.mockImplementation(async () =>
+            aiStreamText({ model, prompt: 'hi' }),
+        );
+
+        const res = await actionCall(makeRequest(validBody));
+
+        // Read only the first chunk, then leave the body unread.
+        await res.body!.getReader().read();
+
+        await vi.waitFor(() => expect(saveChat).toHaveBeenCalledTimes(1));
+        const saved = saveChat.mock.calls[0][0].messages as UIMessage[];
+        expect(saved[1].parts).toContainEqual(
+            expect.objectContaining({
+                type: 'text',
+                text: `Start${'.'.repeat(499)}`,
+            }),
+        );
+    });
+
+    it('keeps the user message but drops an empty aborted reply', async () => {
+        const onFinish = captureOnFinish();
+
+        await actionCall(makeRequest(validBody));
+        await (
+            onFinish.current as unknown as (args: {
+                messages: unknown[];
+                isAborted: boolean;
+            }) => Promise<void>
+        )({
+            isAborted: true,
+            messages: [
+                validBody.messages[0],
+                {
+                    id: 'a1',
+                    role: 'assistant',
+                    parts: [{ type: 'step-start' }],
+                },
+            ],
+        });
+
+        expect(saveChat).toHaveBeenCalledWith({
+            messages: [validBody.messages[0]],
+            threadId: 'thread-1',
+            userId: 'u1',
+        });
     });
 });

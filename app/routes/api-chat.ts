@@ -1,4 +1,4 @@
-import type { UIMessage } from 'ai';
+import { consumeStream, type UIMessage } from 'ai';
 import z from 'zod';
 
 import { DEFAULT_MODEL_ID } from '~/lib/ai-models';
@@ -35,6 +35,22 @@ const chatRequestSchema = z.object({
     trigger: z.string().max(50).optional(),
     messageId: z.string().max(128).optional(),
 });
+
+/**
+ * Bounds for one chat turn. The request's abort signal stops generation when
+ * the client disconnects or presses Stop; these stop a stalled or runaway
+ * turn (worst case is maxSteps 10 x maxOutputTokens 2048).
+ */
+const CHAT_TIMEOUT = { totalMs: 180_000, stepMs: 90_000 };
+
+/** False for a reply aborted before it produced anything to show. */
+function hasContent(message: UIMessage): boolean {
+    return message.parts.some((part) =>
+        part.type === 'text'
+            ? part.text.trim() !== ''
+            : part.type !== 'step-start',
+    );
+}
 
 function isDuplicateItemError(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
@@ -134,6 +150,10 @@ export async function action({ request }: Route.ActionArgs) {
         conversationId: threadId,
         // The per-thread model is read by the agent's dynamic model callback.
         context: new Map([['model', thread.model ?? DEFAULT_MODEL_ID]]),
+        // Stop generating (and billing) when the client disconnects or
+        // presses Stop. VoltAgent links this to its own abort controller.
+        abortSignal: request.signal,
+        timeout: CHAT_TIMEOUT,
         allowSystemInMessages: true,
     } as Parameters<typeof agent.streamText>[1] & {
         allowSystemInMessages: boolean;
@@ -154,10 +174,23 @@ export async function action({ request }: Route.ActionArgs) {
 
     return result.toUIMessageStreamResponse({
         originalMessages: messages,
-        onFinish: async ({ messages }) => {
+        // Drain a copy of the stream server-side so onFinish runs even when
+        // the client goes away mid-reply; the partial reply is then saved and
+        // Postgres stays in step with VoltAgent memory.
+        consumeSseStream: consumeStream,
+        onFinish: async ({ messages, isAborted }) => {
+            if (isAborted) {
+                log.info('chat_aborted', { threadId, userId: user.id });
+            }
+
             try {
                 await saveChat({
-                    messages,
+                    // An abort can land before the reply has any content;
+                    // keep the user's message but not an empty bubble.
+                    messages: messages.filter(
+                        (message) =>
+                            message.role !== 'assistant' || hasContent(message),
+                    ),
                     threadId,
                     userId: user.id,
                 });

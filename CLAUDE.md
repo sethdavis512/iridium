@@ -130,7 +130,7 @@ Plain async functions in `app/models/*.server.ts` — no classes, no ORM wrapper
 2. Server validates session, applies rate limiting (20 req/min), streams via `agent.streamText()`
 3. VoltAgent manages conversation memory (PostgreSQL-backed) and calls tools as needed
 4. `UIMessage.parts` are serialized as JSON string in the `content` DB column
-5. On completion, `saveChat()` upserts messages to the database
+5. On completion, `saveChat()` upserts messages to the database. Generation stops when the client disconnects or presses Stop (`abortSignal: request.signal`, plus a timeout), and `consumeSseStream` drains the stream server-side so an aborted turn's partial reply is still saved
 
 Agent tools are defined in `app/voltagent/tools/` (`create_note`, `list_notes`, `search_notes`, `render_card`, `get_weather`, `get_current_datetime`). The `render_card` tool demonstrates VoltAgent's tool-driven generative UI pattern -- the agent returns structured data and `CardToolPart` renders it as a rich visual card.
 
