@@ -105,6 +105,29 @@ const envSchema = z.object({
 
 type Env = z.infer<typeof envSchema>;
 
+/** Test-only switches that must never be enabled in production. */
+const TEST_ONLY_FLAGS = ['E2E_TEST_HOOKS', 'DISABLE_AUTH_RATE_LIMIT'] as const;
+
+/**
+ * The schema validated at boot: envSchema plus cross-field rules. With
+ * NODE_ENV=production, E2E_TEST_HOOKS would expose /api/test-role (anyone can
+ * become ADMIN) and /api/test-mailbox (password-reset links), and
+ * DISABLE_AUTH_RATE_LIMIT would remove brute-force protection, so either one
+ * fails boot instead of running.
+ */
+export const bootEnvSchema = envSchema.superRefine((value, ctx) => {
+    if (value.NODE_ENV !== 'production') return;
+    for (const key of TEST_ONLY_FLAGS) {
+        if (value[key]) {
+            ctx.addIssue({
+                code: 'custom',
+                path: [key],
+                message: 'test-only flag; must not be true in production',
+            });
+        }
+    }
+});
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
@@ -145,7 +168,7 @@ function reportAndExit(error: z.ZodError): never {
 }
 
 function validateEnv(): { env: Env; placeholdered: string[] } {
-    const result = envSchema.safeParse(process.env);
+    const result = bootEnvSchema.safeParse(process.env);
     if (result.success) return { env: result.data, placeholdered: [] };
 
     // Production must never run misconfigured — fail fast.
@@ -163,7 +186,7 @@ function validateEnv(): { env: Env; placeholdered: string[] } {
         }
     }
 
-    const retry = envSchema.safeParse(patched);
+    const retry = bootEnvSchema.safeParse(patched);
     // A failure here means a required var we don't have a placeholder for —
     // unrecoverable, so fall back to fail-fast even in dev.
     if (!retry.success) reportAndExit(retry.error);

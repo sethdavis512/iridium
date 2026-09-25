@@ -1,5 +1,67 @@
 import { describe, it, expect } from 'vitest';
-import { computeEnvWarnings } from './env.server';
+import { bootEnvSchema, computeEnvWarnings } from './env.server';
+
+const baseEnv = {
+    DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/iridium',
+    VOLTAGENT_DATABASE_URL:
+        'postgresql://postgres:postgres@localhost:5433/voltagent',
+    BETTER_AUTH_SECRET: 'x'.repeat(32),
+    BETTER_AUTH_BASE_URL: 'https://iridium.example.com',
+};
+
+function failingKeys(input: Record<string, string>) {
+    const result = bootEnvSchema.safeParse(input);
+    return result.success
+        ? []
+        : result.error.issues.map((i) => String(i.path[0]));
+}
+
+describe('bootEnvSchema test-only flags', () => {
+    it('boots in production when the test-only flags are unset or false', () => {
+        expect(failingKeys({ ...baseEnv, NODE_ENV: 'production' })).toEqual([]);
+        expect(
+            failingKeys({
+                ...baseEnv,
+                NODE_ENV: 'production',
+                E2E_TEST_HOOKS: 'false',
+                DISABLE_AUTH_RATE_LIMIT: 'false',
+            }),
+        ).toEqual([]);
+    });
+
+    it('fails in production when E2E_TEST_HOOKS is true', () => {
+        expect(
+            failingKeys({
+                ...baseEnv,
+                NODE_ENV: 'production',
+                E2E_TEST_HOOKS: 'true',
+            }),
+        ).toEqual(['E2E_TEST_HOOKS']);
+    });
+
+    it('fails in production when DISABLE_AUTH_RATE_LIMIT is true', () => {
+        expect(
+            failingKeys({
+                ...baseEnv,
+                NODE_ENV: 'production',
+                DISABLE_AUTH_RATE_LIMIT: 'true',
+            }),
+        ).toEqual(['DISABLE_AUTH_RATE_LIMIT']);
+    });
+
+    it('allows the flags outside production (E2E and dev servers)', () => {
+        for (const NODE_ENV of ['development', 'test']) {
+            expect(
+                failingKeys({
+                    ...baseEnv,
+                    NODE_ENV,
+                    E2E_TEST_HOOKS: 'true',
+                    DISABLE_AUTH_RATE_LIMIT: 'true',
+                }),
+            ).toEqual([]);
+        }
+    });
+});
 
 describe('computeEnvWarnings', () => {
     it('returns no warnings when no required var is placeholdered', () => {
