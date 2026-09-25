@@ -8,6 +8,7 @@ import {
     LOCAL_DATABASE_NAME,
 } from '~/config';
 import {
+    isTemplateRemote,
     localDatabaseUrl,
     replaceLocalDatabaseName,
     setAppIdentity,
@@ -51,6 +52,20 @@ describe('toDisplayName', () => {
         ['  ', 'App'],
     ])('%j -> %j', (name, display) => {
         expect(toDisplayName(name)).toBe(display);
+    });
+});
+
+describe('isTemplateRemote', () => {
+    it.each([
+        ['git@github.com:sethdavis512/iridium.git', true],
+        ['https://github.com/sethdavis512/iridium', true],
+        ['https://github.com/SethDavis512/Iridium.git\n', true],
+        ['git@github.com:acme/iridium.git', false],
+        ['git@github.com:sethdavis512/iridium-fork.git', false],
+        ['https://gitlab.com/sethdavis512/iridium.git', false],
+        ['', false],
+    ])('%j -> %j', (url, expected) => {
+        expect(isTemplateRemote(url)).toBe(expected);
     });
 });
 
