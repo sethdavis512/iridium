@@ -9,7 +9,7 @@ You are a VoltAgent and Vercel AI SDK expert for the Iridium project. Your job i
 
 ## Project Setup
 
-- **Agent definition**: `app/voltagent/agents.ts` — exports `agent` (Agent instance) and `memory` (Memory instance)
+- **Agent definition**: `app/voltagent/agents.ts` exports `getChat()`, which resolves to `{ agent, memory, storage }`, built on first use (a lazy resource retried with backoff, so a down VoltAgent database fails chat with a 503 instead of crashing boot). Never construct the adapter, Memory, or Agent at module level
 - **Agent barrel export**: `app/voltagent/index.ts` — re-exports from `agents.ts`
 - **Tools directory**: `app/voltagent/tools/` — one file per tool domain (e.g., `notes.ts`)
 - **Retrievers directory**: `app/voltagent/retrievers/` — one file per retriever
@@ -160,7 +160,7 @@ const memory = new Memory({
 });
 ```
 
-- Memory lives in its own Postgres database (`VOLTAGENT_DATABASE_URL`, port 5433 locally). Constructing the adapter creates its `voltagent_memory_*` tables in whatever database it points at, so never pass `DATABASE_URL` (env validation refuses a VoltAgent URL that names the app database). The real wiring, with pool options, is in `app/voltagent/agents.ts`
+- Memory lives in its own Postgres database (`VOLTAGENT_DATABASE_URL`, port 5433 locally). Constructing the adapter creates its `voltagent_memory_*` tables in whatever database it points at, so never pass `DATABASE_URL` (env validation refuses a VoltAgent URL that names the app database). The real wiring, with pool options, is in `app/voltagent/memory-storage.ts`
 - Working memory scope is `'user'` (shared across threads) — use `'conversation'` for thread-specific memory
 - The Zod schema defines what the agent can store/retrieve in working memory
 - `memory.clearMessages(userId, conversationId)` clears provider messages for self-healing

@@ -15,7 +15,7 @@ import {
     getThreadMeta,
     saveChat,
 } from '~/models/thread.server';
-import { agent, memory } from '~/voltagent';
+import { getChat, ResourceUnavailableError } from '~/voltagent';
 import type { Route } from './+types/api-chat';
 
 /** Request bodies over this size are rejected (413) before being parsed. */
@@ -176,6 +176,30 @@ export async function action({ request }: Route.ActionArgs) {
             { status: 400 },
         );
     }
+
+    // VoltAgent memory opens on first use and can be down (it is retried with
+    // backoff). Answer 503 before touching the thread or its memory, so a
+    // retry finds both as they were.
+    let chat: Awaited<ReturnType<typeof getChat>>;
+    try {
+        chat = await getChat();
+    } catch (error) {
+        if (!(error instanceof ResourceUnavailableError)) throw error;
+        return Response.json(
+            {
+                error: 'Chat is temporarily unavailable. Please try again in a moment.',
+            },
+            {
+                status: 503,
+                headers: {
+                    'Retry-After': String(
+                        Math.max(1, Math.ceil(error.retryAfterMs / 1000)),
+                    ),
+                },
+            },
+        );
+    }
+    const { agent, memory } = chat;
 
     const isRegenerate = parsed.trigger === 'regenerate-message';
     let inputMessages: UIMessage[] = [latestUserMessage];

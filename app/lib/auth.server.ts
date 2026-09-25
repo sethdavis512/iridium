@@ -99,7 +99,8 @@ export const auth = betterAuth({
                 // Prisma cascades remove the user's rows in the app DB, but
                 // VoltAgent conversation memory lives in a separate store.
                 try {
-                    const { memory } = await import('~/voltagent');
+                    const { getChat } = await import('~/voltagent');
+                    const { memory } = await getChat();
                     // No conversationId: clears every conversation for the user.
                     await memory.clearMessages(user.id);
                 } catch (error) {

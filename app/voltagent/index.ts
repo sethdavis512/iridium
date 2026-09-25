@@ -1,1 +1,2 @@
-export { agent, memory } from './agents';
+export { getChat } from './agents';
+export { ResourceUnavailableError } from './lazy-resource';
