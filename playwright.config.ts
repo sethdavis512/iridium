@@ -11,7 +11,8 @@ export default defineConfig({
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
-    workers: process.env.CI ? 1 : undefined,
+    // Every test signs up its own isolated user, so CI can run in parallel.
+    workers: process.env.CI ? 2 : undefined,
     reporter: 'html',
     use: {
         baseURL: BASE_URL,

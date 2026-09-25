@@ -7,6 +7,15 @@ on:
         branches: [main]
     workflow_dispatch:
 
+# A new push to a PR cancels that PR's in-flight run. Runs on main never
+# cancel: Railway's Wait for CI needs every main commit's run to finish. Main
+# gets a per-run group rather than a shared one because a shared group would
+# still replace a queued run when a third commit lands, even without
+# cancel-in-progress.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
     DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iridium_test
     VOLTAGENT_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/voltagent_test
@@ -15,45 +24,178 @@ env:
     ANTHROPIC_API_KEY: test-key-not-used-in-e2e
 
 jobs:
-    validate:
-        name: Typecheck + Lint + Format
+    # `code` is 'false' only when every changed file is docs or agent config,
+    # so unit, e2e, visual, and docker can skip. The jobs skip through `if:`
+    # rather than workflow-level paths-ignore, so every commit still gets a
+    # workflow result for Railway's Wait for CI. Assumes the app never imports
+    # markdown. Manual runs skip the filter and test everything.
+    changes:
+        name: Detect changes
         runs-on: ubuntu-latest
         timeout-minutes: 5
+        permissions:
+            contents: read
+            pull-requests: read
+        outputs:
+            code: ${{ steps.filter.outputs.code != 'false' }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dorny/paths-filter@v4
+              id: filter
+              if: github.event_name != 'workflow_dispatch'
+              with:
+                  predicate-quantifier: every
+                  filters: |
+                      code:
+                          - '**'
+                          - '!.claude/**'
+                          - '!.agents/**'
+                          - '!.specify/**'
+                          - '!docs/**'
+                          - '!**/*.md'
+
+    # Unit tests share this job's install and Prisma setup: they take a few
+    # seconds, less than a separate job spends on setup. Validate itself always
+    # runs, because Prettier checks markdown.
+    validate:
+        name: Validate + Unit Tests
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        needs: changes
         steps:
             - uses: actions/checkout@v4
             - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version-file: package.json
             - uses: actions/setup-node@v4
               with:
                   node-version: 24
+            - name: Cache Bun packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.bun/install/cache
+                  key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: bun-${{ runner.os }}-
             - name: Install dependencies
               run: bun install --frozen-lockfile
             - name: Generate Prisma client
               run: bunx --bun prisma generate
             - name: Validate
               run: bun run validate
-
-    unit:
-        name: Unit Tests
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        steps:
-            - uses: actions/checkout@v4
-            - uses: oven-sh/setup-bun@v2
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 24
-            - name: Install dependencies
-              run: bun install --frozen-lockfile
-            - name: Generate Prisma client
-              run: bunx --bun prisma generate
             - name: Run unit tests
+              if: needs.changes.outputs.code == 'true'
               run: bun run test
 
     e2e:
         name: Playwright
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        needs: [validate, unit]
+        # Needs only `changes`, not validate: e2e runs alongside validate to
+        # keep the critical path short. Wait for CI still waits for the whole run.
+        needs: changes
+        if: needs.changes.outputs.code == 'true'
+
+        # The health checks probe over TCP: during first-boot init the image
+        # runs a socket-only temporary server that a plain `pg_isready` would
+        # report as ready.
+        services:
+            postgres:
+                image: postgres:16-alpine
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: iridium_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
+                    --health-timeout 5s
+                    --health-retries 15
+
+            voltagent:
+                image: postgres:16-alpine
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: voltagent_test
+                ports:
+                    - 5433:5432
+                options: >-
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
+                    --health-timeout 5s
+                    --health-retries 15
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version-file: package.json
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+            - name: Cache Bun packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.bun/install/cache
+                  key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: bun-${{ runner.os }}-
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Generate Prisma client
+              run: bunx --bun prisma generate
+
+            - name: Run migrations
+              run: bunx --bun prisma migrate deploy
+
+            # Browser builds depend on the Playwright version and the runner
+            # image (ImageOS changes when ubuntu-latest moves to a new release).
+            - name: Resolve Playwright cache key
+              id: playwright
+              run: |
+                  version=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+                  echo "cache-key=playwright-${ImageOS}-${RUNNER_ARCH}-${version}-chromium" >> "$GITHUB_OUTPUT"
+
+            - name: Cache Playwright browsers
+              id: playwright-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: ${{ steps.playwright.outputs.cache-key }}
+
+            - name: Install Playwright browsers
+              if: steps.playwright-cache.outputs.cache-hit != 'true'
+              run: bunx playwright install --with-deps chromium
+
+            # The cache holds the browsers but not their apt packages.
+            - name: Install Playwright system dependencies
+              if: steps.playwright-cache.outputs.cache-hit == 'true'
+              run: bunx playwright install-deps chromium
+
+            - name: Run e2e tests
+              run: bunx playwright test --project=chromium
+
+            - name: Upload test report
+              if: ${{ !cancelled() }}
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-report
+                  path: playwright-report/
+                  retention-days: 14
+
+    # Screenshot gallery for PR review. Captures, not assertions, so it runs on
+    # pull requests only: skipped on main, it adds nothing to the run Railway's
+    # Wait for CI waits on and can't block a deploy.
+    visual:
+        name: Visual inventory
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: changes
+        if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
 
         services:
             postgres:
@@ -65,10 +207,10 @@ jobs:
                 ports:
                     - 5432:5432
                 options: >-
-                    --health-cmd "pg_isready -U postgres"
-                    --health-interval 10s
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
                     --health-timeout 5s
-                    --health-retries 5
+                    --health-retries 15
 
             voltagent:
                 image: postgres:16-alpine
@@ -79,18 +221,26 @@ jobs:
                 ports:
                     - 5433:5432
                 options: >-
-                    --health-cmd "pg_isready -U postgres"
-                    --health-interval 10s
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
                     --health-timeout 5s
-                    --health-retries 5
+                    --health-retries 15
 
         steps:
             - uses: actions/checkout@v4
 
             - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version-file: package.json
             - uses: actions/setup-node@v4
               with:
                   node-version: 24
+            - name: Cache Bun packages
+              uses: actions/cache@v4
+              with:
+                  path: ~/.bun/install/cache
+                  key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: bun-${{ runner.os }}-
 
             - name: Install dependencies
               run: bun install --frozen-lockfile
@@ -101,24 +251,28 @@ jobs:
             - name: Run migrations
               run: bunx --bun prisma migrate deploy
 
+            - name: Resolve Playwright cache key
+              id: playwright
+              run: |
+                  version=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+                  echo "cache-key=playwright-${ImageOS}-${RUNNER_ARCH}-${version}-chromium" >> "$GITHUB_OUTPUT"
+
+            - name: Cache Playwright browsers
+              id: playwright-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: ${{ steps.playwright.outputs.cache-key }}
+
             - name: Install Playwright browsers
+              if: steps.playwright-cache.outputs.cache-hit != 'true'
               run: bunx playwright install --with-deps chromium
 
-            - name: Run e2e tests
-              run: bunx playwright test --project=chromium
-
-            # Upload before the visual run: a second `playwright test`
-            # invocation rewrites playwright-report/ and clears test-results/.
-            - name: Upload test report
-              if: ${{ !cancelled() }}
-              uses: actions/upload-artifact@v4
-              with:
-                  name: playwright-report
-                  path: playwright-report/
-                  retention-days: 14
+            - name: Install Playwright system dependencies
+              if: steps.playwright-cache.outputs.cache-hit == 'true'
+              run: bunx playwright install-deps chromium
 
             - name: Run visual inventory
-              if: ${{ !cancelled() }}
               run: PW_VISUAL=1 bunx playwright test --project=visual
 
             - name: Upload visual inventory
@@ -131,29 +285,138 @@ jobs:
                       playwright-report/
                   retention-days: 14
 
-    deploy:
-        name: Deploy (Railway)
+    # Builds the production image and boots it the way Railway does, so a
+    # broken production install, build, migration, or env check fails CI
+    # instead of the deploy.
+    docker:
+        name: Docker image
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        needs: [e2e]
-        # Only deploy on pushes to main (not PRs). The deploy step itself is a
-        # no-op until a RAILWAY_TOKEN repo secret exists, so forks and clones
-        # without Railway configured stay green.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-            RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        needs: changes
+        if: needs.changes.outputs.code == 'true'
+
+        services:
+            postgres:
+                image: postgres:16-alpine
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: iridium_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
+                    --health-timeout 5s
+                    --health-retries 15
+
+            voltagent:
+                image: postgres:16-alpine
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: voltagent_test
+                ports:
+                    - 5433:5432
+                options: >-
+                    --health-cmd "pg_isready -h 127.0.0.1 -U postgres"
+                    --health-interval 2s
+                    --health-timeout 5s
+                    --health-retries 15
+
         steps:
             - uses: actions/checkout@v4
+
+            - uses: docker/setup-buildx-action@v4
+
+            - name: Build image
+              uses: docker/build-push-action@v7
+              with:
+                  context: .
+                  push: false
+                  load: true
+                  tags: iridium:ci
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+
+            # Host networking lets the container reach the service databases
+            # at the workflow's localhost DATABASE_URL and VOLTAGENT_DATABASE_URL.
+            # The image's CMD runs `prisma migrate deploy` before serving.
+            - name: Boot image and wait for /healthcheck
+              run: |
+                  docker run -d --name iridium --network host \
+                      -e NODE_ENV=production \
+                      -e DATABASE_URL \
+                      -e VOLTAGENT_DATABASE_URL \
+                      -e BETTER_AUTH_SECRET \
+                      -e BETTER_AUTH_BASE_URL=http://localhost:3000 \
+                      iridium:ci
+                  for _ in $(seq 1 45); do
+                      if curl -fsS --max-time 5 http://localhost:3000/healthcheck; then
+                          echo
+                          exit 0
+                      fi
+                      if [ "$(docker inspect -f '{{.State.Running}}' iridium)" != true ]; then
+                          echo "::error::The container exited before /healthcheck returned 200"
+                          docker logs iridium
+                          exit 1
+                      fi
+                      sleep 2
+                  done
+                  echo "::error::/healthcheck did not return 200 within 90s"
+                  docker logs iridium
+                  exit 1
+
+    # Deploys the Trigger.dev tasks in trigger/ once the other jobs pass on a
+    # push to main (it skips with them on docs-only commits). A no-op until the
+    # TRIGGER_ACCESS_TOKEN repo secret exists, so forks and fresh copies stay
+    # green; once it does, the TRIGGER_PROJECT_REF repo variable is required.
+    trigger:
+        name: Deploy Trigger.dev tasks
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: [validate, e2e, docker]
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+            TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+            TRIGGER_PROJECT_REF: ${{ vars.TRIGGER_PROJECT_REF }}
+        steps:
+            - name: Skipped (no TRIGGER_ACCESS_TOKEN)
+              if: env.TRIGGER_ACCESS_TOKEN == ''
+              run: echo "TRIGGER_ACCESS_TOKEN is not set, so the Trigger.dev tasks were not deployed. Add the repo secret and the TRIGGER_PROJECT_REF variable to enable."
+
+            - uses: actions/checkout@v4
+              if: env.TRIGGER_ACCESS_TOKEN != ''
             - uses: oven-sh/setup-bun@v2
-            - name: Deploy to Railway
-              if: ${{ env.RAILWAY_TOKEN != '' }}
-              # `railway up` builds the Dockerfile; migrations then run once as
-              # the pre-deploy command from .railway/railway.ts, not on boot.
-              # Use a project-scoped token; set RAILWAY_SERVICE if the project has
-              # more than one service.
-              run: bunx @railway/cli up --ci ${RAILWAY_SERVICE:+--service "$RAILWAY_SERVICE"}
-              env:
-                  RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
-            - name: Skipped (no RAILWAY_TOKEN)
-              if: ${{ env.RAILWAY_TOKEN == '' }}
-              run: echo "RAILWAY_TOKEN not set — skipping deploy. Add it in repo secrets to enable."
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              with:
+                  bun-version-file: package.json
+            - uses: actions/setup-node@v4
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              with:
+                  node-version: 24
+            - name: Cache Bun packages
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              uses: actions/cache@v4
+              with:
+                  path: ~/.bun/install/cache
+                  key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: bun-${{ runner.os }}-
+            - name: Install dependencies
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              run: bun install --frozen-lockfile
+            # The Prisma build extension bundles the generated client, which is
+            # gitignored.
+            - name: Generate Prisma client
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              run: bunx --bun prisma generate
+            # trigger:deploy pins the CLI to the installed @trigger.dev/sdk
+            # version; deploy fails in CI on a version mismatch.
+            - name: Deploy to Trigger.dev
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              run: |
+                  if [ -z "$TRIGGER_PROJECT_REF" ]; then
+                      echo "::error::Set the TRIGGER_PROJECT_REF repo variable to the Trigger.dev project ref."
+                      exit 1
+                  fi
+                  bun run trigger:deploy

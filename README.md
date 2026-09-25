@@ -169,6 +169,11 @@ required env vars (`DATABASE_URL`, `BETTER_AUTH_SECRET`, etc.) set in the
 Trigger.dev dashboard. Without `TRIGGER_SECRET_KEY`, `app/lib/jobs.server.ts`
 runs the same functions inline and the purge job simply doesn't run.
 
+To deploy the tasks from CI on every push to `main`, add a Trigger.dev personal
+access token as the `TRIGGER_ACCESS_TOKEN` repository secret and the project
+ref as the `TRIGGER_PROJECT_REF` repository variable. The CI job is a no-op
+until the secret exists.
+
 ## Project Structure
 
 ```
@@ -332,9 +337,13 @@ service or variable missing from the file is deleted, and removing `source`
 disconnects the repo.
 
 There is no `railway.json`: Railway's Config as Code is deprecated (it stops being
-read on 2026-12-01), and `.railway/railway.ts` is the only Railway config. The `deploy` job in `.github/workflows/ci.yml` is a
-no-op unless a `RAILWAY_TOKEN` secret is set; provisioned projects deploy
-through Railway's GitHub integration instead.
+read on 2026-12-01), and `.railway/railway.ts` is the only Railway config.
+
+Production ships the same way, only by merging to `main`. Railway's GitHub
+integration builds the commit, and Wait for CI (`checkSuites: true` in
+`.railway/railway.ts`) holds the deploy until the CI workflow finishes and skips
+it if CI fails. CI has no deploy job, and `railway up` is not used against
+production.
 
 The image is also deployable to any Docker-compatible platform (Fly.io, AWS ECS,
 Google Cloud Run, …).
