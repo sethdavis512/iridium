@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { EnvWarning } from '~/lib/env-status';
 import { APP_NAME, LOCAL_DATABASE_NAME } from '~/config';
 import { parseAdminEmails } from '~/lib/admin-emails';
+import { log } from '~/lib/logger.server';
 
 const envSchema = z.object({
     DATABASE_URL: z.url({ message: 'DATABASE_URL must be a valid URL' }),
@@ -50,7 +51,8 @@ const envSchema = z.object({
     ANTHROPIC_API_KEY: z.string().optional(),
     /**
      * Optional: when unset, outgoing email is rendered and logged to the
-     * console instead of sent. Set a real key in production.
+     * console instead of sent. Set a real key in production (production
+     * boot logs an `email_not_configured` warning without one).
      */
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().default(`${APP_NAME} <onboarding@resend.dev>`),
@@ -201,6 +203,39 @@ function validateEnv(): { env: Env; placeholdered: string[] } {
 const resolved = validateEnv();
 
 export const env = resolved.env;
+
+/**
+ * Production-only boot warnings for email config. Without Resend, password
+ * reset and verification emails are only logged, so users cannot recover
+ * their accounts. This warns rather than fails so the production image still
+ * boots without a key (e.g. a CI Docker smoke test). Dev and test keep the
+ * console fallback silently. Pure so it can be unit-tested.
+ */
+export function productionEmailWarnings(
+    values: Pick<Env, 'NODE_ENV' | 'RESEND_API_KEY' | 'EMAIL_FROM'>,
+): string[] {
+    if (values.NODE_ENV !== 'production') return [];
+    if (!values.RESEND_API_KEY) {
+        return [
+            'RESEND_API_KEY is unset: password-reset and verification emails ' +
+                'are logged instead of sent, so users cannot recover their ' +
+                'accounts. Verify a sending domain in Resend and set ' +
+                'RESEND_API_KEY and EMAIL_FROM.',
+        ];
+    }
+    if (values.EMAIL_FROM.includes('@resend.dev')) {
+        return [
+            'EMAIL_FROM uses the resend.dev test sender, which only delivers ' +
+                'to the Resend account owner. Set EMAIL_FROM to an address on ' +
+                'a verified domain.',
+        ];
+    }
+    return [];
+}
+
+for (const message of productionEmailWarnings(env)) {
+    log.warn('email_not_configured', { message });
+}
 
 /**
  * Build the dev banner's warning list. Only *required* infra vars that are

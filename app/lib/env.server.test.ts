@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { bootEnvSchema, computeEnvWarnings } from './env.server';
+import {
+    bootEnvSchema,
+    computeEnvWarnings,
+    productionEmailWarnings,
+} from './env.server';
 
 const baseEnv = {
     DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/iridium',
@@ -86,5 +90,49 @@ describe('computeEnvWarnings', () => {
     it('falls back to a generic effect for an unknown key', () => {
         const [warning] = computeEnvWarnings(['SOMETHING_ELSE']);
         expect(warning.effect).toMatch(/placeholder/i);
+    });
+});
+
+describe('productionEmailWarnings', () => {
+    const verifiedSender = 'Iridium <hello@example.com>';
+
+    it('stays silent outside production (console fallback)', () => {
+        for (const NODE_ENV of ['development', 'test'] as const) {
+            expect(
+                productionEmailWarnings({
+                    NODE_ENV,
+                    RESEND_API_KEY: undefined,
+                    EMAIL_FROM: verifiedSender,
+                }),
+            ).toEqual([]);
+        }
+    });
+
+    it('warns in production when RESEND_API_KEY is unset', () => {
+        const [warning] = productionEmailWarnings({
+            NODE_ENV: 'production',
+            RESEND_API_KEY: undefined,
+            EMAIL_FROM: verifiedSender,
+        });
+        expect(warning).toMatch(/RESEND_API_KEY is unset/);
+    });
+
+    it('warns in production when EMAIL_FROM is the resend.dev test sender', () => {
+        const [warning] = productionEmailWarnings({
+            NODE_ENV: 'production',
+            RESEND_API_KEY: 're_test',
+            EMAIL_FROM: 'Iridium <onboarding@resend.dev>',
+        });
+        expect(warning).toMatch(/EMAIL_FROM/);
+    });
+
+    it('is quiet in production once Resend is fully configured', () => {
+        expect(
+            productionEmailWarnings({
+                NODE_ENV: 'production',
+                RESEND_API_KEY: 're_test',
+                EMAIL_FROM: verifiedSender,
+            }),
+        ).toEqual([]);
     });
 });
