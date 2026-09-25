@@ -67,7 +67,17 @@ The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
 | `iridium`   | 5432 | `DATABASE_URL`           | Prisma (app data, auth, threads) |
 | `voltagent` | 5433 | `VOLTAGENT_DATABASE_URL` | VoltAgent memory and state       |
 
-VoltAgent creates its own tables automatically on first connection -- no migration needed.
+VoltAgent creates its own tables automatically on first connection -- no migration needed. It does so the moment `~/voltagent` loads, in whatever database `VOLTAGENT_DATABASE_URL` names, so env validation refuses a `VOLTAGENT_DATABASE_URL` that resolves to the same database as `DATABASE_URL` (in dev too).
+
+**One-time cleanup for stray VoltAgent tables:** from late February to 2026-03-24, memory was wired to `DATABASE_URL`, so an app database from that era can still hold `voltagent_memory_*` tables, which `prisma migrate dev` reports as drift. They hold no app data (live memory is on 5433). Drop them from the database Prisma actually uses (`prisma db execute` reads `DATABASE_URL` through `prisma.config.ts`):
+
+```sh
+echo 'DROP TABLE IF EXISTS voltagent_memory_steps, voltagent_memory_workflow_states, voltagent_memory_messages, voltagent_memory_conversations, voltagent_memory_users CASCADE;' | bunx --bun prisma db execute --stdin
+```
+
+Or reset everything with `bun run db:fresh`.
+
+**Gotcha: another Postgres on port 5432.** A host Postgres (Postgres.app, Homebrew) listening on `127.0.0.1`/`::1` port 5432 wins over Docker's wildcard binding, so `localhost:5432` silently reaches it, and whatever old `iridium` database it holds, instead of the `postgres` container. `lsof -nP -iTCP:5432 -sTCP:LISTEN` shows who is listening, and `SELECT version()` through `DATABASE_URL` shows which server you reached. Stop the other server, or move one of them off 5432, before trusting local migrations or E2E runs.
 
 Environment variables are validated at startup by `app/lib/env.server.ts` -- missing or invalid vars produce clear error messages.
 
@@ -151,7 +161,7 @@ Every pg pool is built from `pgPoolConfig()` in `app/lib/db-pool.server.ts`: `co
 
 `app/lib/env.server.ts` validates env with Zod at startup. Required **infra** vars (`DATABASE_URL`, `VOLTAGENT_DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_BASE_URL`) plus **feature** keys that degrade gracefully when unset (`ANTHROPIC_API_KEY` → chat disabled, `RESEND_API_KEY` → email to console, OAuth pairs → buttons hidden, `TRIGGER_SECRET_KEY` → jobs inline, `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`STRIPE_PRICE_ID` → billing stub, `ADMIN_EMAILS` → no first-admin bootstrap) and `EMAIL_FROM`, `DISABLE_AUTH_RATE_LIMIT`, `E2E_TEST_HOOKS`. Import `env` from this module instead of reading `process.env` directly in server code.
 
-**Boot behavior is environment-dependent:** in **production**, missing/invalid vars fail fast (`process.exit(1)`) so misconfigured prod never runs. In **dev/test**, the app always boots — missing infra vars are swapped for placeholders (a console warning lists them) and missing feature keys just disable their feature. What's unset surfaces in a **dev-only banner** at the top of every page (`EnvBanner`, fed by `envWarnings`/`shouldShowEnvBanner` from `env.server.ts` via the root loader). The banner never renders in production or during E2E runs (gated on `E2E_TEST_HOOKS`), so it can't affect end users or test/visual snapshots.
+**Boot behavior is environment-dependent:** in **production**, missing/invalid vars fail fast (`process.exit(1)`) so misconfigured prod never runs. In **dev/test**, the app always boots — missing infra vars are swapped for placeholders (a console warning lists them) and missing feature keys just disable their feature. The exception is `bootEnvSchema`'s cross-field rules (a `VOLTAGENT_DATABASE_URL` that names the `DATABASE_URL` database): no placeholder fixes a set but wrong value, so they fail boot everywhere. What's unset surfaces in a **dev-only banner** at the top of every page (`EnvBanner`, fed by `envWarnings`/`shouldShowEnvBanner` from `env.server.ts` via the root loader). The banner never renders in production or during E2E runs (gated on `E2E_TEST_HOOKS`), so it can't affect end users or test/visual snapshots.
 
 ### Billing (Stripe stub)
 
