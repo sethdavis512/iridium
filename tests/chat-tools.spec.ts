@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect, waitForHydration } from './fixtures';
 import { mockChatStream, toolCallChunks } from './chat-mock';
 
 /**
@@ -10,11 +10,16 @@ import { mockChatStream, toolCallChunks } from './chat-mock';
 
 async function openNewThread(page: import('@playwright/test').Page) {
     await page.goto('/chat');
+    // Before hydration the composer accepts input but useChat isn't attached,
+    // so Send silently does nothing. Wait on both sides of the navigation.
+    await waitForHydration(page);
     await page.getByRole('button', { name: 'New Thread' }).click();
     await expect(page).toHaveURL(/\/chat\/.+/);
+    await waitForHydration(page);
 }
 
 async function send(page: import('@playwright/test').Page, text: string) {
+    await waitForHydration(page);
     await page.getByPlaceholder('Your message here...').fill(text);
     await page.getByRole('button', { name: 'Send' }).click();
 }

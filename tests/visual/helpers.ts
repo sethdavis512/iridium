@@ -13,10 +13,6 @@ export const VISUAL_DIR = 'test-results/visual-inventory';
 
 export const MOBILE_VIEWPORT = { width: 390, height: 844 };
 
-// Monotonic counter so emails minted within the same millisecond by one worker
-// never collide (mirrors fixtures.ts).
-let userSeq = 0;
-
 /**
  * Fresh browser context authenticated as a new user whose display name is the
  * fixed string "Visual Tester". fixtures' createFreshUser embeds the tag in
@@ -34,7 +30,8 @@ export async function createVisualContext(
         headers: { Origin: baseURL },
         data: {
             name: 'Visual Tester',
-            email: `visual-${tag}-${Date.now()}-${userSeq++}@iridium.test`,
+            // Random UUID for the same reason as fixtures' createFreshUser.
+            email: `visual-${tag}-${crypto.randomUUID()}@iridium.test`,
             password: 'password123',
         },
     });

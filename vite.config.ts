@@ -25,6 +25,7 @@ export default defineConfig({
             'tailwind-merge',
             'lucide-react',
             '@ai-sdk/react',
+            'ai',
             'react-markdown',
             'zod',
             'tiny-invariant',
@@ -40,6 +41,20 @@ export default defineConfig({
             '@base-ui/react/separator',
             '@base-ui/react/toast',
             '@base-ui/react/use-render',
+            // Server-only packages. The browser never loads these, but the
+            // dev server still registers them with the client optimizer
+            // after the first authenticated SSR (seen with DEBUG=vite:deps),
+            // so leaving them out re-optimizes and reloads open pages.
+            '@prisma/adapter-pg',
+            '@prisma/client/runtime/client',
+            '@react-email/components',
+            '@react-email/render',
+            '@voltagent/core',
+            'better-auth',
+            'better-auth/adapters/prisma',
+            'better-auth/plugins',
+            'better-auth/plugins/admin/access',
+            'resend',
         ],
     },
 });

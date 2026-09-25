@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect, waitForHydration } from './fixtures';
 
 test.describe('Theme switching', () => {
     test('defaults to system (no dark class in light color scheme)', async ({
@@ -25,6 +25,7 @@ test.describe('Theme switching', () => {
     }) => {
         await page.goto('/');
 
+        await waitForHydration(page);
         await page.getByRole('button', { name: 'Change theme' }).click();
         await page.getByRole('menuitem', { name: 'Dark' }).click();
 
@@ -50,6 +51,7 @@ test.describe('Theme switching', () => {
         await page.goto('/');
         await expect(page.locator('html')).toHaveClass(/\bdark\b/);
 
+        await waitForHydration(page);
         await page.getByRole('button', { name: 'Change theme' }).click();
         await page.getByRole('menuitem', { name: 'Light' }).click();
 
@@ -60,6 +62,7 @@ test.describe('Theme switching', () => {
     test('selecting light removes the dark class', async ({ page }) => {
         await page.goto('/');
 
+        await waitForHydration(page);
         await page.getByRole('button', { name: 'Change theme' }).click();
         await page.getByRole('menuitem', { name: 'Dark' }).click();
         await expect(page.locator('html')).toHaveClass(/\bdark\b/);

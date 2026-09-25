@@ -1,5 +1,5 @@
 import { APP_NAME, APP_TAGLINE } from '~/config';
-import { test, expect } from './fixtures';
+import { test, expect, waitForHydration } from './fixtures';
 
 const siteNav = (page: import('@playwright/test').Page) =>
     page.getByRole('navigation', { name: 'Site' });
@@ -78,6 +78,7 @@ test.describe('Mobile navigation', () => {
         authedPage: page,
     }) => {
         await page.goto('/');
+        await waitForHydration(page);
 
         const hamburger = page.getByRole('button', {
             name: 'Open navigation menu',
@@ -108,6 +109,7 @@ test.describe('Mobile navigation', () => {
 
     test('logged-out drawer shows Login', async ({ page }) => {
         await page.goto('/');
+        await waitForHydration(page);
         await page
             .getByRole('button', { name: 'Open navigation menu' })
             .click();
