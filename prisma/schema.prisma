@@ -79,6 +79,30 @@ model Verification {
     @@map("verification")
 }
 
+/// Better Auth rate-limit counters (`rateLimit.storage: 'database'`). Shape is
+/// dictated by Better Auth; it creates, increments, and prunes rows itself.
+model RateLimit {
+    id          String @id
+    key         String
+    count       Int
+    lastRequest BigInt
+
+    @@unique([key])
+    @@index([lastRequest])
+    @@map("rateLimit")
+}
+
+/// App sliding-window rate limiter (`app/lib/rate-limit.server.ts`): one row
+/// per bucket key holding the hit timestamps still inside the window.
+model RateLimitBucket {
+    key       String     @id
+    hits      DateTime[]
+    expiresAt DateTime
+
+    @@index([expiresAt])
+    @@map("rateLimitBucket")
+}
+
 model Thread {
     id          String    @id @default(cuid())
     createdAt   DateTime  @default(now())

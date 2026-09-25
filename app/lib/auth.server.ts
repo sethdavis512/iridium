@@ -130,6 +130,9 @@ export const auth = betterAuth({
     // many sessions quickly.
     rateLimit: {
         enabled: !env.DISABLE_AUTH_RATE_LIMIT,
+        // Counters live in the `RateLimit` table rather than process memory,
+        // so limits hold across replicas and survive deploys.
+        storage: 'database',
         // 10s sliding window, 100 req/window per IP across all auth endpoints.
         window: 10,
         max: 100,

@@ -123,7 +123,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 export async function action({ request }: Route.ActionArgs) {
     const admin = await requireAdmin(request);
 
-    const { success } = rateLimit({
+    const { success } = await rateLimit({
         key: `admin:${admin.id}`,
         maxRequests: 30,
         windowMs: 60_000,

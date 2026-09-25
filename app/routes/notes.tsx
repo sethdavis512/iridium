@@ -95,7 +95,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const intent = String(form.get('intent'));
 
     if (intent === 'create-note' || intent === 'update-note') {
-        const { success } = rateLimit({
+        const { success } = await rateLimit({
             key: `note-write:${user.id}`,
             maxRequests: 30,
             windowMs: 60_000,

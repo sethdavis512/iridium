@@ -13,7 +13,7 @@ You are an API design expert for the Iridium project. Your job is to design, imp
 - **Auth**: Better Auth with middleware (`app/middleware/auth.ts`) and `getUserFromSession(request)` for API routes
 - **Validation**: Zod for all request parsing
 - **Database**: Prisma via `app/models/*.server.ts` (never import Prisma directly in routes)
-- **Rate Limiting**: `rateLimit()` from `~/lib/rate-limit.server`
+- **Rate Limiting**: `await rateLimit()` from `~/lib/rate-limit.server` (Postgres-backed, shared across instances)
 - **Runtime**: Bun (dev), Node 24 (prod)
 
 ## Route Patterns
@@ -82,7 +82,7 @@ export async function action({ request }: Route.ActionArgs) {
     }
 
     // Rate limit
-    const { success } = rateLimit({
+    const { success } = await rateLimit({
         key: `endpoint-name:${user.id}`,
         maxRequests: 20,
         windowMs: 60_000,
@@ -250,7 +250,7 @@ if (user.role !== 'ADMIN') {
 ```ts
 import { rateLimit } from '~/lib/rate-limit.server';
 
-const { success } = rateLimit({
+const { success } = await rateLimit({
     key: `action-name:${user.id}`, // Scope to user + action
     maxRequests: 20, // Max requests in window
     windowMs: 60_000, // Window in ms

@@ -128,7 +128,10 @@ Per-thread model: `Thread.model` is set via a `set-model` intent in the `/chat` 
 
 ### Rate Limiting
 
-In-memory sliding window in `app/lib/rate-limit.server.ts`. Used for chat (20/min) and note creation (10/hour). Single-instance only — needs Redis for distributed setups.
+Both limiters store state in Postgres, so limits are shared across replicas and survive deploys.
+
+- **App limiter**: `await rateLimit({ key, maxRequests, windowMs })` in `app/lib/rate-limit.server.ts` is a sliding window over the `RateLimitBucket` table (one row per key holding the hit timestamps still inside the window). Used for chat (20/min), note creation (10/hour), and per-user write limits on notes, threads, settings, and admin actions. Each check runs in a transaction that takes a per-key `pg_advisory_xact_lock` first, so concurrent requests on any instance cannot both slip under the limit; rejected requests are not recorded. Each process sweeps expired buckets inline at most once a minute. The window math is the pure `slideWindow()`, unit-tested on its own.
+- **Better Auth**: `rateLimit.storage: 'database'` in `auth.server.ts` keeps its per-IP counters in the `RateLimit` table (shape dictated by Better Auth, which also prunes it). `DISABLE_AUTH_RATE_LIMIT=true` still turns it off for E2E.
 
 ### Environment Validation
 

@@ -36,7 +36,7 @@ export const createNoteTool = createTool({
         const userId = options?.userId;
         invariant(userId, 'User not authenticated');
 
-        const { success } = rateLimit({
+        const { success } = await rateLimit({
             key: `note-create:${userId}`,
             maxRequests: 10,
             windowMs: 3_600_000, // 1 hour
