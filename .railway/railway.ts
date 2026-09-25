@@ -68,7 +68,8 @@ export default defineRailway((ctx) => {
         preDeploy: 'npx --no-install prisma migrate deploy',
         healthcheck: '/healthcheck',
         healthcheckTimeout: 100,
-        deploy: { restartPolicyType: 'ON_FAILURE', restartPolicyMaxRetries: 3 },
+        // ON_FAILURE is Railway's default restart policy; only the retry count is set.
+        deploy: { restartPolicyMaxRetries: 3 },
         env: {
             DATABASE_URL: db.env.DATABASE_URL,
             VOLTAGENT_DATABASE_URL: voltagentDb.env.DATABASE_URL,
