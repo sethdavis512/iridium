@@ -7,10 +7,15 @@ import { isbot } from 'isbot';
 import type { RenderToPipeableStreamOptions } from 'react-dom/server';
 import { renderToPipeableStream } from 'react-dom/server';
 import { env } from '~/lib/env.server';
+import { installGracefulShutdown } from '~/lib/shutdown.server';
 
 export const streamTimeout = 5_000;
 
 const isProduction = env.NODE_ENV === 'production';
+
+// Drain in-flight requests and close the database pools on SIGTERM/SIGINT.
+// Production only: the dev server owns its own signal handling.
+if (isProduction) installGracefulShutdown();
 
 /**
  * Security headers applied to every document response.

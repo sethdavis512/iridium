@@ -7,11 +7,15 @@ import { getCurrentDatetimeTool, getWeatherTool } from './tools/weather';
 import { NotesRetriever } from './retrievers/notes';
 import { env } from '~/lib/env.server';
 import { DEFAULT_MODEL_ID, isAllowedModel } from '~/lib/ai-models';
+import { onShutdown } from '~/lib/shutdown.server';
+
+const memoryStorage = new PostgreSQLMemoryAdapter({
+    connection: env.VOLTAGENT_DATABASE_URL,
+});
+onShutdown(() => memoryStorage.close());
 
 export const memory = new Memory({
-    storage: new PostgreSQLMemoryAdapter({
-        connection: env.VOLTAGENT_DATABASE_URL,
-    }),
+    storage: memoryStorage,
     workingMemory: {
         enabled: true,
         scope: 'user',

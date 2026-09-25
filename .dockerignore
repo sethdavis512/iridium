@@ -1,4 +1,51 @@
-.react-router
-build
+# The build needs package.json + bun.lock (install stages), then app/,
+# public/, prisma/, trigger/ (task types imported by app/lib/jobs.server.ts),
+# and the root build configs. Everything else stays out of the context.
+
+# Dependencies and generated output, rebuilt inside the image
 node_modules
-README.md
+build
+.react-router
+app/generated
+
+# Secrets: a local .env must never land in an image layer
+.env
+.env.*
+
+# Version control, CI, editor, and agent tooling
+.git
+.gitignore
+.github
+.husky
+.vscode
+.claude
+.agents
+.specify
+.railway
+.DS_Store
+
+# Tests and their output
+tests
+**/*.test.ts
+**/*.test.tsx
+test-results
+playwright-report
+blob-report
+playwright
+playwright.config.ts
+vitest.config.ts
+
+# Docs and local-only tooling
+*.md
+docs
+scripts
+tools
+components.json
+skills-lock.json
+eslint.config.js
+.prettierrc
+trigger.config.ts
+docker-compose.dev.yml
+railway.json
+Dockerfile
+.dockerignore

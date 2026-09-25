@@ -64,7 +64,11 @@ export default defineRailway((ctx) => {
             checkSuites: true,
         }),
         build: { builder: 'DOCKERFILE', dockerfilePath: 'Dockerfile' },
-        start: 'npm run start',
+        // Railway runs the start command in exec form in place of the image's
+        // ENTRYPOINT and CMD, so it names tini itself: tini as PID 1 hands
+        // SIGTERM straight to node (no npm or shell), which drains in-flight
+        // requests and closes the database pools before exiting.
+        start: '/sbin/tini -- node /app/node_modules/@react-router/serve/bin.cjs /app/build/server/index.js',
         preDeploy: 'npx --no-install prisma migrate deploy',
         healthcheck: '/healthcheck',
         healthcheckTimeout: 100,
@@ -73,6 +77,9 @@ export default defineRailway((ctx) => {
         env: {
             DATABASE_URL: db.env.DATABASE_URL,
             VOLTAGENT_DATABASE_URL: voltagentDb.env.DATABASE_URL,
+            // SIGTERM-to-SIGKILL window for the previous deploy (default 0):
+            // long enough for the longest chat stream to finish.
+            RAILWAY_DEPLOYMENT_DRAINING_SECONDS: '60',
             BETTER_AUTH_SECRET: preserve(),
             BETTER_AUTH_BASE_URL: preserve(),
             BETTER_AUTH_TRUSTED_ORIGINS: preserve(),
