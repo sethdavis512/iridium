@@ -1,4 +1,4 @@
-import { APP_NAME, APP_TAGLINE } from '~/config';
+import { APP_NAME, APP_OWNER, APP_TAGLINE } from '~/config';
 import { test, expect, waitForHydration } from './fixtures';
 
 const siteNav = (page: import('@playwright/test').Page) =>
@@ -55,6 +55,13 @@ test.describe('Desktop navigation', () => {
         await page.goto('/');
         await expect(
             page.getByText(`${APP_NAME}. ${APP_TAGLINE}`),
+        ).toBeVisible();
+        await expect(
+            page.getByText(
+                APP_OWNER
+                    ? `All rights reserved by ${APP_OWNER}`
+                    : 'All rights reserved',
+            ),
         ).toBeVisible();
     });
 

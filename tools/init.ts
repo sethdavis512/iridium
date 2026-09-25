@@ -365,7 +365,7 @@ console.log(`
   Left to rebrand by hand:
   - Favicon: public/favicon.ico
   - Placeholder landing copy: app/routes/landing.tsx; repo link: APP_REPO_URL in app/config.ts
-  - Tagline: APP_TAGLINE in app/config.ts
+  - Tagline and footer owner: APP_TAGLINE and APP_OWNER in app/config.ts
   - Titles and descriptions: README.md and CLAUDE.md
   - Demo users with a known password: prisma/seed.ts (it refuses non-local databases)
 

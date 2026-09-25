@@ -9,6 +9,12 @@ export const APP_NAME = 'Iridium';
 export const APP_TAGLINE = 'Go build. Be bold.';
 
 /**
+ * Person or company named in the footer's "All rights reserved by ..." line.
+ * Set it to '' to leave the name out.
+ */
+export const APP_OWNER: string = 'Tech with Seth';
+
+/**
  * Source repository behind the landing page's "View source" button. Point it
  * at your own repo, or set it to '' to hide the button.
  */
