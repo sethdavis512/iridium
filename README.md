@@ -130,8 +130,10 @@ bun run db:migrate              # Apply migrations
 bun run db:seed                 # Seed with demo users
 ```
 
-Seeded demo users (password `password123` for all): `alice@iridium.dev`,
-`bob@iridium.dev`, and `admin@iridium.dev` (ADMIN role). Because those
+Seeded demo users (password `password123` for all): `alice@iridium.test`,
+`bob@iridium.test`, and `admin@iridium.test` (ADMIN role). Their domain is
+`<slug>.test` (`DEMO_EMAIL_DOMAIN` in `app/config.ts`), a reserved TLD, so
+verification and reset emails to them never reach a real inbox. Because those
 passwords are public, the seed refuses to run when `NODE_ENV=production` or
 the `DATABASE_URL` host isn't `localhost`/`127.0.0.1`. Override with
 `bun prisma/seed.ts --force` only for a throwaway database.

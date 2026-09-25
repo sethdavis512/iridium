@@ -29,8 +29,12 @@ export default async function globalSetup(config: FullConfig) {
             console.log(`  Created test user ${user.email}`);
         } else {
             const body = await res.json().catch(() => ({}));
-            // "User already exists" is fine
-            if (body?.code === 'USER_ALREADY_EXISTS') {
+            // "User already exists" is fine. Better Auth answers a duplicate
+            // sign-up with 422 and USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL.
+            if (
+                typeof body?.code === 'string' &&
+                body.code.startsWith('USER_ALREADY_EXISTS')
+            ) {
                 console.log(`  Test user ${user.email} already exists`);
             } else {
                 console.log(

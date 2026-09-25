@@ -351,7 +351,9 @@ await $`bunx --bun prisma generate`.cwd(root);
 step('Seeding demo users');
 await $`bunx --bun prisma db seed`.cwd(root);
 
-const demoDomain = `${slug}.dev`;
+// Mirrors DEMO_EMAIL_DOMAIN in app/config.ts, whose import still holds the
+// previous slug.
+const demoDomain = `${slug}.test`;
 
 console.log(`
 ✓ ${appName} is ready.

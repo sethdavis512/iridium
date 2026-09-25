@@ -40,5 +40,9 @@ export const LOCAL_DATABASE_NAME = APP_SLUG.replaceAll('-', '_');
 export const AUTH_COOKIE_PREFIX =
     APP_SLUG === 'iridium' ? 'better-auth' : APP_SLUG;
 
-/** Email domain of the demo users (prisma/seed.ts) and the E2E seed logins. */
-export const DEMO_EMAIL_DOMAIN = `${APP_SLUG}.dev`;
+/**
+ * Email domain of the demo users (prisma/seed.ts) and the E2E seed logins.
+ * `.test` is a reserved TLD (RFC 2606), so mail sent to a demo user can never
+ * reach a real inbox, whatever the slug is.
+ */
+export const DEMO_EMAIL_DOMAIN = `${APP_SLUG}.test`;
