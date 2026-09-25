@@ -1,24 +1,36 @@
 ---
 name: iridium-form
-description: Build validated forms in this Iridium app using React Hook Form v7 + Zod v4, useFetcher submission, and DaisyUI v5 markup. Use when adding any user-input form (login, signup, settings, create/edit pages, contact, etc.), composing fieldsets with accessible error messages, wiring client + server validation against a shared schema, displaying form-level or field-level errors from an action, or editing a *.tsx file that contains a <form> or imports react-hook-form, @hookform/resolvers/zod, or zod. Do NOT use for the chat input (uses @ai-sdk/react useChat), for the existing Better Auth login/register flows, or for pure search/filter forms (use <Form method="get"> directly).
+description: Build validated forms in this Iridium app using React Hook Form v7 + Zod v4, useFetcher submission, and the COSS UI form components (Field, Input, Button, FormAlert). Use when adding any user-input form (login, signup, settings, create/edit pages, contact, etc.), composing fieldsets with accessible error messages, wiring client + server validation against a shared schema, displaying form-level or field-level errors from an action, or editing a *.tsx file that contains a <form> or imports react-hook-form, @hookform/resolvers/zod, or zod. Do NOT use for the chat input (uses @ai-sdk/react useChat), for the existing Better Auth login/register flows, or for pure search/filter forms (use <Form method="get"> directly).
 ---
 
 # Iridium Forms
 
-Compose validated, accessible forms with React Hook Form + Zod, submit them through `useFetcher`, and render them in DaisyUI v5 markup. The same Zod schema validates on both sides of the wire.
+Compose validated, accessible forms with React Hook Form + Zod, submit them through `useFetcher`, and render them with the COSS UI form components in `app/components/forms/` and `app/components/ui/`. The same Zod schema validates on both sides of the wire.
 
 ## Project package versions
 
 The form stack in this repo. Match the API for the installed major version:
 
-| Package               | Version | Notes                                                                                                                                                            |
-| --------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `react-hook-form`     | ^7.76   | v7 API: `useForm`, `register`, `handleSubmit`, `setError`, `formState.errors`.                                                                                   |
-| `zod`                 | ^4.4    | v4 syntax. Use `z.email()` and `z.url()` as standalone formats -- **not** `z.string().email()`. Issues are on `result.error.issues` with `path[]` + `message`.   |
-| `@hookform/resolvers` | ^5.2    | Import `zodResolver` from `@hookform/resolvers/zod`. v5 is the pair for RHF 7 + Zod 4.                                                                           |
-| `react-router`        | 7.14    | Framework mode. Import `useFetcher`, `Form`, `redirect`, `data` from `react-router`. Never `react-router-dom`.                                                   |
-| `daisyui`             | ^5.5    | v5 form classes: `fieldset`, `fieldset-legend`, `input`, `label`, `alert`, `btn`. v5 dropped the v4 `form-control` / `input-bordered` classes -- don't use them. |
-| `lucide-react`        | ^1.16   | Project's icon library. Use these for form icons; never heroicons.                                                                                               |
+| Package               | Version | Notes                                                                                                                                                             |
+| --------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `react-hook-form`     | ^7.88   | v7 API: `useForm`, `register`, `handleSubmit`, `setError`, `formState.errors`.                                                                                    |
+| `zod`                 | ^4.6    | v4 syntax. Use `z.email()` and `z.url()` as standalone formats, **not** `z.string().email()`. Issues are on `result.error.issues` with `path[]` + `message`.      |
+| `@hookform/resolvers` | ^5.9    | Import `zodResolver` from `@hookform/resolvers/zod`. v5 is the pair for RHF 7 + Zod 4.                                                                            |
+| `react-router`        | 8.4     | Framework mode. Import `useFetcher`, `Form`, `redirect`, `data` from `react-router`. Never `react-router-dom`.                                                    |
+| `@base-ui/react`      | ^1.8    | COSS UI primitives, copy-owned in `app/components/ui/` (`field`, `fieldset`, `input`, `textarea`, `button`, `alert`). There is no DaisyUI; never use its classes. |
+| `lucide-react`        | ^1.48   | Project's icon library. Use these for form icons; never heroicons.                                                                                                |
+
+## Form building blocks
+
+Reuse these instead of hand-rolling markup:
+
+| Import                                                                               | What it renders                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Field` from `~/components/forms/Field`                                              | App wrapper on COSS `Fieldset` + `FieldsetLegend`. Props: `label`, `name`, `error?`, `disabled?`, `className?`. Children can be a render prop that receives `{ 'aria-describedby', 'aria-invalid' }`. |
+| `Input` / `Textarea` / `Select` from `~/components/forms/*`                          | Thin wrappers over the COSS `Input` / `Textarea` and a token-styled native `<select>`. Size props: `inputSize` / `textareaSize` / `selectSize` (`'sm' \| 'md' \| 'lg'`). Accept `register()` spreads. |
+| `Button` from `~/components/ui/button`                                               | COSS button. `variant` (`default`, `outline`, `secondary`, `ghost`, `destructive`, `destructive-outline`, `link`), `size`, and `loading` (disables and shows a spinner).                              |
+| `FormAlert` from `~/components/forms/FormAlert`                                      | Form-level error: COSS `Alert variant="error"` with `role="alert"` and a `CircleXIcon`. Renders nothing when `message` is empty. Children become alert actions.                                       |
+| `Field`, `FieldLabel`, `FieldError`, `FieldDescription` from `~/components/ui/field` | Raw COSS/Base UI field parts. Use when a real `<label>` bound to the control is wanted (see the variant below).                                                                                       |
 
 ## When to apply
 
@@ -33,11 +45,14 @@ Use the `react-router-framework-mode` skill for route-level concerns (loaders, r
 
 ```tsx
 import { useEffect } from 'react';
-import { CircleXIcon } from 'lucide-react';
 import { useFetcher } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Field } from '~/components/forms/Field';
+import { FormAlert } from '~/components/forms/FormAlert';
+import { Input } from '~/components/forms/Input';
+import { Button } from '~/components/ui/button';
 
 const formSchema = z.object({
     name: z.string().min(1, { message: 'Name is required' }),
@@ -47,7 +62,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 type ActionData = {
-    formError?: string;
+    formError?: string | null;
     fieldErrors?: Partial<Record<keyof FormValues, string>>;
 };
 
@@ -83,49 +98,66 @@ export function ExampleForm() {
 
     return (
         <>
-            {fetcher.data?.formError && (
-                <div role="alert" className="alert alert-error mb-4">
-                    <CircleXIcon aria-hidden="true" className="h-6 w-6" />
-                    <span>{fetcher.data.formError}</span>
-                </div>
-            )}
+            <FormAlert message={fetcher.data?.formError} className="mb-4" />
             <form
                 onSubmit={handleSubmit(onSubmit)}
                 className="space-y-4"
                 noValidate
             >
-                <fieldset className="fieldset">
-                    <legend className="fieldset-legend">
-                        What is your first name?
-                    </legend>
-                    <input
-                        type="text"
-                        className="input"
-                        placeholder="Your name"
-                        aria-invalid={errors.name ? true : undefined}
-                        aria-describedby={
-                            errors.name ? 'name-error' : undefined
-                        }
-                        {...register('name')}
-                    />
-                    {errors.name && (
-                        <p id="name-error" className="label text-error italic">
-                            {errors.name.message}
-                        </p>
-                    )}
-                </fieldset>
-                {/* Repeat the fieldset block for every additional field. */}
-                <button
-                    className="btn btn-primary"
-                    type="submit"
+                <Field
+                    label="What is your first name?"
+                    name="name"
+                    error={errors.name?.message}
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? 'Submitting...' : 'Submit'}
-                </button>
+                    {(controlProps) => (
+                        <Input
+                            type="text"
+                            placeholder="Your name"
+                            {...controlProps}
+                            {...register('name')}
+                        />
+                    )}
+                </Field>
+                <Field
+                    label="Email address"
+                    name="email"
+                    error={errors.email?.message}
+                    disabled={isSubmitting}
+                >
+                    {(controlProps) => (
+                        <Input
+                            type="email"
+                            placeholder="name@example.com"
+                            {...controlProps}
+                            {...register('email')}
+                        />
+                    )}
+                </Field>
+                <Button type="submit" loading={isSubmitting}>
+                    Submit
+                </Button>
             </form>
         </>
     );
 }
+```
+
+`Field` derives the error id from `name` (`<name>-error`) and hands `aria-describedby` + `aria-invalid` to the render prop, so always spread `controlProps` onto the control. Pass `disabled` to `Field` to disable the whole fieldset while submitting.
+
+### Variant: COSS `Field` with a bound label
+
+When the control needs a real `<label>` (instead of the wrapper's fieldset legend), compose the COSS field parts directly. Base UI links `FieldLabel` and `FieldError` to the control inside the same `Field`. Mark the field `invalid` and force the error visible with `match` because RHF, not the browser's validity state, owns validation:
+
+```tsx
+import { Field, FieldError, FieldLabel } from '~/components/ui/field';
+import { Input } from '~/components/ui/input';
+
+<Field name="email" invalid={!!errors.email} disabled={isSubmitting}>
+    <FieldLabel>Email address</FieldLabel>
+    <Input type="email" {...register('email')} />
+    <FieldError match={!!errors.email}>{errors.email?.message}</FieldError>
+</Field>;
 ```
 
 ## Validation: one schema, both sides
@@ -165,7 +197,7 @@ Zod v4 notes:
 - `safeParse` returns `{ success, data }` or `{ success, error }` where `error.issues[]` has `{ path, message, code }`.
 - Coerce numbers/dates from JSON with `z.coerce.number()` / `z.coerce.date()` when needed.
 
-Never trust client validation alone -- always `safeParse` on the server.
+Never trust client validation alone: always `safeParse` on the server.
 
 ## Submission pattern (pick one)
 
@@ -180,29 +212,29 @@ For RHF forms in this project, prefer `useFetcher` + JSON. It keeps client valid
 
 `fetcher.state` is `'idle' | 'submitting' | 'loading'`. Disable submit on anything other than `'idle'`.
 
-## DaisyUI v5 markup rules
+## Markup rules
 
-- Wrap each field in `<fieldset className="fieldset">` with a `<legend className="fieldset-legend">`. Use fieldset/legend rather than `<label>`. (DaisyUI v5 dropped `form-control` -- don't reach for it.)
-- Inputs use `className="input"` only. No `input-bordered` (that was v4). Add size (`input-sm`) or color modifiers only when design calls for them.
-- Field errors render as `<p id="<field>-error" className="label text-error italic">{message}</p>`.
-- Form-level errors render as `alert alert-error` with `role="alert"` and a `CircleXIcon` from lucide-react.
-- Submit buttons: `className="btn btn-primary"`. Disable while pending.
+- Wrap each field in the app `Field` (`~/components/forms/Field`) and render the control through its render prop so `aria-describedby` and `aria-invalid` are wired. Don't hand-roll `<fieldset>`/`<legend>` or error `<p>` markup.
+- Controls come from `~/components/forms/` (`Input`, `Textarea`, `Select`), or from `~/components/ui/` when composing the raw COSS `Field`. Size them with `inputSize`/`textareaSize`/`selectSize` (wrappers) or `size` (COSS), not ad-hoc height classes.
+- Field errors come from `Field`'s `error` prop (rendered as `text-destructive` under the control). Form-level errors use `FormAlert`.
+- Submit with COSS `Button type="submit"` and `loading={isSubmitting}`; `loading` disables the button and shows a spinner. Use `variant="ghost"` for Cancel.
+- Styling uses semantic tokens only (`text-muted-foreground`, `text-destructive`, `bg-card`, ...). Never DaisyUI classes (`btn`, `input`, `fieldset-legend`, `alert-error`) or raw palette colors: DaisyUI is not installed, so they render unstyled.
 
 ## Accessibility
 
-- Pair `aria-describedby={errors.X ? 'X-error' : undefined}` on the input with a matching `id="X-error"` on the error `<p>`.
-- Set `aria-invalid` on the input when an error is present.
+- `Field` pairs the control's `aria-describedby` with the error's `id` (`<name>-error`) and sets `aria-invalid` when `error` is present, as long as the render prop spreads `controlProps` onto the control.
+- `Field` labels with a fieldset legend. When a control needs a bound `<label>`, use the COSS `Field` + `FieldLabel` variant above.
 - Use `noValidate` on `<form>` so the browser's native bubble doesn't fight RHF's messages.
-- Form-level alerts use `role="alert"` so screen readers announce them immediately.
+- `FormAlert` renders `role="alert"` so screen readers announce form-level errors immediately.
 - Decorative icons get `aria-hidden="true"`.
 
 ## Returning errors from the action
 
 Pick the shape that matches what to show:
 
-- `{ formError: string }` -- one banner at the top of the form.
-- `{ fieldErrors: Record<string, string> }` -- per-field messages, lifted back into RHF via `setError` (see template).
-- `{ formError, fieldErrors }` -- both, when the failure is partly per-field and partly global (e.g. "email taken" on `email` plus a global "fix the issues below" banner).
+- `{ formError: string }`: one banner at the top of the form.
+- `{ fieldErrors: Record<string, string> }`: per-field messages, lifted back into RHF via `setError` (see template).
+- `{ formError, fieldErrors }`: both, when the failure is partly per-field and partly global (e.g. "email taken" on `email` plus a global "fix the issues below" banner).
 
 On success: return `{ formError: null }` to let the UI clear, or `throw redirect('/somewhere')` from `react-router`.
 
@@ -225,17 +257,17 @@ Then branch on `parsed.data.intent` in the action.
 
 ## Don'ts
 
-- Don't use `<Form>` from react-router for RHF-driven forms -- it navigates and bypasses `handleSubmit`.
-- Don't replace `<fieldset>` / `<legend>` with `<label>`. Project convention is fieldset/legend.
-- Don't omit `aria-describedby` + matching `id`. The error UI is only accessible when both are present.
+- Don't use `<Form>` from react-router for RHF-driven forms: it navigates and bypasses `handleSubmit`.
+- Don't hand-roll field markup. Use the `Field` wrapper (or COSS `Field` parts) so labels and error wiring stay consistent.
+- Don't drop the `controlProps` spread in a `Field` render prop. The error UI is only accessible when `aria-describedby` reaches the control.
 - Don't validate only on the client. Re-run the same Zod schema in the action.
-- Don't put DB calls directly in the action -- delegate to `app/models/*.server.ts` functions.
-- Don't write `z.string().email()` -- Zod v4 uses `z.email()`.
-- Don't import from `react-router-dom`. Everything ships from `react-router` in v7.
-- Don't use DaisyUI v4 classes (`form-control`, `input-bordered`). v5 dropped them.
+- Don't put DB calls directly in the action; delegate to `app/models/*.server.ts` functions.
+- Don't write `z.string().email()`; Zod v4 uses `z.email()`.
+- Don't import from `react-router-dom`. Everything ships from `react-router`.
+- Don't use DaisyUI class names (`btn`, `input`, `fieldset`, `alert-error`, `form-control`). There is no DaisyUI in this project; use the COSS components.
 
 ## See also
 
-- `react-router-framework-mode` -- loaders, actions, route registration, redirects, error boundaries, optimistic UI.
-- `app/middleware/auth.ts` -- gate a form's route with `authMiddleware`.
-- `app/models/*.server.ts` -- where mutation logic lives.
+- `react-router-framework-mode`: loaders, actions, route registration, redirects, error boundaries, optimistic UI.
+- `app/middleware/auth.ts`: gate a form's route with `authMiddleware`.
+- `app/models/*.server.ts`: where mutation logic lives.

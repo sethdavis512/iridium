@@ -21,9 +21,13 @@ time is spent. Triage never fixes anything.
 
 ## 1. Fetch candidates
 
-List issues in the **Iridium** project (Linear MCP `list_issues`) and keep
-`statusType` of `backlog` and `unstarted`. Ignore completed, canceled,
-started, and archived.
+Read the `## Linear` section of the repo's root `CLAUDE.md` for the Linear
+team and project this repo tracks. If the section is missing, ask the user
+which project to triage; never guess or fall back to another repo's project.
+
+List issues in that project (Linear MCP `list_issues` with the `project` and
+`team` from CLAUDE.md) and keep `statusType` of `backlog` and `unstarted`.
+Ignore completed, canceled, started, and archived.
 
 ## 2. Skip already-triaged
 

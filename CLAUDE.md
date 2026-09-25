@@ -91,6 +91,13 @@ Auto-generated types: `import type { Route } from './+types/<routeName>'`.
 
 API routes live under `/api` prefix and export only `loader`/`action` (no component).
 
+**React Router 8 overrides the `react-router-framework-mode` skill.** The vendored skill predates React Router 8 (its upstream, `remix-run/agent-skills`, is archived). Where it disagrees, these rules win:
+
+- Middleware is always on. Never add `future.v8_middleware` (or any other removed `v8_*` flag) to `react-router.config.ts`; React Router 8 refuses to start with it.
+- `AppLoadContext` is gone. The `context` argument to loaders, actions, and middleware is always a `RouterContextProvider`: define keys with `createContext` and use `context.set()`/`context.get()` (see `app/context.ts` and `app/middleware/auth.ts`). A custom server's `getLoadContext` must return a `RouterContextProvider`.
+- Loaders and actions receive the raw incoming `request`. Use the `url` argument when you need the normalized URL (no `.data` suffix or `index`/`_routes` params).
+- For anything else version-sensitive, read the version-matched docs in `node_modules/react-router/docs/` and `node_modules/react-router/CHANGELOG.md`.
+
 ### Data Access Layer
 
 Plain async functions in `app/models/*.server.ts` — no classes, no ORM wrappers. Functions use the Prisma client directly.
@@ -147,6 +154,12 @@ Production runs the multi-stage `Dockerfile` (Node 24 Alpine runtime). The conta
 **Railway is defined as code** in `.railway/railway.ts` (IaC, evaluated by the Railway CLI via the `railway` devDependency): app service built from the Dockerfile, `Postgres` + `VoltAgent Postgres`, `/healthcheck`, `prisma migrate deploy` as the pre-deploy command, and `checkSuites: true` (Railway's Wait for CI). Per-project values live in `.railway/app.json`; the file throws if `app.json.project` doesn't match the linked Railway project. A fresh copy of the template gets its own project with `bun run provision` (`tools/provision.ts`, `provision-railway` skill), which rewrites `app.json`, runs `railway init` + `railway config apply`, generates a domain, sets secrets on stdin, and waits for `/healthcheck`. Change infra with `railway config plan` then `railway config apply`. Gotchas: variables or services omitted from the file are deleted on apply (declare externally-set values as `preserve()`), omitting `source` disconnects the GitHub repo, and databases holding data must keep their pinned image or a plan swaps the Postgres major version. Never `railway up` to production and never pass `--confirm-destructive` without the user approving the plan.
 
 The Iridium production project is managed by `.railway/railway.ts` (applied 2026-09-25); there is no `railway.json` (Config as Code is deprecated and stops being read on 2026-12-01). `railway config plan` always shows one cosmetic diff: the planner doesn't recognize the quoted `"VoltAgent Postgres"` variable reference as unchanged, so applying it is a no-op. CI (`.github/workflows/ci.yml`) has a `deploy` job that no-ops unless a `RAILWAY_TOKEN` repo secret is set; deploys actually come from Railway's GitHub integration.
+
+**Deploy rules for agents.** Use the project `provision-railway` skill for first-time provisioning and for any infra change. It overrides generic Railway skills (this repo vendors none):
+
+- Production ships only by merging to `main`; Railway builds the commit once CI passes. Never run `railway up` against production: it uploads the local working tree, uncommitted changes included, and skips git and CI.
+- Infra changes go through `.railway/railway.ts` (per-project values in `.railway/app.json`): run `railway config plan`, show the user the plan, then `railway config apply`.
+- Check health with `/healthcheck` and `railway logs --service <svc> --lines 100` (always pass `--lines`, or it streams forever). Roll back by reverting the commit on `main`, or with Rollback on an earlier deployment in the Railway dashboard.
 
 ### Background Jobs
 
@@ -213,9 +226,6 @@ Shared chrome is extracted into `SiteHeader` and `SiteFooter` (`app/components/`
 
 Prettier with: 80 char width, 4-space indentation, single quotes, semicolons, tailwindcss plugin for class sorting. ESLint with typescript-eslint and react-hooks plugin.
 
-<!-- SPECKIT START -->
+## Linear
 
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
-
-<!-- SPECKIT END -->
+Issues for this repo live in Linear team **Tech with Seth**, project **Iridium**. Skills that query Linear (such as `linear-triage`) read the team and project from this section. A copy of the template should point this at its own project or delete the section.

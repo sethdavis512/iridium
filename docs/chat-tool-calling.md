@@ -14,9 +14,9 @@ In this app, repeated tool-driven prompts in the same conversation (for example 
 
 ### Guardrails implemented in this codebase
 
-1. Send only the latest `user` message into `agent.streamText(...)` in [`app/routes/api-chat.ts`](/Users/seth/repositories/iridium/app/routes/api-chat.ts), so assistant/tool parts are not re-submitted as fresh input.
-2. If this exact duplicate-item error occurs, clear VoltAgent memory for that conversation once and retry in [`app/routes/api-chat.ts`](/Users/seth/repositories/iridium/app/routes/api-chat.ts).
-3. Persist stable message IDs by setting `id: msg.id` on message create in [`app/models/thread.server.ts`](/Users/seth/repositories/iridium/app/models/thread.server.ts).
+1. Send only the latest `user` message into `agent.streamText(...)` in [`app/routes/api-chat.ts`](../app/routes/api-chat.ts), so assistant/tool parts are not re-submitted as fresh input.
+2. If this exact duplicate-item error occurs, clear VoltAgent memory for that conversation once and retry in [`app/routes/api-chat.ts`](../app/routes/api-chat.ts).
+3. Persist stable message IDs by setting `id: msg.id` on message create in [`app/models/thread.server.ts`](../app/models/thread.server.ts).
 
 ### Operational note
 

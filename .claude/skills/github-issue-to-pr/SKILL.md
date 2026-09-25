@@ -57,9 +57,10 @@ on, stop and ask the user for scope before writing code.
 ## 3. Implement
 
 Follow the repo's CLAUDE.md conventions (routing in `app/routes.ts`, model
-layer in `app/models/*.server.ts`, DaisyUI components, `~/` imports). Keep
-the diff scoped to the issue; unrelated cleanup goes in a separate commit or
-gets mentioned, not mixed in.
+layer in `app/models/*.server.ts`, COSS UI primitives from
+`app/components/ui/` with semantic tokens, `~/` imports). Keep the diff
+scoped to the issue; unrelated cleanup goes in a separate commit or gets
+mentioned, not mixed in.
 
 ## 4. Validate
 
