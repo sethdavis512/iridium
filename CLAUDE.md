@@ -14,6 +14,7 @@ Iridium is a full-stack AI chat application built with React Router v8 (SSR), Be
 | `bun run dev:full`       | docker:up then dev (one command)      |
 | `bun run build`          | Production build                      |
 | `bun run start:migrate`  | migrate deploy then serve (prod boot) |
+| `bun run provision`      | Create + deploy a new Railway project |
 | `bun run clean`          | Remove build + test output dirs       |
 | `bun run typecheck`      | Generate route types + run tsc        |
 | `bun run lint`           | ESLint check                          |
@@ -141,7 +142,11 @@ In-memory sliding window in `app/lib/rate-limit.server.ts`. Used for chat (20/mi
 
 ### Deployment
 
-Production runs the multi-stage `Dockerfile` (Node 24 Alpine runtime). The container CMD is `npm run start:migrate`, which applies pending Prisma migrations (`migrate deploy` — a no-op when current) before serving, so deploys self-migrate. `railway.json` configures the Railway build (Dockerfile) and start command, with `/healthcheck` as the health probe. CI (`.github/workflows/ci.yml`) has a `deploy` job that runs only on pushes to `main` after e2e passes; it deploys via the Railway CLI and no-ops unless a `RAILWAY_TOKEN` repo secret is set (set `RAILWAY_SERVICE` repo variable if the project has multiple services).
+Production runs the multi-stage `Dockerfile` (Node 24 Alpine runtime). The container CMD is `npm run start:migrate`, which applies pending Prisma migrations (`migrate deploy` — a no-op when current) before serving, so plain Docker hosts self-migrate.
+
+**Railway is defined as code** in `.railway/railway.ts` (IaC, evaluated by the Railway CLI via the `railway` devDependency): app service built from the Dockerfile, `Postgres` + `VoltAgent Postgres`, `/healthcheck`, `prisma migrate deploy` as the pre-deploy command, and `checkSuites: true` (Railway's Wait for CI). Per-project values live in `.railway/app.json`; the file throws if `app.json.project` doesn't match the linked Railway project. A fresh copy of the template gets its own project with `bun run provision` (`tools/provision.ts`, `provision-railway` skill), which rewrites `app.json`, runs `railway init` + `railway config apply`, generates a domain, sets secrets on stdin, and waits for `/healthcheck`. Change infra with `railway config plan` then `railway config apply`. Gotchas: variables or services omitted from the file are deleted on apply (declare externally-set values as `preserve()`), omitting `source` disconnects the GitHub repo, and databases holding data must keep their pinned image or a plan swaps the Postgres major version. Never `railway up` to production and never pass `--confirm-destructive` without the user approving the plan.
+
+The original Iridium deployment still runs from `railway.json` (Config as Code: Railway stops reading it on 2026-12-01, and new services ignore it) until it migrates to `.railway/railway.ts`; `railway config plan` in this repo shows that diff. CI (`.github/workflows/ci.yml`) has a `deploy` job that no-ops unless a `RAILWAY_TOKEN` repo secret is set; deploys actually come from Railway's GitHub integration.
 
 ### Background Jobs
 

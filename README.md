@@ -50,7 +50,7 @@ bun run dev
 
 `bun run setup` also takes `--non-interactive` (and `--name <project>`) for
 scripted use. Prefer manual control? The steps below do the same thing by
-hand.
+hand. To stand up production on Railway, see [Railway](#railway).
 
 ### Installation
 
@@ -272,13 +272,40 @@ Prisma migrations (`migrate deploy`) before serving, so deploys self-migrate.
 
 ### Railway
 
-`railway.json` builds the Dockerfile and runs the migrate-on-boot start command,
-with `/healthcheck` as the health probe. Deploy manually with `railway up`, or
-let CI do it: the `deploy` job in `.github/workflows/ci.yml` runs on pushes to
-`main` after e2e passes. It stays a no-op until you add a `RAILWAY_TOKEN` repo
-secret (and, if the project has multiple services, a `RAILWAY_SERVICE` repo
-variable). Set the runtime env vars (both database URLs, `BETTER_AUTH_SECRET`,
-`ANTHROPIC_API_KEY`, etc.) in the Railway dashboard.
+Railway infrastructure is defined as code in `.railway/railway.ts`: the app
+service built from the Dockerfile, both Postgres databases, the `/healthcheck`
+probe, `prisma migrate deploy` as a pre-deploy command, and Railway's "Wait for
+CI" so a commit only deploys after GitHub Actions passes. Per-project values
+(project and service names, GitHub repo, pinned database images) live in
+`.railway/app.json`.
+
+**First deploy of a new copy.** Push the copy to GitHub, give the
+[Railway GitHub app](https://github.com/apps/railway-app) access to it, install
+the Railway CLI, and run `railway login`. Then:
+
+```bash
+bun run provision            # interactive; --dry-run shows the plan first
+```
+
+This creates the Railway project, applies `.railway/railway.ts`, generates a
+domain, sets `BETTER_AUTH_SECRET` and `BETTER_AUTH_BASE_URL` (plus the Anthropic
+and Resend keys if you provide them), deploys, and waits for `/healthcheck`.
+Commit the rewritten `.railway/app.json` afterwards. For scripted use:
+`--non-interactive --name <project> [--workspace <id>]`, with optional keys in
+`PROVISION_ANTHROPIC_API_KEY`, `PROVISION_RESEND_API_KEY`, and
+`PROVISION_EMAIL_FROM`.
+
+**After that**, ship by merging to `main`: Railway builds once CI passes.
+Change infrastructure by editing `.railway/railway.ts` and running
+`railway config plan`, then `railway config apply`. Read the plan first: a
+service or variable missing from the file is deleted, and removing `source`
+disconnects the repo.
+
+`railway.json` still configures the original Iridium deployment until it moves
+to `.railway/railway.ts`. Railway stops reading it on 2026-12-01, and new
+services ignore it already. The `deploy` job in `.github/workflows/ci.yml` is a
+no-op unless a `RAILWAY_TOKEN` secret is set; provisioned projects deploy
+through Railway's GitHub integration instead.
 
 The image is also deployable to any Docker-compatible platform (Fly.io, AWS ECS,
 Google Cloud Run, …).

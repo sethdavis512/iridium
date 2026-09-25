@@ -1,0 +1,8 @@
+{
+    "project": "Iridium",
+    "service": "Iridium",
+    "repo": "sethdavis512/iridium",
+    "branch": "main",
+    "postgresImage": "ghcr.io/railwayapp-templates/postgres-ssl:17",
+    "voltagentPostgresImage": "ghcr.io/railwayapp-templates/postgres-ssl:18"
+}
