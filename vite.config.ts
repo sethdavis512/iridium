@@ -1,10 +1,11 @@
 import { reactRouter } from '@react-router/dev/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-    plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
+    plugins: [tailwindcss(), reactRouter()],
+    // Resolve the tsconfig `paths` aliases (`~/*`, `cva.config`) natively.
+    resolve: { tsconfigPaths: true },
     optimizeDeps: {
         // Pre-bundle everything the client graph reaches so the dev server
         // never discovers a dependency mid-session. Late discovery
@@ -19,6 +20,7 @@ export default defineConfig({
             'better-auth/client',
             'better-auth/client/plugins',
             'class-variance-authority',
+            'cva/config',
             'clsx',
             'tailwind-merge',
             'lucide-react',

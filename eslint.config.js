@@ -11,7 +11,11 @@ export default tseslint.config(
             'app/generated/',
             'playwright-report/',
             'test-results/',
-            'tests/',
+            // Agent tooling: vendored skills, spec-kit scaffolding, and
+            // nested git worktrees (full app copies on other branches).
+            '.agents/',
+            '.specify/',
+            '.claude/worktrees/',
         ],
     },
     js.configs.recommended,
@@ -25,6 +29,14 @@ export default tseslint.config(
                 'warn',
                 { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
             ],
+        },
+    },
+    {
+        // Playwright fixtures hand their value to the test via `use()`, which
+        // the React hooks rule mistakes for React's `use` hook.
+        files: ['tests/**'],
+        rules: {
+            'react-hooks/rules-of-hooks': 'off',
         },
     },
 );
