@@ -9,6 +9,7 @@ import {
     ScrollRestoration,
     useRouteLoaderData,
 } from 'react-router';
+import { z } from 'zod';
 import { getSessionInfo } from '~/models/session.server';
 import { getTheme } from '~/lib/theme.server';
 import { getToast } from '~/lib/toast.server';
@@ -16,10 +17,16 @@ import { envWarnings, shouldShowEnvBanner } from '~/lib/env.server';
 import { Toaster } from '~/components/Toaster';
 import { ToastProvider } from '~/components/ui/toast';
 import { EnvBanner } from '~/components/EnvBanner';
+import { useNonce } from '~/lib/nonce';
 import { requestIdMiddleware } from '~/middleware/request-id';
 import type { Route } from './+types/root';
 
 import './app.css';
+
+// Zod probes `new Function` to decide whether to JIT-compile parsers. The CSP
+// has no 'unsafe-eval', so the browser blocks the probe and reports a
+// violation even though Zod catches it. jitless skips the probe.
+z.config({ jitless: true });
 
 // Root middleware runs for every route, including /api/* and /healthcheck.
 export const middleware: Route.MiddlewareFunction[] = [requestIdMiddleware];
@@ -57,6 +64,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const loaderData = useRouteLoaderData<typeof loader>('root');
     const theme = loaderData?.theme ?? 'system';
     const bannerWarnings = loaderData?.envWarnings ?? [];
+    // CSP nonce (server render only); see setSecurityHeaders in entry.server.
+    const nonce = useNonce();
 
     // Pre-paint: only "system" needs JS. Explicit "dark" is already in the
     // SSR payload as class="dark", so there is never a theme flash.
@@ -78,8 +87,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     content="width=device-width, initial-scale=1"
                 />
                 <Meta />
-                <Links />
-                <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+                {/* nonce="" opts <Links> out of ServerRouter's default nonce:
+                    the client render has none, so the server's value would
+                    cause a hydration mismatch, and styles don't need it. */}
+                <Links nonce="" />
+                <script
+                    nonce={nonce}
+                    // Browsers hide the nonce after parsing, and the client
+                    // render has none, so skip the attribute mismatch.
+                    suppressHydrationWarning
+                    dangerouslySetInnerHTML={{ __html: themeScript }}
+                />
             </head>
             <body className="relative h-full">
                 {/* isolate: Base UI portals stack above page content. */}
@@ -87,8 +105,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <EnvBanner warnings={bannerWarnings} />
                     {children}
                 </div>
-                <ScrollRestoration />
-                <Scripts />
+                <ScrollRestoration nonce={nonce} />
+                <Scripts nonce={nonce} />
             </body>
         </html>
     );

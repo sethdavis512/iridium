@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { PassThrough } from 'node:stream';
 
 import type {
@@ -13,6 +14,7 @@ import { renderToPipeableStream } from 'react-dom/server';
 import { requestIdContext } from '~/context';
 import { env } from '~/lib/env.server';
 import { log } from '~/lib/logger.server';
+import { NonceProvider } from '~/lib/nonce';
 import { installGracefulShutdown } from '~/lib/shutdown.server';
 
 export const streamTimeout = 5_000;
@@ -26,11 +28,13 @@ if (isProduction) installGracefulShutdown();
 /**
  * Security headers applied to every document response.
  *
- * CSP intentionally allows `'unsafe-inline'` for styles because Tailwind
- * v4 emits inline styles for some features, and React Router injects a
- * tiny inline runtime script. `'self'` covers the rest.
+ * Scripts: only same-origin files and inline scripts carrying this request's
+ * nonce (React Router's bootstrap and streamed data, React's streaming
+ * helpers, and the pre-paint theme script in root.tsx), so an injected
+ * inline script cannot run. Styles still allow `'unsafe-inline'` because
+ * Tailwind v4 and React Router emit inline styles.
  */
-function setSecurityHeaders(headers: Headers) {
+function setSecurityHeaders(headers: Headers, nonce: string) {
     if (isProduction) {
         headers.set(
             'Strict-Transport-Security',
@@ -54,8 +58,7 @@ function setSecurityHeaders(headers: Headers) {
             "img-src 'self' data: blob: https://res.cloudinary.com",
             "font-src 'self' https://fonts.gstatic.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            // Inline scripts are required for the React Router runtime bootstrap.
-            "script-src 'self' 'unsafe-inline'",
+            `script-src 'self' 'nonce-${nonce}'`,
             "connect-src 'self'",
             "object-src 'none'",
         ].join('; '),
@@ -117,7 +120,9 @@ export default function handleRequest(
     routerContext: EntryContext,
     loadContext: RouterContextProvider,
 ) {
-    setSecurityHeaders(responseHeaders);
+    // Fresh per response so an attacker can never predict it.
+    const nonce = randomBytes(16).toString('base64');
+    setSecurityHeaders(responseHeaders, nonce);
 
     if (request.method.toUpperCase() === 'HEAD') {
         return new Response(null, {
@@ -141,8 +146,19 @@ export default function handleRequest(
         );
 
         const { pipe, abort } = renderToPipeableStream(
-            <ServerRouter context={routerContext} url={request.url} />,
+            // ServerRouter applies the nonce to React Router's inline scripts
+            // and uses it as the default for <Scripts>, <ScrollRestoration>,
+            // and <Links>; NonceProvider exposes it to root's theme script.
+            <NonceProvider nonce={nonce}>
+                <ServerRouter
+                    context={routerContext}
+                    url={request.url}
+                    nonce={nonce}
+                />
+            </NonceProvider>,
             {
+                // React's own inline streaming (Suspense) scripts.
+                nonce,
                 [readyOption]() {
                     shellRendered = true;
                     const body = new PassThrough({
