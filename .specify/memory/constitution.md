@@ -1,6 +1,25 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.1.0 → 1.2.0
+Bump rationale: MINOR. Principle VI and Technology Constraints now name the styling stack
+  actually installed (COSS UI on Base UI with semantic tokens) instead of DaisyUI v5.
+  Not MAJOR: DaisyUI is not a dependency, so the old rule could not be satisfied and no
+  compliant code becomes non-compliant.
+
+Modified principles:
+  VI. Component Authoring Pattern: variant values use the semantic tokens in app/app.css;
+    added a rule to compose the COSS primitives in app/components/ui/.
+
+Modified sections:
+  - Technology Constraints: Styling line.
+
+Templates requiring updates:
+  ✅ .specify/templates/*.md: no styling references; aligned.
+
+Follow-up TODOs: none.
+
+--- Prior report (v1.1.0) ---
 Version change: 1.0.0 → 1.1.0
 Bump rationale: MINOR — added a new principle (VI. Component Authoring Pattern)
   codifying the component pattern established in app/components/Card.tsx. Principle IV
@@ -132,8 +151,13 @@ Components MUST follow the single established authoring pattern (reference:
 - `className` MUST be threaded into the variants call (e.g.
   `cardVariants({ ...variants, className })`) so consumer overrides merge correctly via
   tailwind-merge.
-- Variant values MUST be DaisyUI v5 semantic class names (e.g. `card`, `btn`,
-  `bg-base-200`), not raw color utilities.
+- Variant values MUST use the semantic token utilities defined in `app/app.css`
+  (e.g. `bg-card`, `bg-muted`, `text-muted-foreground`), never raw palette colors or
+  DaisyUI class names (DaisyUI is not installed).
+- Components MUST compose the COSS UI primitives in `app/components/ui/` (Base UI) rather
+  than re-implementing them. Those copy-owned files keep their upstream `cn()` and
+  `class-variance-authority` conventions; the `cva.config` rule applies to app-authored
+  components.
 
 **Rationale**: One component shape keeps the UI layer predictable and consumer-overridable.
 Routing every variant through `cva.config` guarantees Tailwind class conflicts resolve the
@@ -147,7 +171,9 @@ styles without copy-paste.
 - **Auth**: Better Auth with the Prisma adapter and admin plugin (roles USER < EDITOR < ADMIN).
 - **Data**: PostgreSQL via Prisma; app data and VoltAgent memory live in separate databases.
 - **AI**: Vercel AI SDK + VoltAgent; agent tools live in `app/voltagent/tools/`.
-- **Styling**: Tailwind CSS v4 + DaisyUI v5; CVA with tailwind-merge; lucide-react icons.
+- **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives copy-owned in
+  `app/components/ui/`, semantic tokens in `app/app.css`); CVA via `cva.config` with
+  tailwind-merge; lucide-react icons.
 - **Formatting**: Prettier (80 cols, 4-space indent, single quotes, semicolons,
   tailwindcss plugin) and ESLint with typescript-eslint + react-hooks. No em dashes or
   `--` separators in prose.
@@ -179,4 +205,4 @@ principle wins or the principle is amended — code does not silently diverge.
 - **Runtime guidance**: `CLAUDE.md` and `.claude/rules/*.md` provide day-to-day
   development guidance consistent with these principles.
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-04 | **Last Amended**: 2026-06-07
+**Version**: 1.2.0 | **Ratified**: 2026-06-04 | **Last Amended**: 2026-09-25
