@@ -1,3 +1,4 @@
+import { countKeywordMatches, extractKeywords } from '~/lib/keywords';
 import prisma from '~/lib/prisma';
 
 const MAX_TITLE_LENGTH = 200;
@@ -129,4 +130,66 @@ export function searchNotes({
         skip,
         take,
     });
+}
+
+/**
+ * Most recent keyword matches ranked in memory. Bounds the rows (each up to
+ * 10k chars) read per search, so ranking covers the newest matches only.
+ */
+export const KEYWORD_CANDIDATE_LIMIT = 25;
+
+/**
+ * Notes relevant to free text such as a chat message: matches notes whose
+ * title or content contains any of the text's keywords, ranked by how many
+ * distinct keywords they contain, then by recency. Text with no keywords
+ * (only stop words or short tokens) returns nothing without a query.
+ */
+export async function searchNotesByKeywords({
+    userId,
+    text,
+    take,
+}: {
+    userId: string;
+    text: string;
+    take: number;
+}) {
+    const keywords = extractKeywords(text);
+    if (keywords.length === 0) return [];
+
+    const candidates = await prisma.note.findMany({
+        where: {
+            userId,
+            deletedAt: null,
+            OR: keywords.flatMap((keyword) => [
+                { title: { contains: keyword, mode: 'insensitive' as const } },
+                {
+                    content: {
+                        contains: keyword,
+                        mode: 'insensitive' as const,
+                    },
+                },
+            ]),
+        },
+        orderBy: { createdAt: 'desc' },
+        take: KEYWORD_CANDIDATE_LIMIT,
+    });
+
+    // The query matches substrings; scoring keeps word-start matches only,
+    // so "art" in a message does not pull in every note mentioning "start".
+    return candidates
+        .map((note) => ({
+            note,
+            score: countKeywordMatches(
+                `${note.title}\n${note.content}`,
+                keywords,
+            ),
+        }))
+        .filter(({ score }) => score > 0)
+        .sort(
+            (a, b) =>
+                b.score - a.score ||
+                b.note.createdAt.getTime() - a.note.createdAt.getTime(),
+        )
+        .slice(0, take)
+        .map(({ note }) => note);
 }

@@ -22,7 +22,9 @@ import {
     deleteNote,
     getNoteById,
     getNotesByUserId,
+    KEYWORD_CANDIDATE_LIMIT,
     searchNotes,
+    searchNotesByKeywords,
     updateNote,
 } from './note.server';
 
@@ -169,5 +171,99 @@ describe('searchNotes', () => {
             skip: undefined,
             take: undefined,
         });
+    });
+});
+
+describe('searchNotesByKeywords', () => {
+    function note(id: string, title: string, content: string, day: number) {
+        return { id, title, content, createdAt: new Date(2026, 0, day) };
+    }
+
+    it('queries any keyword in title or content, scoped to the user, excluding deleted', async () => {
+        mockPrisma.note.findMany.mockResolvedValue([]);
+
+        await searchNotesByKeywords({
+            userId: 'u1',
+            text: 'What was that taco recipe?',
+            take: 5,
+        });
+
+        expect(mockPrisma.note.findMany).toHaveBeenCalledWith({
+            where: {
+                userId: 'u1',
+                deletedAt: null,
+                OR: [
+                    { title: { contains: 'taco', mode: 'insensitive' } },
+                    { content: { contains: 'taco', mode: 'insensitive' } },
+                    { title: { contains: 'recipe', mode: 'insensitive' } },
+                    { content: { contains: 'recipe', mode: 'insensitive' } },
+                ],
+            },
+            orderBy: { createdAt: 'desc' },
+            take: KEYWORD_CANDIDATE_LIMIT,
+        });
+    });
+
+    it('matches a note sharing key words but not the full sentence', async () => {
+        const tacos = note(
+            'n1',
+            'Weeknight Tacos',
+            'Al pastor recipe with pineapple.',
+            1,
+        );
+        mockPrisma.note.findMany.mockResolvedValue([tacos]);
+
+        const notes = await searchNotesByKeywords({
+            userId: 'u1',
+            text: 'Can you remind me of the taco recipe I saved last week?',
+            take: 5,
+        });
+
+        expect(notes).toEqual([tacos]);
+    });
+
+    it('drops candidates that only contain a keyword inside another word', async () => {
+        const parking = note(
+            'n1',
+            'Parking spot',
+            'Level 3, row C, by the car wash.',
+            1,
+        );
+        const scarf = note('n2', 'Scarf shopping', 'Wool, not cashmere.', 2);
+        mockPrisma.note.findMany.mockResolvedValue([scarf, parking]);
+
+        const notes = await searchNotesByKeywords({
+            userId: 'u1',
+            text: 'Where did I park the car?',
+            take: 5,
+        });
+
+        expect(notes).toEqual([parking]);
+    });
+
+    it('ranks by matched keyword count, then by recency, and applies take', async () => {
+        const oldBoth = note('n1', 'Taco night', 'Recipe from Mom', 1);
+        const newBoth = note('n2', 'Tacos', 'Fish taco recipe', 3);
+        const newest = note('n3', 'Recipe box', 'Soup, bread, pie', 9);
+        mockPrisma.note.findMany.mockResolvedValue([newest, newBoth, oldBoth]);
+
+        const notes = await searchNotesByKeywords({
+            userId: 'u1',
+            text: 'taco recipe',
+            take: 2,
+        });
+
+        expect(notes.map((n) => n.id)).toEqual(['n2', 'n1']);
+    });
+
+    it('runs no query for a message of only stop words', async () => {
+        const notes = await searchNotesByKeywords({
+            userId: 'u1',
+            text: 'Can you tell me what that was about?',
+            take: 5,
+        });
+
+        expect(notes).toEqual([]);
+        expect(mockPrisma.note.findMany).not.toHaveBeenCalled();
     });
 });

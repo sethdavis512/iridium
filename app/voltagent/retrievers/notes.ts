@@ -4,7 +4,7 @@ import {
     type RetrieveOptions,
 } from '@voltagent/core';
 import type { TextPart, UserModelMessage } from 'ai';
-import { searchNotes } from '~/models/note.server';
+import { searchNotesByKeywords } from '~/models/note.server';
 
 /** Notes injected into the prompt per turn; each can be up to 10k chars. */
 export const RETRIEVER_NOTE_LIMIT = 5;
@@ -46,9 +46,11 @@ export class NotesRetriever extends BaseRetriever {
 
         if (!query.trim()) return '';
 
-        const notes = await searchNotes({
+        // Matches on the message's keywords, not the whole sentence; a message
+        // with no keywords (only stop words) runs no query.
+        const notes = await searchNotesByKeywords({
             userId,
-            query,
+            text: query,
             take: RETRIEVER_NOTE_LIMIT,
         });
         if (!notes.length) return '';
