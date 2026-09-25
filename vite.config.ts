@@ -20,6 +20,7 @@ export default defineConfig({
             'better-auth/client',
             'better-auth/client/plugins',
             'class-variance-authority',
+            'cva/config',
             'clsx',
             'tailwind-merge',
             'lucide-react',
