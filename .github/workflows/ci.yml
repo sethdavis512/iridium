@@ -66,7 +66,8 @@ jobs:
         name: Playwright
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        needs: [validate, unit]
+        # No `needs`: e2e runs alongside validate and unit to keep the critical
+        # path short. Railway's Wait for CI still waits for the whole run.
 
         services:
             postgres:
