@@ -1,8 +1,13 @@
 import type { FullConfig } from '@playwright/test';
+import { DEMO_EMAIL_DOMAIN } from '~/config';
 
 const TEST_USERS = [
-    { name: 'Alice', email: 'alice@iridium.dev', password: 'password123' },
-    { name: 'Bob', email: 'bob@iridium.dev', password: 'password123' },
+    {
+        name: 'Alice',
+        email: `alice@${DEMO_EMAIL_DOMAIN}`,
+        password: 'password123',
+    },
+    { name: 'Bob', email: `bob@${DEMO_EMAIL_DOMAIN}`, password: 'password123' },
 ];
 
 export default async function globalSetup(config: FullConfig) {

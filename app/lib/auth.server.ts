@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { admin } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
+import { AUTH_COOKIE_PREFIX } from '~/config';
 import prisma from '~/lib/prisma';
 import { env } from '~/lib/env.server';
 import { enqueueAuthEmail } from '~/lib/jobs.server';
@@ -104,6 +105,7 @@ export const auth = betterAuth({
         },
     },
     advanced: {
+        cookiePrefix: AUTH_COOKIE_PREFIX,
         defaultCookieAttributes: {
             httpOnly: true,
             sameSite: 'lax',

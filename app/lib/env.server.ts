@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { EnvWarning } from '~/lib/env-status';
-import { APP_NAME } from '~/config';
+import { APP_NAME, LOCAL_DATABASE_NAME } from '~/config';
 
 const envSchema = z.object({
     DATABASE_URL: z.url({ message: 'DATABASE_URL must be a valid URL' }),
@@ -100,7 +100,7 @@ const isProduction = process.env.NODE_ENV === 'production';
  * clone + `bun run docker:up` + `bun run dev` connects with zero configuration.
  */
 const DEV_FALLBACKS: Record<string, string> = {
-    DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/iridium',
+    DATABASE_URL: `postgresql://postgres:postgres@localhost:5432/${LOCAL_DATABASE_NAME}`,
     VOLTAGENT_DATABASE_URL:
         'postgresql://postgres:postgres@localhost:5433/voltagent',
     BETTER_AUTH_SECRET: 'dev-only-placeholder-secret-change-me-please',

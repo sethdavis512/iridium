@@ -43,14 +43,23 @@ A full-stack starter kit for shipping AI-powered products. Clone the repo, confi
 
 ```bash
 bun install
-bun run setup   # interactive: renames the project, writes .env, starts
-                # Docker, migrates, and seeds demo users in one shot
+bun run setup   # interactive: names the app, writes .env, starts Docker,
+                # migrates, and seeds demo users in one shot
 bun run dev
 ```
 
-`bun run setup` also takes `--non-interactive` (and `--name <project>`) for
-scripted use. Prefer manual control? The steps below do the same thing by
-hand. To stand up production on Railway, see [Railway](#railway).
+`bun run setup` asks for an app name and derives a slug from it (`My App` →
+`my-app`). It writes both to `app/config.ts` (`APP_NAME`, `APP_SLUG`) and uses
+the slug for the package name, the Docker Compose project, the local database
+(`my_app`), the cookie names, and the demo users' emails, so a copy never
+shares containers, data, or sessions with another copy on the same machine.
+Every copy still uses ports 5432 and 5433, so stop one project's databases
+before starting another's. When it finishes, it lists what is left to rebrand
+by hand (favicon, landing copy, README).
+
+It also takes `--non-interactive` (and `--name "<App Name>"`) for scripted
+use. Prefer manual control? The steps below do the same thing by hand. To
+stand up production on Railway, see [Railway](#railway).
 
 ### Installation
 

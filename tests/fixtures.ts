@@ -5,17 +5,18 @@ import {
     type BrowserContext,
     type Page,
 } from '@playwright/test';
+import { DEMO_EMAIL_DOMAIN } from '~/config';
 
 export const TEST_USER = {
     name: 'Alice',
-    email: 'alice@iridium.dev',
+    email: `alice@${DEMO_EMAIL_DOMAIN}`,
     password: 'password123',
 };
 
 /** Second seeded user, used for cross-user authorization tests. */
 export const TEST_USER_BOB = {
     name: 'Bob',
-    email: 'bob@iridium.dev',
+    email: `bob@${DEMO_EMAIL_DOMAIN}`,
     password: 'password123',
 };
 
