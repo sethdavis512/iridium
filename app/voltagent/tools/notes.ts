@@ -9,6 +9,9 @@ import {
     searchNotes,
 } from '~/models/note.server';
 
+/** Most notes a tool returns to the model; each can be up to 10k chars. */
+export const NOTES_TOOL_LIMIT = 20;
+
 function serializeNote(n: Note) {
     return {
         id: n.id,
@@ -55,13 +58,15 @@ export const createNoteTool = createTool({
 export const listNotesTool = createTool({
     name: 'list_notes',
     description:
-        'List all notes for the current user. Use when the user wants to see their notes.',
+        "List the current user's most recent notes (up to 20). Use when the user wants to see their notes.",
     parameters: z.object({}),
     execute: async (_args, options) => {
         const userId = options?.userId;
         invariant(userId, 'User not authenticated');
 
-        const notes = await getNotesByUserId(userId);
+        const notes = await getNotesByUserId(userId, {
+            take: NOTES_TOOL_LIMIT,
+        });
 
         return { notes: notes.map(serializeNote) };
     },
@@ -81,7 +86,11 @@ export const searchNotesTool = createTool({
         const userId = options?.userId;
         invariant(userId, 'User not authenticated');
 
-        const notes = await searchNotes({ userId, query: args.query });
+        const notes = await searchNotes({
+            userId,
+            query: args.query,
+            take: NOTES_TOOL_LIMIT,
+        });
 
         return { notes: notes.map(serializeNote) };
     },

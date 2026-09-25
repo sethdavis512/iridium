@@ -3,7 +3,29 @@ import {
     type BaseMessage,
     type RetrieveOptions,
 } from '@voltagent/core';
+import type { TextPart, UserModelMessage } from 'ai';
 import { searchNotes } from '~/models/note.server';
+
+/** Notes injected into the prompt per turn; each can be up to 10k chars. */
+export const RETRIEVER_NOTE_LIMIT = 5;
+
+/**
+ * Text of the latest user message. Model messages usually carry `content` as
+ * an array of parts, not a string, so only the text parts are joined.
+ */
+function latestUserText(messages: BaseMessage[]): string {
+    const message = [...messages]
+        .reverse()
+        .find((m): m is UserModelMessage => m.role === 'user');
+
+    if (!message) return '';
+    if (typeof message.content === 'string') return message.content;
+
+    return message.content
+        .filter((part): part is TextPart => part.type === 'text')
+        .map((part) => part.text)
+        .join(' ');
+}
 
 export class NotesRetriever extends BaseRetriever {
     constructor() {
@@ -20,21 +42,15 @@ export class NotesRetriever extends BaseRetriever {
         const { userId } = options;
         if (!userId) return '';
 
-        let query: string;
-        if (typeof input === 'string') {
-            query = input;
-        } else {
-            const lastMessage = input.at(-1);
-            query = String(
-                (lastMessage && 'content' in lastMessage
-                    ? lastMessage.content
-                    : '') ?? '',
-            );
-        }
+        const query = typeof input === 'string' ? input : latestUserText(input);
 
         if (!query.trim()) return '';
 
-        const notes = await searchNotes({ userId, query });
+        const notes = await searchNotes({
+            userId,
+            query,
+            take: RETRIEVER_NOTE_LIMIT,
+        });
         if (!notes.length) return '';
 
         return notes.map((n) => `## ${n.title}\n${n.content}`).join('\n\n');
