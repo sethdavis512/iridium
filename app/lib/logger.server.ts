@@ -6,10 +6,22 @@
  * CloudWatch, etc.). In development, emits a human-readable single line so
  * the terminal stays scannable.
  */
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 type LogLevel = 'info' | 'warn' | 'error';
 
 type LogFields = Record<string, unknown>;
+
+const logContext = new AsyncLocalStorage<LogFields>();
+
+/**
+ * Run `fn` with `fields` (e.g. a request id) attached to every log line
+ * emitted inside it, including from awaited async work. Explicit fields
+ * passed to a log call win over context fields.
+ */
+export function withLogContext<T>(fields: LogFields, fn: () => T): T {
+    return logContext.run({ ...logContext.getStore(), ...fields }, fn);
+}
 
 /**
  * Use JSON format anywhere that's not a developer terminal -- this includes
@@ -50,7 +62,8 @@ function formatDev(level: LogLevel, event: string, fields: LogFields) {
     return `${tag} ${level.toUpperCase().padEnd(5)} ${event}${extras}`;
 }
 
-function emit(level: LogLevel, event: string, fields: LogFields = {}) {
+function emit(level: LogLevel, event: string, ownFields: LogFields = {}) {
+    const fields = { ...logContext.getStore(), ...ownFields };
     const line = useJson
         ? JSON.stringify(
               { ts: new Date().toISOString(), level, event, ...fields },

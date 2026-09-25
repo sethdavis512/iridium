@@ -137,6 +137,15 @@ export const auth = betterAuth({
     },
     advanced: {
         cookiePrefix: AUTH_COOKIE_PREFIX,
+        // Client IP for rate limiting and session records. Better Auth reads
+        // X-Forwarded-For by default, which a client can forge to get a fresh
+        // rate-limit bucket per request; Railway's edge sets X-Real-IP to the
+        // connecting address. Without the header (local dev, E2E) Better Auth
+        // uses 127.0.0.1 in development/test and one shared bucket in
+        // production, so a host that doesn't set X-Real-IP must change this.
+        ipAddress: {
+            ipAddressHeaders: ['x-real-ip'],
+        },
         defaultCookieAttributes: {
             httpOnly: true,
             sameSite: 'lax',

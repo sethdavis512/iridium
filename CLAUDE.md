@@ -143,6 +143,10 @@ Both limiters store state in Postgres, so limits are shared across replicas and 
 - **App limiter**: `await rateLimit({ key, maxRequests, windowMs })` in `app/lib/rate-limit.server.ts` is a sliding window over the `RateLimitBucket` table (one row per key holding the hit timestamps still inside the window). Used for chat (20/min), note creation (10/hour), and per-user write limits on notes, threads, settings, and admin actions. Each check runs in a transaction that takes a per-key `pg_advisory_xact_lock` first, so concurrent requests on any instance cannot both slip under the limit; rejected requests are not recorded. Each process sweeps expired buckets inline at most once a minute. The window math is the pure `slideWindow()`, unit-tested on its own.
 - **Better Auth**: `rateLimit.storage: 'database'` in `auth.server.ts` keeps its per-IP counters in the `RateLimit` table (shape dictated by Better Auth, which also prunes it). `DISABLE_AUTH_RATE_LIMIT=true` still turns it off for E2E.
 
+### Database pools
+
+Every pg pool is built from `pgPoolConfig()` in `app/lib/db-pool.server.ts`: `connectionTimeoutMillis` 5s (pg's default waits forever), `statement_timeout` 15s, `idle_in_transaction_session_timeout` 30s. Sizes (`POOL_MAX`) assume 1 replica and Railway Postgres's default `max_connections` of 100 per database: Prisma 10 on the app DB, VoltAgent memory 5 plus a 1-connection healthcheck probe on the VoltAgent DB. A deploy briefly runs two replicas, so budget double (20 and 12), plus Trigger.dev workers on the app DB. Revisit `POOL_MAX` before adding replicas. VoltAgent's adapter only types `maxConnections`, so `agents.ts` passes the pg options through its object-form `connection` (it spreads that into `new Pool()`); recheck after upgrading `@voltagent/postgres`.
+
 ### Environment Validation
 
 `app/lib/env.server.ts` validates env with Zod at startup. Required **infra** vars (`DATABASE_URL`, `VOLTAGENT_DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_BASE_URL`) plus **feature** keys that degrade gracefully when unset (`ANTHROPIC_API_KEY` → chat disabled, `RESEND_API_KEY` → email to console, OAuth pairs → buttons hidden, `TRIGGER_SECRET_KEY` → jobs inline, `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`STRIPE_PRICE_ID` → billing stub, `ADMIN_EMAILS` → no first-admin bootstrap) and `EMAIL_FROM`, `DISABLE_AUTH_RATE_LIMIT`, `E2E_TEST_HOOKS`. Import `env` from this module instead of reading `process.env` directly in server code.
@@ -210,7 +214,7 @@ Auth is explicit per test: the `authedPage` fixture in `tests/fixtures.ts` signs
 
 ### Context & Shared Styles
 
-- `app/context.ts` — `userContext` via React Router's `createContext<SessionUser | null>`
+- `app/context.ts` — `userContext` via React Router's `createContext<SessionUser | null>`, plus `requestIdContext`, set by the root `requestIdMiddleware` (`app/middleware/request-id.ts`), which reuses or mints `x-request-id`, echoes it on the response, and wraps the request in `withLogContext` so every `log.*` line carries `requestId`. `handleError` in `entry.server.tsx` logs loader/action/render errors the same way
 - `app/shared.ts` — shared className helpers (`listItemClassName`, `navLinkClassName`)
 - `app/hooks.ts` — shared hooks: `useDialogState` (controlled Base UI Dialog/AlertDialog state: `open`/`onOpenChange`/`openDialog(target?)`/`close`/`target`, with derived reopen-on-error — no setState-in-effect), `usePendingIntent`, `useIsSubmitting`
 
@@ -226,7 +230,7 @@ Reuse these instead of re-rolling the markup: the COSS primitives in `app/compon
 - `layouts/marketing.tsx` — growable document (`min-h-dvh` flex column, footer at content's end). Wraps `/` (landing).
 - `layouts/auth.tsx` — full-bleed, no header/footer. Wraps `/login`, `/forgot-password`, `/reset-password`.
 
-Shared chrome is extracted into `SiteHeader` and `SiteFooter` (`app/components/`). `SiteHeader` reads auth state via `useRouteLoaderData<typeof rootLoader>('root')` rather than props, and owns the skip link, the labeled Site/Main navs, the theme toggle (Base UI Menu), and the mobile nav Sheet. Root renders the flash `Toaster` and drives dark mode by putting `class="dark"` on `<html>` from the theme cookie; `theme === 'system'` resolves via a pre-paint inline script reading `prefers-color-scheme` (with `suppressHydrationWarning` on `<html>`). Gotcha: an open Sheet/Dialog makes the rest of the page inert, so tests must assert on the popup, not the trigger.
+Shared chrome is extracted into `SiteHeader` and `SiteFooter` (`app/components/`). `SiteHeader` reads auth state via `useRouteLoaderData<typeof rootLoader>('root')` rather than props, and owns the skip link, the labeled Site/Main navs, the theme toggle (Base UI Menu), and the mobile nav Sheet. Root renders the flash `Toaster` and drives dark mode by putting `class="dark"` on `<html>` from the theme cookie; `theme === 'system'` resolves via a pre-paint inline script reading `prefers-color-scheme` (with `suppressHydrationWarning` on `<html>`). The CSP's `script-src` allows only same-origin files and a per-request nonce (no `'unsafe-inline'`): `entry.server.tsx` generates it and passes it to `ServerRouter`, React's stream, and `NonceProvider`, so any new inline `<script>` must take `nonce={useNonce()}` (`app/lib/nonce.tsx`) plus `suppressHydrationWarning`, or the browser blocks it (`tests/csp.spec.ts` checks). Gotcha: an open Sheet/Dialog makes the rest of the page inert, so tests must assert on the popup, not the trigger.
 
 **Definite height matters:** app/auth shells use `h-dvh` (a fixed height) so the `min-h-0` + `overflow-y-auto` chain can scroll children internally. `min-h-screen` is a minimum, not a definite height, and silently breaks internal scrolling once content exceeds the viewport.
 

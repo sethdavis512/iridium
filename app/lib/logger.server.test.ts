@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
-import { log } from './logger.server';
+import { log, withLogContext } from './logger.server';
 
 describe('logger', () => {
     let logSpy: ReturnType<typeof vi.spyOn>;
@@ -93,5 +93,29 @@ describe('logger', () => {
         log.info('ts_check');
         const payload = lastCall(logSpy);
         expect(payload.ts).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    });
+
+    it('withLogContext() adds its fields to logs across awaits', async () => {
+        await withLogContext({ requestId: 'req-1' }, async () => {
+            await Promise.resolve();
+            log.info('inside');
+        });
+        log.info('outside');
+
+        const [inside, outside] = logSpy.mock.calls.map((call: unknown[]) =>
+            JSON.parse(call[0] as string),
+        );
+        expect(inside.requestId).toBe('req-1');
+        expect(outside.requestId).toBeUndefined();
+    });
+
+    it('explicit fields win over context fields', () => {
+        withLogContext({ requestId: 'req-1', userId: 'u1' }, () => {
+            log.info('override', { requestId: 'req-2' });
+        });
+
+        const payload = lastCall(logSpy);
+        expect(payload.requestId).toBe('req-2');
+        expect(payload.userId).toBe('u1');
     });
 });
