@@ -67,7 +67,6 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/iridium"
 VOLTAGENT_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/voltagent"
 BETTER_AUTH_SECRET="<openssl rand -base64 32>"
 BETTER_AUTH_BASE_URL="http://localhost:5173"
-VITE_BETTER_AUTH_BASE_URL="http://localhost:5173"
 ANTHROPIC_API_KEY="sk-ant-..."
 
 # Optional: real email sending (otherwise emails log to the console)

@@ -34,13 +34,12 @@ e2e, and qa-explorer runs can't collide). Same env recipe as
 ```sh
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-sk-ant-e2e-dummy-key} \
 BETTER_AUTH_BASE_URL=http://localhost:7780 \
-VITE_BETTER_AUTH_BASE_URL=http://localhost:7780 \
 DISABLE_AUTH_RATE_LIMIT=true E2E_TEST_HOOKS=true \
 bun run dev --port 7780
 ```
 
-Precondition: `bun run docker:up`. Both `BETTER_AUTH` URLs must match the
-port or sign-in silently hangs. `E2E_TEST_HOOKS=true` also suppresses the dev
+Precondition: `bun run docker:up`. `BETTER_AUTH_BASE_URL` must match the
+port or sign-in is rejected. `E2E_TEST_HOOKS=true` also suppresses the dev
 env banner so it can't contaminate screenshots of other surfaces (unless the
 banner itself is what you're verifying — then drop that var).
 

@@ -81,7 +81,6 @@ if (writeEnv) {
             'postgresql://postgres:postgres@localhost:5433/voltagent',
         BETTER_AUTH_SECRET: randomBytes(32).toString('base64'),
         BETTER_AUTH_BASE_URL: 'http://localhost:5173',
-        VITE_BETTER_AUTH_BASE_URL: 'http://localhost:5173',
         ANTHROPIC_API_KEY: anthropicKey || 'sk-ant-REPLACE-ME',
     };
 

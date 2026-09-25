@@ -32,12 +32,11 @@ interactive tools, start it yourself with the same env that
 ```sh
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-sk-ant-e2e-dummy-key} \
 BETTER_AUTH_BASE_URL=http://localhost:7779 \
-VITE_BETTER_AUTH_BASE_URL=http://localhost:7779 \
 DISABLE_AUTH_RATE_LIMIT=true E2E_TEST_HOOKS=true \
 bun run dev --port 7779
 ```
 
-Both `BETTER_AUTH` URLs must match the port or sign-in silently hangs.
+`BETTER_AUTH_BASE_URL` must match the port or sign-in is rejected.
 `E2E_TEST_HOOKS` exposes `/api/test-mailbox` (read password-reset links) and
 `/api/test-role` (promote a user to ADMIN).
 
