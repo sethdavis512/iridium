@@ -122,7 +122,8 @@ The app will be available at `http://localhost:5173`.
 
 ```bash
 bun run test          # Vitest unit tests
-bun run test:e2e      # Playwright E2E suite (own server on port 7778)
+bun run test:e2e      # Playwright E2E suite on Chromium, as CI (port 7778)
+bun run test:e2e:cross # Same suite on Chromium, Firefox and WebKit
 bun run test:visual   # Visual inventory: screenshot gallery of every surface
 ```
 

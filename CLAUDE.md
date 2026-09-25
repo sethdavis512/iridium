@@ -23,7 +23,8 @@ Iridium is a full-stack AI chat application built with React Router v8 (SSR), Be
 | `bun run validate`       | typecheck + lint + format:check       |
 | `bun run test`           | Run Vitest unit tests                 |
 | `bun run test:watch`     | Run Vitest in watch mode              |
-| `bun run test:e2e`       | Run all Playwright E2E tests          |
+| `bun run test:e2e`       | Playwright E2E, Chromium only (as CI) |
+| `bun run test:e2e:cross` | E2E on Chromium, Firefox and WebKit   |
 | `bun run test:all`       | Unit + E2E tests                      |
 | `bun run test:visual`    | Visual inventory screenshot gallery   |
 | `bun run db:migrate`     | Run Prisma migrations (dev)           |
