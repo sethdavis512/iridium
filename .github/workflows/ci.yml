@@ -7,6 +7,15 @@ on:
         branches: [main]
     workflow_dispatch:
 
+# A new push to a PR cancels that PR's in-flight run. Runs on main never
+# cancel: Railway's Wait for CI needs every main commit's run to finish. Main
+# gets a per-run group rather than a shared one because a shared group would
+# still replace a queued run when a third commit lands, even without
+# cancel-in-progress.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
     DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iridium_test
     VOLTAGENT_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/voltagent_test
