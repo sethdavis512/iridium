@@ -1,4 +1,4 @@
-import { test, expect, createNoteViaApi } from './fixtures';
+import { test, expect, createNoteViaApi, waitForHydration } from './fixtures';
 
 test.describe('Notes', () => {
     test('shows an empty state for a fresh user', async ({
@@ -13,6 +13,7 @@ test.describe('Notes', () => {
         authedPage: page,
     }) => {
         await page.goto('/notes');
+        await waitForHydration(page);
 
         await page.getByRole('button', { name: 'New Note' }).first().click();
         await page.getByPlaceholder('Note title').fill('Grocery list');
@@ -71,6 +72,7 @@ test.describe('Notes', () => {
         });
 
         await page.goto('/notes');
+        await waitForHydration(page);
         await page.getByRole('button', { name: 'Edit' }).click();
         await page.getByPlaceholder('Note title').fill('Final title');
         await page.getByRole('button', { name: 'Save changes' }).click();
@@ -88,6 +90,7 @@ test.describe('Notes', () => {
         });
 
         await page.goto('/notes');
+        await waitForHydration(page);
         await page.getByRole('button', { name: 'Delete' }).first().click();
 
         const dialog = page.getByRole('alertdialog');

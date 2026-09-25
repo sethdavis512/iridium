@@ -1,5 +1,5 @@
 import type { Route as PwRoute } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { test, expect, waitForHydration } from './fixtures';
 import { SSE_HEADERS, mockChatReply, sseBody } from './chat-mock';
 
 /**
@@ -54,6 +54,7 @@ test.describe('Chat', () => {
         await page.goto('/chat');
         await page.getByRole('button', { name: 'New Thread' }).click();
         await expect(page).toHaveURL(/\/chat\/.+/);
+        await waitForHydration(page);
 
         const reply = 'Hello from mock AI!';
         await mockChatReply(page, reply);
@@ -71,6 +72,7 @@ test.describe('Chat', () => {
         await page.goto('/chat');
         await page.getByRole('button', { name: 'New Thread' }).click();
         await expect(page).toHaveURL(/\/chat\/.+/);
+        await waitForHydration(page);
 
         // Stream two separate deltas to verify incremental concatenation.
         await page.route('**/api/chat', async (route: PwRoute) => {
@@ -100,6 +102,7 @@ test.describe('Chat', () => {
         await page.goto('/chat');
         await page.getByRole('button', { name: 'New Thread' }).click();
         await expect(page).toHaveURL(/\/chat\/.+/);
+        await waitForHydration(page);
         const path = threadPath(page.url());
 
         const sidebar = conversations(page);

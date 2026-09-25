@@ -1,10 +1,11 @@
-import { test, expect, TEST_USER } from './fixtures';
+import { test, expect, TEST_USER, waitForHydration } from './fixtures';
 
 test.describe('Login', () => {
     test('logs in with valid credentials and redirects to dashboard', async ({
         page,
     }) => {
         await page.goto('/login');
+        await waitForHydration(page);
         await page.getByPlaceholder('name@example.com').fill(TEST_USER.email);
         await page.getByPlaceholder('Your password').fill(TEST_USER.password);
         await page.getByRole('button', { name: 'Login' }).click();
@@ -21,6 +22,7 @@ test.describe('Login', () => {
         // The E2E server sets no OAuth env vars, so the env-gated provider
         // buttons must not render.
         await page.goto('/login');
+        await waitForHydration(page);
 
         await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
         await expect(
@@ -30,6 +32,7 @@ test.describe('Login', () => {
 
     test('shows error for invalid credentials', async ({ page }) => {
         await page.goto('/login');
+        await waitForHydration(page);
         await page.getByPlaceholder('name@example.com').fill(TEST_USER.email);
         await page.getByPlaceholder('Your password').fill('wrongpassword');
         await page.getByRole('button', { name: 'Login' }).click();
@@ -40,7 +43,8 @@ test.describe('Login', () => {
     });
 
     test('validates required fields', async ({ page }) => {
-        await page.goto('/login', { waitUntil: 'networkidle' });
+        await page.goto('/login');
+        await waitForHydration(page);
         await page.getByRole('button', { name: 'Login' }).click();
         await expect(
             page.getByText('Enter a valid email address'),
@@ -52,6 +56,7 @@ test.describe('Login', () => {
 
     test('validates short password', async ({ page }) => {
         await page.goto('/login');
+        await waitForHydration(page);
         await page.getByPlaceholder('name@example.com').fill('test@test.com');
         await page.getByPlaceholder('Your password').fill('short');
         await page.getByRole('button', { name: 'Login' }).click();
@@ -64,6 +69,7 @@ test.describe('Login', () => {
 test.describe('Registration', () => {
     test('switches to register mode and shows name field', async ({ page }) => {
         await page.goto('/login');
+        await waitForHydration(page);
         await expect(page.getByPlaceholder('Your name')).not.toBeVisible();
         await page.getByRole('radio', { name: 'Register' }).check();
         await expect(page.getByPlaceholder('Your name')).toBeVisible();
@@ -74,6 +80,7 @@ test.describe('Registration', () => {
 
     test('requires name when registering', async ({ page }) => {
         await page.goto('/login');
+        await waitForHydration(page);
         await page.getByRole('radio', { name: 'Register' }).check();
         await page.getByPlaceholder('name@example.com').fill('new@test.com');
         await page.getByPlaceholder('Your password').fill('password123');
@@ -84,8 +91,9 @@ test.describe('Registration', () => {
     test('registers a new user and redirects to dashboard', async ({
         page,
     }) => {
-        const unique = `e2e-${Date.now()}@test.com`;
+        const unique = `e2e-register-${crypto.randomUUID()}@iridium.test`;
         await page.goto('/login');
+        await waitForHydration(page);
         await page.getByRole('radio', { name: 'Register' }).check();
         await page.getByPlaceholder('Your name').fill('E2E Test User');
         await page.getByPlaceholder('name@example.com').fill(unique);
@@ -101,6 +109,7 @@ test.describe('Registration', () => {
         page,
     }) => {
         await page.goto('/login');
+        await waitForHydration(page);
         await page.getByRole('radio', { name: 'Register' }).check();
         await page.getByPlaceholder('Your name').fill('Alice Dup');
         await page.getByPlaceholder('name@example.com').fill(TEST_USER.email);

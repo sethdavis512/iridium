@@ -39,27 +39,26 @@ export async function loginViaUI(
     user: { email: string; password: string } = TEST_USER,
 ) {
     await page.goto('/login');
+    await waitForHydration(page);
     await page.getByPlaceholder('name@example.com').fill(user.email);
     await page.getByPlaceholder('Your password').fill(user.password);
     await page.getByRole('button', { name: 'Login' }).click();
     await page.waitForURL(new RegExp(REDIRECT_PATH));
 }
 
-// Monotonic counter so emails minted within the same millisecond by one worker
-// never collide.
-let userSeq = 0;
-
 /**
  * Sign up a brand-new account via the Better Auth API in the given context and
  * return its credentials. Sign-up auto-signs-in, so the context is left
- * authenticated (its cookie jar holds the session).
+ * authenticated (its cookie jar holds the session). The email carries a random
+ * UUID so concurrent Playwright runs sharing one database (where worker
+ * indexes and timestamps repeat) never mint the same address.
  */
 export async function createFreshUser(
     context: BrowserContext,
     baseURL: string,
     tag: string | number = 'x',
 ) {
-    const email = `e2e-${tag}-${Date.now()}-${userSeq++}@iridium.test`;
+    const email = `e2e-${tag}-${crypto.randomUUID()}@iridium.test`;
     const password = 'password123';
 
     const res = await context.request.post('/api/auth/sign-up/email', {

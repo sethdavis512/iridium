@@ -1,4 +1,10 @@
-import { test, expect, createFreshUser, loginViaUI } from './fixtures';
+import {
+    test,
+    expect,
+    createFreshUser,
+    loginViaUI,
+    waitForHydration,
+} from './fixtures';
 
 test.describe('Settings', () => {
     test('updates the profile name and bio with a toast', async ({
@@ -91,6 +97,7 @@ test.describe('Settings', () => {
         const page = await context.newPage();
 
         await page.goto('/settings');
+        await waitForHydration(page);
         await page.getByRole('button', { name: 'Delete account' }).click();
 
         const dialog = page.getByRole('dialog');
