@@ -16,7 +16,7 @@ WORKDIR /app
 # Provide a placeholder so prisma.config.ts can resolve env('DATABASE_URL').
 RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" bunx --bun prisma generate && bun run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 ENV NODE_ENV=production
 RUN apk add --no-cache wget \
     && addgroup -S app && adduser -S app -G app

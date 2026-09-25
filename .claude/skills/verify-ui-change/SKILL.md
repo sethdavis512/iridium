@@ -11,13 +11,13 @@ reviewer would, then hand back evidence, not claims.
 
 ## Workflow checklist
 
-- [ ]   1. Capture "before" (only when changing existing UI)
-- [ ]   2. Boot the app
-- [ ]   3. Interact with the change
-- [ ]   4. Screenshot the matrix (light/dark × desktop/phone)
-- [ ]   5. Zero console errors
-- [ ]   6. Run the guardrail tests
-- [ ]   7. Hand back the evidence
+- [ ] 1. Capture "before" (only when changing existing UI)
+- [ ] 2. Boot the app
+- [ ] 3. Interact with the change
+- [ ] 4. Screenshot the matrix (light/dark × desktop/phone)
+- [ ] 5. Zero console errors
+- [ ] 6. Run the guardrail tests
+- [ ] 7. Hand back the evidence
 
 ## 1. Before shots
 

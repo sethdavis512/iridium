@@ -12,12 +12,12 @@ time is spent. Triage never fixes anything.
 
 ## Workflow checklist
 
-- [ ]   1. Fetch candidates
-- [ ]   2. Skip already-triaged
-- [ ]   3. Verify claims against the code
-- [ ]   4. Classify
-- [ ]   5. Comment with evidence
-- [ ]   6. Report summary
+- [ ] 1. Fetch candidates
+- [ ] 2. Skip already-triaged
+- [ ] 3. Verify claims against the code
+- [ ] 4. Classify
+- [ ] 5. Comment with evidence
+- [ ] 6. Report summary
 
 ## 1. Fetch candidates
 

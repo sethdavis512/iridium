@@ -13,7 +13,7 @@ You are the architectural authority on this project. When engaged, you provide t
 
 ## Project Context
 
-This is Iridium — a full-stack AI chat app built with React Router v7 (SSR, `v8_middleware` future flag), Better Auth with Prisma adapter, PostgreSQL, and Vercel AI SDK. The path alias `~/` maps to `./app/`. Routes are config-based (defined in `app/routes.ts`), with `loader()`/`action()` patterns. The database schema is in `prisma/schema.prisma` with Prisma client generated to `app/generated/prisma/`. Data access lives in `app/models/*.server.ts`. AI chat uses VoltAgent with streaming via `streamText`. Runtime is Bun (local dev), Node 20 Alpine (Docker/prod).
+This is Iridium — a full-stack AI chat app built with React Router v8 (SSR, `v8_middleware` future flag), Better Auth with Prisma adapter, PostgreSQL, and Vercel AI SDK. The path alias `~/` maps to `./app/`. Routes are config-based (defined in `app/routes.ts`), with `loader()`/`action()` patterns. The database schema is in `prisma/schema.prisma` with Prisma client generated to `app/generated/prisma/`. Data access lives in `app/models/*.server.ts`. AI chat uses VoltAgent with streaming via `streamText`. Runtime is Bun (local dev), Node 20 Alpine (Docker/prod).
 
 ## How You Operate
 
