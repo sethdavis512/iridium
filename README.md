@@ -278,7 +278,7 @@ export const myTool = createTool({
 ```ts
 import { myTool } from './tools/my-tool';
 
-export const agent = new Agent({
+const agent = new Agent({
     // ...
     tools: [createNoteTool, listNotesTool, searchNotesTool, myTool],
 });
@@ -291,7 +291,7 @@ export const agent = new Agent({
 ## Troubleshooting
 
 - Chat/tool-calling duplicate provider item IDs (`fc_*`): see [docs/chat-tool-calling.md](docs/chat-tool-calling.md)
-- `ECONNREFUSED 127.0.0.1:5433` on `bun run dev`: the VoltAgent Postgres container isn't running. Make sure Docker Desktop is running (`open -a Docker`), then `bun run docker:up` before `bun run dev`. Port 5433 (`VOLTAGENT_POSTGRES_PORT`) is the VoltAgent database; 5432 (`POSTGRES_PORT`) is the Prisma database.
+- `ECONNREFUSED 127.0.0.1:5433` in the server log when you chat (and `/api/chat` answering 503): the VoltAgent Postgres container isn't running. Make sure Docker Desktop is running (`open -a Docker`), then `bun run docker:up` before `bun run dev`. Port 5433 (`VOLTAGENT_POSTGRES_PORT`) is the VoltAgent database; 5432 (`POSTGRES_PORT`) is the Prisma database.
 - `port is already allocated` on `bun run docker:up`: another project's databases hold the ports. Stop them, or run `bun run setup` again to move this copy to a free pair (or set `POSTGRES_PORT`/`VOLTAGENT_POSTGRES_PORT` and the matching URLs in `.env` by hand).
 
 ## Building for Production

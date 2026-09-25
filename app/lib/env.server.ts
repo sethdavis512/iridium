@@ -142,7 +142,7 @@ export function isSameDatabase(a: string, b: string): boolean {
  *
  * In every environment, VOLTAGENT_DATABASE_URL must name a different database
  * than DATABASE_URL. VoltAgent's adapter creates its voltagent_memory_* tables
- * wherever it connects as soon as ~/voltagent loads, and Prisma then reports
+ * wherever it connects the first time chat uses it, and Prisma then reports
  * them as drift and asks to reset the app database.
  *
  * With NODE_ENV=production, E2E_TEST_HOOKS would expose /api/test-role (anyone

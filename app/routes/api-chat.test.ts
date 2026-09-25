@@ -10,6 +10,8 @@ const {
     streamText,
     generateText,
     clearMessages,
+    getChat,
+    deleteTrailingAssistantMessages,
 } = vi.hoisted(() => ({
     getUserFromSession: vi.fn(),
     getThreadMeta: vi.fn(),
@@ -18,6 +20,8 @@ const {
     streamText: vi.fn(),
     generateText: vi.fn(),
     clearMessages: vi.fn(),
+    getChat: vi.fn(),
+    deleteTrailingAssistantMessages: vi.fn(),
 }));
 
 vi.mock('~/models/session.server', () => ({
@@ -27,7 +31,8 @@ vi.mock('~/models/session.server', () => ({
 vi.mock('~/models/thread.server', () => ({
     getThreadMeta: (...args: unknown[]) => getThreadMeta(...args),
     saveChat: (...args: unknown[]) => saveChat(...args),
-    deleteTrailingAssistantMessages: vi.fn(),
+    deleteTrailingAssistantMessages: (...args: unknown[]) =>
+        deleteTrailingAssistantMessages(...args),
 }));
 
 vi.mock('~/lib/jobs.server', () => ({
@@ -40,7 +45,7 @@ vi.mock('~/lib/thread-title.server', () => ({
     buildFallbackTitle: () => 'mock fallback title',
 }));
 
-vi.mock('~/voltagent', () => ({
+const chat = {
     agent: {
         streamText: (...args: unknown[]) => streamText(...args),
         generateText: (...args: unknown[]) => generateText(...args),
@@ -48,6 +53,12 @@ vi.mock('~/voltagent', () => ({
     memory: {
         clearMessages: (...args: unknown[]) => clearMessages(...args),
     },
+};
+
+vi.mock('~/voltagent', async () => ({
+    getChat: () => getChat(),
+    ResourceUnavailableError: (await import('~/voltagent/lazy-resource'))
+        .ResourceUnavailableError,
 }));
 
 vi.mock('~/lib/logger.server', () => ({
@@ -74,11 +85,14 @@ vi.mock('~/lib/rate-limit.server', () => ({
     },
 }));
 
+import { ResourceUnavailableError } from '~/voltagent/lazy-resource';
+
 import { action } from './api-chat';
 
 beforeEach(() => {
     vi.clearAllMocks();
     rateLimitHits.clear();
+    getChat.mockResolvedValue(chat);
 });
 
 function makeRequest(body: unknown, method = 'POST'): Request {
@@ -335,6 +349,64 @@ describe('/api/chat action', () => {
         await expect(
             capturedOnFinish!({ messages: [] }),
         ).resolves.toBeUndefined();
+    });
+
+    it('answers 503 with Retry-After while chat memory is unavailable', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue({
+            id: 'thread-1',
+            createdById: 'u1',
+            title: 'Untitled',
+        });
+        getChat.mockRejectedValue(
+            new ResourceUnavailableError(
+                'voltagent_memory',
+                4_200,
+                new Error('connect ECONNREFUSED'),
+            ),
+        );
+
+        const res = await actionCall(
+            makeRequest({ ...validBody, trigger: 'regenerate-message' }),
+        );
+
+        expect(res.status).toBe(503);
+        expect(res.headers.get('Retry-After')).toBe('5');
+        expect(await res.json()).toEqual({
+            error: expect.stringMatching(/temporarily unavailable/),
+        });
+        // Nothing is changed before the 503, so a retry starts clean.
+        expect(streamText).not.toHaveBeenCalled();
+        expect(deleteTrailingAssistantMessages).not.toHaveBeenCalled();
+        expect(clearMessages).not.toHaveBeenCalled();
+    });
+
+    it('checks auth and thread ownership before opening chat memory', async () => {
+        getUserFromSession.mockResolvedValue(null);
+        expect((await actionCall(makeRequest(validBody))).status).toBe(401);
+
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue({
+            id: 'thread-1',
+            createdById: 'other',
+            title: 'Untitled',
+        });
+        expect((await actionCall(makeRequest(validBody))).status).toBe(403);
+
+        expect(getChat).not.toHaveBeenCalled();
+    });
+
+    it('rethrows an unexpected error from opening chat memory', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue({
+            id: 'thread-1',
+            createdById: 'u1',
+            title: 'Untitled',
+        });
+        const bug = new TypeError('not a connection problem');
+        getChat.mockRejectedValue(bug);
+
+        await expect(actionCall(makeRequest(validBody))).rejects.toBe(bug);
     });
 
     it('self-heals memory on a duplicate-item error and retries the stream', async () => {
