@@ -13,7 +13,6 @@ Iridium is a full-stack AI chat application built with React Router v8 (SSR), Be
 | `bun run dev`            | Start dev server (port 5173)          |
 | `bun run dev:full`       | docker:up then dev (one command)      |
 | `bun run build`          | Production build                      |
-| `bun run start:migrate`  | migrate deploy then serve             |
 | `bun run provision`      | Create + deploy a new Railway project |
 | `bun run clean`          | Remove build + test output dirs       |
 | `bun run typecheck`      | Generate route types + run tsc        |

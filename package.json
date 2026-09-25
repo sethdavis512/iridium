@@ -13,7 +13,6 @@
         "dev": "react-router dev",
         "dev:full": "bun run docker:up && bun run dev",
         "start": "react-router-serve ./build/server/index.js",
-        "start:migrate": "npx --no-install prisma migrate deploy && npm run start",
         "clean": "rm -rf build .react-router test-results playwright-report",
         "typecheck": "react-router typegen && tsc",
         "lint": "eslint .",
