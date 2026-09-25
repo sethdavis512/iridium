@@ -43,14 +43,23 @@ A full-stack starter kit for shipping AI-powered products. Clone the repo, confi
 
 ```bash
 bun install
-bun run setup   # interactive: renames the project, writes .env, starts
-                # Docker, migrates, and seeds demo users in one shot
+bun run setup   # interactive: names the app, writes .env, starts Docker,
+                # migrates, and seeds demo users in one shot
 bun run dev
 ```
 
-`bun run setup` also takes `--non-interactive` (and `--name <project>`) for
-scripted use. Prefer manual control? The steps below do the same thing by
-hand. To stand up production on Railway, see [Railway](#railway).
+`bun run setup` asks for an app name and derives a slug from it (`My App` →
+`my-app`). It writes both to `app/config.ts` (`APP_NAME`, `APP_SLUG`) and uses
+the slug for the package name, the Docker Compose project, the local database
+(`my_app`), the cookie names, and the demo users' emails, so a copy never
+shares containers, data, or sessions with another copy on the same machine.
+Every copy still uses ports 5432 and 5433, so stop one project's databases
+before starting another's. When it finishes, it lists what is left to rebrand
+by hand (favicon, landing copy, README).
+
+It also takes `--non-interactive` (and `--name "<App Name>"`) for scripted
+use. Prefer manual control? The steps below do the same thing by hand. To
+stand up production on Railway, see [Railway](#railway).
 
 ### Installation
 
@@ -67,7 +76,6 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/iridium"
 VOLTAGENT_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/voltagent"
 BETTER_AUTH_SECRET="<openssl rand -base64 32>"
 BETTER_AUTH_BASE_URL="http://localhost:5173"
-VITE_BETTER_AUTH_BASE_URL="http://localhost:5173"
 ANTHROPIC_API_KEY="sk-ant-..."
 
 # Optional: real email sending (otherwise emails log to the console)
@@ -80,6 +88,9 @@ GITHUB_CLIENT_ID="..."
 GITHUB_CLIENT_SECRET="..."
 GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
+
+# Optional: first admin. Listed emails become ADMIN once verified.
+ADMIN_EMAILS="you@example.com"
 ```
 
 ### Two-Database Setup
@@ -108,7 +119,10 @@ bun run db:seed                 # Seed with demo users
 ```
 
 Seeded demo users (password `password123` for all): `alice@iridium.dev`,
-`bob@iridium.dev`, and `admin@iridium.dev` (ADMIN role).
+`bob@iridium.dev`, and `admin@iridium.dev` (ADMIN role). Because those
+passwords are public, the seed refuses to run when `NODE_ENV=production` or
+the `DATABASE_URL` host isn't `localhost`/`127.0.0.1`. Override with
+`bun prisma/seed.ts --force` only for a throwaway database.
 
 ### Development
 
@@ -295,6 +309,17 @@ Commit the rewritten `.railway/app.json` afterwards. For scripted use:
 `--non-interactive --name <project> [--workspace <id>]`, with optional keys in
 `PROVISION_ANTHROPIC_API_KEY`, `PROVISION_RESEND_API_KEY`, and
 `PROVISION_EMAIL_FROM`.
+
+**First admin.** A new deployment has no users. Set `ADMIN_EMAILS` on the
+service (comma-separated, e.g. `railway variable set ADMIN_EMAILS --stdin
+--service <svc>`) and `RESEND_API_KEY` so verification email arrives. Sign
+up with a listed address, click the verification link, and sign in again: the
+account becomes ADMIN once its email is verified, never at sign-up, because
+sign-in doesn't require verification and anyone could register the address
+first. If sign-up reports that the address already exists, someone else
+registered it: don't verify it; delete that user, then sign up yourself. A
+listed address stays ADMIN: it is re-promoted at each sign-in, so remove it
+from `ADMIN_EMAILS` before demoting it in `/admin`.
 
 **After that**, ship by merging to `main`: Railway builds once CI passes.
 Change infrastructure by editing `.railway/railway.ts` and running

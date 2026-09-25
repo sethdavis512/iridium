@@ -57,6 +57,8 @@ bun run dev
 
 Seeded users (all password `password123`): `alice@iridium.dev`, `bob@iridium.dev`, `admin@iridium.dev` (ADMIN).
 
+App identity lives in `app/config.ts`: `APP_NAME`/`APP_TAGLINE` for display, and `APP_SLUG`, which namespaces the theme cookie, Better Auth's cookie prefix (`AUTH_COOKIE_PREFIX`, which keeps the default `better-auth` for the original `iridium` slug so production sessions survive), the local database name, the Compose project, and the demo email domain. `bun run setup` (`tools/init.ts`, pure helpers in `tools/identity.ts`) rewrites them for a copy, including `docker-compose.dev.yml`, `prisma.config.ts`, and `.env.example`, which can't import the config; `tools/identity.test.ts` fails if those drift from `APP_SLUG`.
+
 ### Two-Database Setup
 
 The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
@@ -121,6 +123,7 @@ Plain async functions in `app/models/*.server.ts` — no classes, no ORM wrapper
 - Social login: GitHub and Google via `socialProviders` in `auth.server.ts`, gated on `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` and `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. The login loader passes `enabledSocialProviders` to `Turnstile`, which only renders buttons for configured providers
 - Account flows: `/forgot-password` + `/reset-password` (token emails via `sendResetPassword`), `/settings` (profile, change password, delete account). Verification emails send on sign-up but sign-in is not gated (`requireEmailVerification` stays off — the E2E fixtures rely on sign-up auto-login)
 - Admin: `/admin` (requireAdmin) lists users with search/pagination and supports role changes, ban/unban, and impersonation (`/stop-impersonating` ends it; banner renders from SiteHeader). Gotcha: the admin plugin's `adminRoles` AND its `roles` permission map must be re-keyed to the uppercase Role enum or every admin API call returns FORBIDDEN (see `auth.server.ts`)
+- First admin: optional `ADMIN_EMAILS` (comma-separated). `auth.server.ts` promotes a listed user to ADMIN in `afterEmailVerification` and on each sign-in (`databaseHooks.session.create.after`), but only once `emailVerified` is true (rule in `app/lib/admin-emails.ts`); never promote at sign-up, since sign-in isn't gated on verification. The cookie cache holds the old role until the next sign-in. `prisma/seed.ts` refuses production or non-localhost databases unless `--force` (`prisma/seed-guard.ts`)
 
 ### AI Chat Flow
 
@@ -143,7 +146,7 @@ Both limiters store state in Postgres, so limits are shared across replicas and 
 
 ### Environment Validation
 
-`app/lib/env.server.ts` validates env with Zod at startup. Required **infra** vars (`DATABASE_URL`, `VOLTAGENT_DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_BASE_URL`) plus **feature** keys that degrade gracefully when unset (`ANTHROPIC_API_KEY` → chat disabled, `RESEND_API_KEY` → email to console, OAuth pairs → buttons hidden, `TRIGGER_SECRET_KEY` → jobs inline, `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`STRIPE_PRICE_ID` → billing stub) and `EMAIL_FROM`, `DISABLE_AUTH_RATE_LIMIT`, `E2E_TEST_HOOKS`. Import `env` from this module instead of reading `process.env` directly in server code.
+`app/lib/env.server.ts` validates env with Zod at startup. Required **infra** vars (`DATABASE_URL`, `VOLTAGENT_DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_BASE_URL`) plus **feature** keys that degrade gracefully when unset (`ANTHROPIC_API_KEY` → chat disabled, `RESEND_API_KEY` → email to console, OAuth pairs → buttons hidden, `TRIGGER_SECRET_KEY` → jobs inline, `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`/`STRIPE_PRICE_ID` → billing stub, `ADMIN_EMAILS` → no first-admin bootstrap) and `EMAIL_FROM`, `DISABLE_AUTH_RATE_LIMIT`, `E2E_TEST_HOOKS`. Import `env` from this module instead of reading `process.env` directly in server code.
 
 **Boot behavior is environment-dependent:** in **production**, missing/invalid vars fail fast (`process.exit(1)`) so misconfigured prod never runs. In **dev/test**, the app always boots — missing infra vars are swapped for placeholders (a console warning lists them) and missing feature keys just disable their feature. What's unset surfaces in a **dev-only banner** at the top of every page (`EnvBanner`, fed by `envWarnings`/`shouldShowEnvBanner` from `env.server.ts` via the root loader). The banner never renders in production or during E2E runs (gated on `E2E_TEST_HOOKS`), so it can't affect end users or test/visual snapshots.
 
@@ -173,7 +176,7 @@ Trigger.dev v4 tasks live in `trigger/` (config in `trigger.config.ts`): `send-a
 
 **Unit tests** use Vitest (`bun run test`). Test files live alongside source files as `*.test.ts`. Modules that import server-side dependencies (auth, Prisma) need `vi.mock()` to avoid env validation side effects.
 
-**E2E tests** use Playwright (`bun run test:e2e`) in `tests/`, covering auth, navigation, dashboard, notes, settings, password reset, theme switching, SEO endpoints, healthcheck, the chat flow, model selection/regeneration, agent tool rendering, chat error UX, the `/api/chat` API boundary, and cross-user thread access control. They run against a dedicated dev server on port `7778` (override with `E2E_PORT`) so they never collide with `bun run dev` on 5173; the `webServer` config also points `BETTER_AUTH_BASE_URL`/`VITE_BETTER_AUTH_BASE_URL` at that port and sets `DISABLE_AUTH_RATE_LIMIT=true`, `E2E_TEST_HOOKS=true` (enables `/api/test-mailbox` for reading reset links), plus a dummy `ANTHROPIC_API_KEY`.
+**E2E tests** use Playwright (`bun run test:e2e`) in `tests/`, covering auth, navigation, dashboard, notes, settings, password reset, theme switching, SEO endpoints, healthcheck, the chat flow, model selection/regeneration, agent tool rendering, chat error UX, the `/api/chat` API boundary, and cross-user thread access control. They run against a dedicated dev server on port `7778` (override with `E2E_PORT`) so they never collide with `bun run dev` on 5173; the `webServer` config also points `BETTER_AUTH_BASE_URL` at that port and sets `DISABLE_AUTH_RATE_LIMIT=true`, `E2E_TEST_HOOKS=true` (enables `/api/test-mailbox` for reading reset links), plus a dummy `ANTHROPIC_API_KEY`.
 
 Auth is explicit per test: the `authedPage` fixture in `tests/fixtures.ts` signs up a brand-new isolated user on demand (so every test starts with zero threads and parallel runs never share state), while a plain `page` stays logged out. `globalSetup` only ensures the seed users (Alice, Bob) exist for tests that log in as them. Fixtures also export `createAuthedContext` and `createThreadViaApi` for multi-user scenarios. Chat tests mock `/api/chat` with canned SSE responses (no AI service needed); tool-rendering tests stream `dynamic-tool` parts via helpers in `tests/chat-mock.ts`.
 

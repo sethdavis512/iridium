@@ -1,3 +1,4 @@
+import { APP_NAME } from '~/config';
 import { test, expect } from './fixtures';
 
 test.describe('SEO', () => {
@@ -28,7 +29,7 @@ test.describe('SEO', () => {
 
         await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
             'content',
-            'Iridium',
+            APP_NAME,
         );
         await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
             'content',

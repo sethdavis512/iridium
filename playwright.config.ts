@@ -71,15 +71,13 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         // The suite mocks /api/chat, so the real Anthropic key is never used —
         // env validation just needs a non-empty value for the server to boot.
-        // The two BETTER_AUTH base URLs must match the test port: the server
-        // one drives Better Auth's trusted origins, and the VITE_ one is baked
-        // into the browser auth client — if it points elsewhere, sign-in POSTs
-        // to the wrong origin and silently hangs.
+        // BETTER_AUTH_BASE_URL must match the test port: it drives Better
+        // Auth's trusted origins, so a mismatch rejects sign-in requests. The
+        // browser auth client needs no URL; it calls its own origin.
         env: {
             ANTHROPIC_API_KEY:
                 process.env.ANTHROPIC_API_KEY || 'sk-ant-e2e-dummy-key',
             BETTER_AUTH_BASE_URL: BASE_URL,
-            VITE_BETTER_AUTH_BASE_URL: BASE_URL,
             // The suite creates a fresh user per test; the prod-tuned auth rate
             // limiter would otherwise reject the rapid sign-ups with 429s.
             DISABLE_AUTH_RATE_LIMIT: 'true',

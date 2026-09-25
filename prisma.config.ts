@@ -16,6 +16,11 @@ export default defineConfig({
         // migrate/seed against a running `bun run docker:up`) work with zero
         // env. Production always sets DATABASE_URL, so the fallback never runs
         // there.
+        //
+        // The database name is LOCAL_DATABASE_NAME from app/config.ts, written
+        // here as a literal because the production image ships this file
+        // without app/ (`prisma migrate deploy` would fail to import it).
+        // `bun run setup` rewrites it; tools/identity.test.ts checks it.
         url:
             process.env.DATABASE_URL ??
             'postgresql://postgres:postgres@localhost:5432/iridium',

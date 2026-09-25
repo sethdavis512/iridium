@@ -2,12 +2,29 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { admin } from 'better-auth/plugins';
 import { adminAc, userAc } from 'better-auth/plugins/admin/access';
+import { AUTH_COOKIE_PREFIX } from '~/config';
 import prisma from '~/lib/prisma';
+import {
+    shouldPromoteToAdmin,
+    type PromotionCandidate,
+} from '~/lib/admin-emails';
 import { env } from '~/lib/env.server';
 import { enqueueAuthEmail } from '~/lib/jobs.server';
 import { log } from '~/lib/logger.server';
+import { getUserById, updateUserRole } from '~/models/user.server';
 
 const isProduction = env.NODE_ENV === 'production';
+
+/**
+ * First-admin bootstrap: promote a user listed in ADMIN_EMAILS once their
+ * email is verified. The session cookie caches the old role for up to
+ * cookieCache.maxAge, so the promoted user signs in again to see /admin.
+ */
+async function promoteIfAdminEmail(user: PromotionCandidate & { id: string }) {
+    if (!shouldPromoteToAdmin(user, env.ADMIN_EMAILS)) return;
+    await updateUserRole(user.id, 'ADMIN');
+    log.info('admin_email_promoted', { userId: user.id });
+}
 
 export type SocialProvider = 'github' | 'google';
 
@@ -72,6 +89,8 @@ export const auth = betterAuth({
                 url,
             });
         },
+        // The moment a listed address proves ownership.
+        afterEmailVerification: promoteIfAdminEmail,
     },
     user: {
         deleteUser: {
@@ -95,6 +114,19 @@ export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: 'postgresql',
     }),
+    databaseHooks: {
+        session: {
+            create: {
+                // Also check at sign-in: covers OAuth sign-ups (verified by the
+                // provider) and users who verified before ADMIN_EMAILS was set.
+                after: async (session) => {
+                    if (env.ADMIN_EMAILS.length === 0) return;
+                    const user = await getUserById(session.userId);
+                    if (user) await promoteIfAdminEmail(user);
+                },
+            },
+        },
+    },
     session: {
         // Cache the session in a signed cookie so most requests skip the DB
         // session lookup. Revocations still take effect within cookieCache.maxAge.
@@ -104,6 +136,7 @@ export const auth = betterAuth({
         },
     },
     advanced: {
+        cookiePrefix: AUTH_COOKIE_PREFIX,
         defaultCookieAttributes: {
             httpOnly: true,
             sameSite: 'lax',

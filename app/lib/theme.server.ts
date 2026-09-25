@@ -1,7 +1,8 @@
 import { createCookie } from 'react-router';
+import { APP_SLUG } from '~/config';
 import { themeSchema, type Theme } from '~/lib/theme';
 
-const themeCookie = createCookie('iridium_theme', {
+const themeCookie = createCookie(`${APP_SLUG}_theme`, {
     path: '/',
     httpOnly: true,
     sameSite: 'lax',

@@ -1,3 +1,4 @@
+import { APP_NAME, APP_TAGLINE } from '~/config';
 import { test, expect } from './fixtures';
 
 const siteNav = (page: import('@playwright/test').Page) =>
@@ -43,17 +44,17 @@ test.describe('Desktop navigation', () => {
 
     test('brand link returns to home', async ({ authedPage: page }) => {
         await page.goto('/chat');
-        await siteNav(page).getByRole('link', { name: 'Iridium' }).click();
+        await siteNav(page).getByRole('link', { name: APP_NAME }).click();
         await expect(page).toHaveURL(/\/$/);
         await expect(
-            page.getByRole('heading', { name: 'Iridium', level: 1 }),
+            page.getByRole('heading', { name: APP_NAME, level: 1 }),
         ).toBeVisible();
     });
 
     test('footer is present', async ({ page }) => {
         await page.goto('/');
         await expect(
-            page.getByText('Iridium. Go build. Be bold.'),
+            page.getByText(`${APP_NAME}. ${APP_TAGLINE}`),
         ).toBeVisible();
     });
 
