@@ -366,3 +366,57 @@ jobs:
                   echo "::error::/healthcheck did not return 200 within 90s"
                   docker logs iridium
                   exit 1
+
+    # Deploys the Trigger.dev tasks in trigger/ once the other jobs pass on a
+    # push to main (it skips with them on docs-only commits). A no-op until the
+    # TRIGGER_ACCESS_TOKEN repo secret exists, so forks and fresh copies stay
+    # green; once it does, the TRIGGER_PROJECT_REF repo variable is required.
+    trigger:
+        name: Deploy Trigger.dev tasks
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: [validate, e2e, docker]
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+            TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+            TRIGGER_PROJECT_REF: ${{ vars.TRIGGER_PROJECT_REF }}
+        steps:
+            - name: Skipped (no TRIGGER_ACCESS_TOKEN)
+              if: env.TRIGGER_ACCESS_TOKEN == ''
+              run: echo "TRIGGER_ACCESS_TOKEN is not set, so the Trigger.dev tasks were not deployed. Add the repo secret and the TRIGGER_PROJECT_REF variable to enable."
+
+            - uses: actions/checkout@v4
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+            - uses: oven-sh/setup-bun@v2
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              with:
+                  bun-version-file: package.json
+            - uses: actions/setup-node@v4
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              with:
+                  node-version: 24
+            - name: Cache Bun packages
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              uses: actions/cache@v4
+              with:
+                  path: ~/.bun/install/cache
+                  key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+                  restore-keys: bun-${{ runner.os }}-
+            - name: Install dependencies
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              run: bun install --frozen-lockfile
+            # The Prisma build extension bundles the generated client, which is
+            # gitignored.
+            - name: Generate Prisma client
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              run: bunx --bun prisma generate
+            # trigger:deploy pins the CLI to the installed @trigger.dev/sdk
+            # version; deploy fails in CI on a version mismatch.
+            - name: Deploy to Trigger.dev
+              if: env.TRIGGER_ACCESS_TOKEN != ''
+              run: |
+                  if [ -z "$TRIGGER_PROJECT_REF" ]; then
+                      echo "::error::Set the TRIGGER_PROJECT_REF repo variable to the Trigger.dev project ref."
+                      exit 1
+                  fi
+                  bun run trigger:deploy

@@ -169,6 +169,11 @@ required env vars (`DATABASE_URL`, `BETTER_AUTH_SECRET`, etc.) set in the
 Trigger.dev dashboard. Without `TRIGGER_SECRET_KEY`, `app/lib/jobs.server.ts`
 runs the same functions inline and the purge job simply doesn't run.
 
+To deploy the tasks from CI on every push to `main`, add a Trigger.dev personal
+access token as the `TRIGGER_ACCESS_TOKEN` repository secret and the project
+ref as the `TRIGGER_PROJECT_REF` repository variable. The CI job is a no-op
+until the secret exists.
+
 ## Project Structure
 
 ```

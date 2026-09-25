@@ -173,7 +173,7 @@ The Iridium production project is managed by `.railway/railway.ts` (applied 2026
 
 ### Background Jobs
 
-Trigger.dev v4 tasks live in `trigger/` (config in `trigger.config.ts`): `send-auth-email`, `generate-thread-title`, and the scheduled `purge-soft-deleted` (hard-deletes Threads/Notes soft-deleted 30+ days ago, daily). `app/lib/jobs.server.ts` is the only enqueue entry point: with `TRIGGER_SECRET_KEY` set it hands work to Trigger.dev, otherwise it runs the same shared functions inline (`app/lib/email-jobs.server.ts`, `app/lib/thread-title.server.ts`). Keep task files thin; put logic in those shared modules so the inline fallback and the worker never diverge. `bun run trigger:dev` / `bun run trigger:deploy`.
+Trigger.dev v4 tasks live in `trigger/` (config in `trigger.config.ts`): `send-auth-email`, `generate-thread-title`, and the scheduled `purge-soft-deleted` (hard-deletes Threads/Notes soft-deleted 30+ days ago, daily). `app/lib/jobs.server.ts` is the only enqueue entry point: with `TRIGGER_SECRET_KEY` set it hands work to Trigger.dev, otherwise it runs the same shared functions inline (`app/lib/email-jobs.server.ts`, `app/lib/thread-title.server.ts`). Keep task files thin; put logic in those shared modules so the inline fallback and the worker never diverge. `bun run trigger:dev` / `bun run trigger:deploy`; both pin the `trigger.dev` CLI to the installed `@trigger.dev/sdk` version, so bump the scripts with the SDK. CI's `trigger` job deploys the tasks on pushes to `main` once the `TRIGGER_ACCESS_TOKEN` repo secret and `TRIGGER_PROJECT_REF` repo variable exist, and is a no-op until then.
 
 ### Testing
 
