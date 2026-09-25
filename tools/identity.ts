@@ -2,7 +2,9 @@
  * Pure helpers behind `bun run setup` (tools/init.ts) that give a copy of the
  * template its own identity: app name, slug, local database, and Docker
  * Compose project. No Bun APIs or file I/O, so they can be unit tested.
+ * Database host ports live in tools/ports.ts.
  */
+import { DEFAULT_DEV_PORTS } from './ports';
 
 /** Longest slug we emit; keeps derived names well under Postgres's 63 bytes. */
 const MAX_SLUG_LENGTH = 40;
@@ -61,8 +63,11 @@ export function toDatabaseName(slug: string): string {
 }
 
 /** The docker-compose.dev.yml app database URL for a given database name. */
-export function localDatabaseUrl(databaseName: string): string {
-    return `postgresql://postgres:postgres@localhost:5432/${databaseName}`;
+export function localDatabaseUrl(
+    databaseName: string,
+    port: number = DEFAULT_DEV_PORTS.app,
+): string {
+    return `postgresql://postgres:postgres@localhost:${port}/${databaseName}`;
 }
 
 function escapeRegExp(value: string): string {
@@ -145,18 +150,21 @@ export function setComposeIdentity(
 }
 
 /**
- * Swap the database name in every local app database URL (port 5432) in a
- * file, leaving other hosts, ports, and databases alone. Used for
- * prisma.config.ts, .env.example, and an existing .env.
+ * Swap the database name in every local app database URL in a file, leaving
+ * other hosts, ports, and databases alone. The port is the app database's
+ * host port (5432 unless setup moved it) or a template-literal interpolation,
+ * as in prisma.config.ts's POSTGRES_PORT fallback. Used for prisma.config.ts,
+ * .env.example, and an existing .env.
  */
 export function replaceLocalDatabaseName(
     source: string,
     previous: string,
     next: string,
+    port: number = DEFAULT_DEV_PORTS.app,
 ): string {
     return source.replace(
         new RegExp(
-            String.raw`(@localhost:5432/)${escapeRegExp(previous)}(?![\w-])`,
+            String.raw`(@localhost:(?:${port}|\$\{[^}]*\})/)${escapeRegExp(previous)}(?![\w-])`,
             'g',
         ),
         `$1${next}`,

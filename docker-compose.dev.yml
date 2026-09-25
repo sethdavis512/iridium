@@ -4,11 +4,14 @@
 # (they become invisible to `docker compose down` / `docker:nuke`).
 name: iridium
 
+# Host ports come from POSTGRES_PORT / VOLTAGENT_POSTGRES_PORT (read from .env
+# or the shell), defaulting to 5432/5433. `bun run setup` picks free ones when
+# another project already holds those, so copies can run side by side.
 services:
     postgres:
         image: postgres:16-alpine
         ports:
-            - '5432:5432'
+            - '${POSTGRES_PORT:-5432}:5432'
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
@@ -24,7 +27,7 @@ services:
     postgres-voltagent:
         image: postgres:16-alpine
         ports:
-            - '5433:5432'
+            - '${VOLTAGENT_POSTGRES_PORT:-5433}:5432'
         environment:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres

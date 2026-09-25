@@ -155,6 +155,27 @@ describe('replaceLocalDatabaseName', () => {
         expect(next).toContain('localhost:5433/voltagent');
     });
 
+    it("rewrites prisma.config.ts's POSTGRES_PORT fallback", () => {
+        const next = replaceLocalDatabaseName(
+            read('prisma.config.ts'),
+            LOCAL_DATABASE_NAME,
+            'acme_notes',
+        );
+        expect(next).toContain('|| 5432}/acme_notes`');
+        expect(next).not.toContain(`}/${LOCAL_DATABASE_NAME}\``);
+    });
+
+    it('follows the app database to the port setup picked', () => {
+        const source =
+            'DATABASE_URL="postgresql://postgres:postgres@localhost:5442/iridium"';
+        expect(
+            replaceLocalDatabaseName(source, 'iridium', 'acme', 5442),
+        ).toContain('@localhost:5442/acme"');
+        expect(replaceLocalDatabaseName(source, 'iridium', 'acme')).toBe(
+            source,
+        );
+    });
+
     it('leaves other databases, ports, and hosts alone', () => {
         const source = [
             'postgresql://postgres:postgres@localhost:5432/iridium_test',
@@ -182,7 +203,11 @@ describe('files that mirror APP_SLUG', () => {
     });
 
     it('prisma.config.ts falls back to the local database', () => {
-        expect(read('prisma.config.ts')).toContain(`'${url}'`);
+        expect(read('prisma.config.ts')).toMatch(
+            new RegExp(
+                String.raw`@localhost:\$\{[^}]*\}/${LOCAL_DATABASE_NAME}` + '`',
+            ),
+        );
     });
 
     it('.env.example points DATABASE_URL at the local database', () => {

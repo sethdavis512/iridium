@@ -15,7 +15,8 @@ export default defineConfig({
         // with the docker-compose default fallback so `generate` (and
         // migrate/seed against a running `bun run docker:up`) work with zero
         // env. Production always sets DATABASE_URL, so the fallback never runs
-        // there.
+        // there. POSTGRES_PORT is the host port docker-compose.dev.yml
+        // publishes it on (`bun run setup` moves it off 5432 when taken).
         //
         // The database name is LOCAL_DATABASE_NAME from app/config.ts, written
         // here as a literal because the production image ships this file
@@ -23,6 +24,6 @@ export default defineConfig({
         // `bun run setup` rewrites it; tools/identity.test.ts checks it.
         url:
             process.env.DATABASE_URL ??
-            'postgresql://postgres:postgres@localhost:5432/iridium',
+            `postgresql://postgres:postgres@localhost:${process.env.POSTGRES_PORT || 5432}/iridium`,
     },
 });

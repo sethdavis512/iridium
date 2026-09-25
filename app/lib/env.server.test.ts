@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { LOCAL_DATABASE_NAME } from '~/config';
 import {
     bootEnvSchema,
     computeEnvWarnings,
@@ -134,5 +135,50 @@ describe('productionEmailWarnings', () => {
                 EMAIL_FROM: verifiedSender,
             }),
         ).toEqual([]);
+    });
+});
+
+describe('database dev fallbacks', () => {
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.restoreAllMocks();
+        vi.resetModules();
+    });
+
+    async function loadEnv(ports: Record<string, string | undefined>) {
+        vi.stubEnv('DATABASE_URL', undefined);
+        vi.stubEnv('VOLTAGENT_DATABASE_URL', undefined);
+        for (const [key, value] of Object.entries(ports)) {
+            vi.stubEnv(key, value);
+        }
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+        vi.resetModules();
+        return (await import('./env.server')).env;
+    }
+
+    it('use the docker-compose.dev.yml default ports', async () => {
+        const env = await loadEnv({
+            POSTGRES_PORT: undefined,
+            VOLTAGENT_POSTGRES_PORT: undefined,
+        });
+        expect(env.DATABASE_URL).toBe(
+            `postgresql://postgres:postgres@localhost:5432/${LOCAL_DATABASE_NAME}`,
+        );
+        expect(env.VOLTAGENT_DATABASE_URL).toBe(
+            'postgresql://postgres:postgres@localhost:5433/voltagent',
+        );
+    });
+
+    it('honor the host ports setup picked', async () => {
+        const env = await loadEnv({
+            POSTGRES_PORT: '5442',
+            VOLTAGENT_POSTGRES_PORT: '5443',
+        });
+        expect(env.DATABASE_URL).toBe(
+            `postgresql://postgres:postgres@localhost:5442/${LOCAL_DATABASE_NAME}`,
+        );
+        expect(env.VOLTAGENT_DATABASE_URL).toBe(
+            'postgresql://postgres:postgres@localhost:5443/voltagent',
+        );
     });
 });

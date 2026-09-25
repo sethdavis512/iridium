@@ -56,7 +56,7 @@ bun run dev
 
 Seeded users (all password `password123`): `alice@iridium.dev`, `bob@iridium.dev`, `admin@iridium.dev` (ADMIN).
 
-App identity lives in `app/config.ts`: `APP_NAME`/`APP_TAGLINE` for display, and `APP_SLUG`, which namespaces the theme cookie, Better Auth's cookie prefix (`AUTH_COOKIE_PREFIX`, which keeps the default `better-auth` for the original `iridium` slug so production sessions survive), the local database name, the Compose project, and the demo email domain. `bun run setup` (`tools/init.ts`, pure helpers in `tools/identity.ts`) rewrites them for a copy, including `docker-compose.dev.yml`, `prisma.config.ts`, and `.env.example`, which can't import the config; `tools/identity.test.ts` fails if those drift from `APP_SLUG`.
+App identity lives in `app/config.ts`: `APP_NAME`/`APP_TAGLINE` for display, and `APP_SLUG`, which namespaces the theme cookie, Better Auth's cookie prefix (`AUTH_COOKIE_PREFIX`, which keeps the default `better-auth` for the original `iridium` slug so production sessions survive), the local database name, the Compose project, and the demo email domain. `bun run setup` (`tools/init.ts`, pure helpers in `tools/identity.ts`) rewrites them for a copy, including `docker-compose.dev.yml`, `prisma.config.ts`, and `.env.example`, which can't import the config; `tools/identity.test.ts` fails if those drift from `APP_SLUG`. Setup also checks the database host ports: when another project holds 5432/5433 it picks a free pair (`tools/ports.ts`; asks first, automatic with `--non-interactive`) and writes `POSTGRES_PORT`/`VOLTAGENT_POSTGRES_PORT` plus the matching URLs to `.env`.
 
 ### Two-Database Setup
 
@@ -68,6 +68,8 @@ The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
 | `voltagent` | 5433 | `VOLTAGENT_DATABASE_URL` | VoltAgent memory and state       |
 
 VoltAgent creates its own tables automatically on first connection -- no migration needed.
+
+The ports are defaults: `docker-compose.dev.yml` publishes on `${POSTGRES_PORT:-5432}`/`${VOLTAGENT_POSTGRES_PORT:-5433}`, and when the database URLs are unset, `prisma.config.ts` and `DEV_FALLBACKS` in `env.server.ts` follow the same vars. `tools/ports.test.ts` fails if those defaults drift. CI uses its own service containers on the defaults.
 
 Environment variables are validated at startup by `app/lib/env.server.ts` -- missing or invalid vars produce clear error messages.
 
