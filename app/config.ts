@@ -9,6 +9,12 @@ export const APP_NAME = 'Iridium';
 export const APP_TAGLINE = 'Go build. Be bold.';
 
 /**
+ * Person or company named in the footer's "All rights reserved by ..." line.
+ * Set it to '' to leave the name out.
+ */
+export const APP_OWNER: string = 'Tech with Seth';
+
+/**
  * Source repository behind the landing page's "View source" button. Point it
  * at your own repo, or set it to '' to hide the button.
  */
@@ -40,5 +46,9 @@ export const LOCAL_DATABASE_NAME = APP_SLUG.replaceAll('-', '_');
 export const AUTH_COOKIE_PREFIX =
     APP_SLUG === 'iridium' ? 'better-auth' : APP_SLUG;
 
-/** Email domain of the demo users (prisma/seed.ts) and the E2E seed logins. */
-export const DEMO_EMAIL_DOMAIN = `${APP_SLUG}.dev`;
+/**
+ * Email domain of the demo users (prisma/seed.ts) and the E2E seed logins.
+ * `.test` is a reserved TLD (RFC 2606), so mail sent to a demo user can never
+ * reach a real inbox, whatever the slug is.
+ */
+export const DEMO_EMAIL_DOMAIN = `${APP_SLUG}.test`;

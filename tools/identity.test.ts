@@ -215,7 +215,7 @@ describe('files that mirror APP_SLUG', () => {
     });
 
     it('derives the demo email domain from the slug', () => {
-        expect(DEMO_EMAIL_DOMAIN).toBe(`${APP_SLUG}.dev`);
+        expect(DEMO_EMAIL_DOMAIN).toBe(`${APP_SLUG}.test`);
     });
 
     it.runIf(APP_SLUG === 'iridium')(

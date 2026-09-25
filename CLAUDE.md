@@ -54,7 +54,7 @@ bun run db:seed             # seed demo users
 bun run dev
 ```
 
-Seeded users (all password `password123`): `alice@iridium.dev`, `bob@iridium.dev`, `admin@iridium.dev` (ADMIN).
+Seeded users (all password `password123`): `alice@iridium.test`, `bob@iridium.test`, `admin@iridium.test` (ADMIN). The domain is `DEMO_EMAIL_DOMAIN` (`<slug>.test`, a reserved TLD) in `app/config.ts`.
 
 App identity lives in `app/config.ts`: `APP_NAME`/`APP_TAGLINE` for display, and `APP_SLUG`, which namespaces the theme cookie, Better Auth's cookie prefix (`AUTH_COOKIE_PREFIX`, which keeps the default `better-auth` for the original `iridium` slug so production sessions survive), the local database name, the Compose project, and the demo email domain. `bun run setup` (`tools/init.ts`, pure helpers in `tools/identity.ts`) rewrites them for a copy, including `docker-compose.dev.yml`, `prisma.config.ts`, and `.env.example`, which can't import the config; `tools/identity.test.ts` fails if those drift from `APP_SLUG`. Setup also checks the database host ports: when another project holds 5432/5433 it picks a free pair (`tools/ports.ts`; asks first, automatic with `--non-interactive`) and writes `POSTGRES_PORT`/`VOLTAGENT_POSTGRES_PORT` plus the matching URLs to `.env`.
 
