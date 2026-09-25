@@ -148,6 +148,12 @@ Production runs the multi-stage `Dockerfile` (Node 24 Alpine runtime). The conta
 
 The original Iridium deployment still runs from `railway.json` (Config as Code: Railway stops reading it on 2026-12-01, and new services ignore it) until it migrates to `.railway/railway.ts`; `railway config plan` in this repo shows that diff. CI (`.github/workflows/ci.yml`) has a `deploy` job that no-ops unless a `RAILWAY_TOKEN` repo secret is set; deploys actually come from Railway's GitHub integration.
 
+**Deploy rules for agents.** Use the project `provision-railway` skill for first-time provisioning and for any infra change. It overrides generic Railway skills (this repo vendors none):
+
+- Production ships only by merging to `main`; Railway builds the commit once CI passes. Never run `railway up` against production: it uploads the local working tree, uncommitted changes included, and skips git and CI.
+- Infra changes go through `.railway/railway.ts` (per-project values in `.railway/app.json`): run `railway config plan`, show the user the plan, then `railway config apply`.
+- Check health with `/healthcheck` and `railway logs --service <svc> --lines 100` (always pass `--lines`, or it streams forever). Roll back by reverting the commit on `main`, or with Rollback on an earlier deployment in the Railway dashboard.
+
 ### Background Jobs
 
 Trigger.dev v4 tasks live in `trigger/` (config in `trigger.config.ts`): `send-auth-email`, `generate-thread-title`, and the scheduled `purge-soft-deleted` (hard-deletes Threads/Notes soft-deleted 30+ days ago, daily). `app/lib/jobs.server.ts` is the only enqueue entry point: with `TRIGGER_SECRET_KEY` set it hands work to Trigger.dev, otherwise it runs the same shared functions inline (`app/lib/email-jobs.server.ts`, `app/lib/thread-title.server.ts`). Keep task files thin; put logic in those shared modules so the inline fallback and the worker never diverge. `bun run trigger:dev` / `bun run trigger:deploy`.
