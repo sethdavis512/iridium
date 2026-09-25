@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const {
     getUserFromSession,
-    getThreadById,
+    getThreadMeta,
     saveChat,
     enqueueThreadTitle,
     streamText,
@@ -10,7 +10,7 @@ const {
     clearMessages,
 } = vi.hoisted(() => ({
     getUserFromSession: vi.fn(),
-    getThreadById: vi.fn(),
+    getThreadMeta: vi.fn(),
     saveChat: vi.fn(),
     enqueueThreadTitle: vi.fn(),
     streamText: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('~/models/session.server', () => ({
 }));
 
 vi.mock('~/models/thread.server', () => ({
-    getThreadById: (...args: unknown[]) => getThreadById(...args),
+    getThreadMeta: (...args: unknown[]) => getThreadMeta(...args),
     saveChat: (...args: unknown[]) => saveChat(...args),
     deleteTrailingAssistantMessages: vi.fn(),
 }));
@@ -136,7 +136,7 @@ describe('/api/chat action', () => {
 
     it('returns 404 when the thread does not exist', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue(null);
+        getThreadMeta.mockResolvedValue(null);
 
         const res = await actionCall(makeRequest(validBody));
         expect(res.status).toBe(404);
@@ -145,7 +145,7 @@ describe('/api/chat action', () => {
 
     it('returns 403 when the thread belongs to another user', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'other',
             title: 'Untitled',
@@ -158,7 +158,7 @@ describe('/api/chat action', () => {
 
     it('returns 429 when the rate limit is exceeded', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -180,7 +180,7 @@ describe('/api/chat action', () => {
 
     it('streams successfully on the happy path and wires onFinish to saveChat', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -222,7 +222,7 @@ describe('/api/chat action', () => {
 
     it('does not throw when saveChat fails (errors are logged, not propagated)', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -250,7 +250,7 @@ describe('/api/chat action', () => {
 
     it('self-heals memory on a duplicate-item error and retries the stream', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -274,7 +274,7 @@ describe('/api/chat action', () => {
 
     it('does not auto-generate a title when the title is already set', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Existing Title',
@@ -290,7 +290,7 @@ describe('/api/chat action', () => {
 
     it('titles an untitled thread once the reply finishes, not before streaming', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -313,7 +313,7 @@ describe('/api/chat action', () => {
 
     it('does not wait for title generation to finish the stream', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',

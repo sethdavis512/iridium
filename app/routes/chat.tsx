@@ -19,10 +19,11 @@ import { navLinkClassName } from '~/shared';
 import { APP_NAME } from '~/config';
 import type { Route } from './+types/chat';
 import {
+    THREAD_LIST_LIMIT,
     createThread,
     deleteThread,
     getAllThreadsByUserId,
-    getThreadById,
+    getThreadMeta,
     searchThreads,
     updateThreadModel,
 } from '~/models/thread.server';
@@ -41,11 +42,18 @@ export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
 export async function loader({ request, context }: Route.LoaderArgs) {
     const user = requireUserFromContext(context);
     const query = new URL(request.url).searchParams.get('q')?.trim() ?? '';
+    // Fetch one extra row to know whether the list was cut off.
+    const take = THREAD_LIST_LIMIT + 1;
     const threads = query
-        ? await searchThreads(user.id, query)
-        : await getAllThreadsByUserId(user.id);
+        ? await searchThreads(user.id, query, { take })
+        : await getAllThreadsByUserId(user.id, { take });
 
-    return { threads, query };
+    return {
+        threads: threads.slice(0, THREAD_LIST_LIMIT),
+        hasMore: threads.length > THREAD_LIST_LIMIT,
+        limit: THREAD_LIST_LIMIT,
+        query,
+    };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -90,7 +98,7 @@ export async function action({ request, context }: Route.ActionArgs) {
             throw new Response('Invalid model', { status: 400 });
         }
 
-        const thread = await getThreadById(threadId);
+        const thread = await getThreadMeta(threadId);
 
         if (!thread) {
             throw new Response('Thread not found', { status: 404 });
@@ -118,7 +126,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         }
 
         const threadId = String(form.get('threadId'));
-        const thread = await getThreadById(threadId);
+        const thread = await getThreadMeta(threadId);
 
         if (!thread) {
             throw new Response('Thread not found', { status: 404 });
@@ -138,25 +146,13 @@ export async function action({ request, context }: Route.ActionArgs) {
     throw new Response('Unknown intent', { status: 400 });
 }
 
-function getThreadLabel(thread: {
-    title?: string | null;
-    messages: { content: string }[];
-}): string {
-    if (thread.title && thread.title !== 'Untitled') return thread.title;
-
-    try {
-        const parts = JSON.parse(thread.messages[0]?.content ?? '[]');
-        const text = parts
-            .filter((p: { type: string }) => p.type === 'text')
-            .map((p: { text: string }) => p.text)
-            .join('');
-
-        return text.length > 30
-            ? `${text.slice(0, 30)}...`
-            : text || 'New Thread';
-    } catch {
-        return 'New Thread';
-    }
+/**
+ * Threads are titled after their first reply (the model's title, or the
+ * opening message truncated), so only threads with no reply yet read as
+ * "New Thread".
+ */
+function getThreadLabel(title: string | null): string {
+    return title && title !== 'Untitled' ? title : 'New Thread';
 }
 
 export default function ChatRoute({ loaderData }: Route.ComponentProps) {
@@ -214,7 +210,9 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
                                                 className={navLinkClassName}
                                             >
                                                 <span className="truncate pr-6 pointer-coarse:pr-10">
-                                                    {getThreadLabel(thread)}
+                                                    {getThreadLabel(
+                                                        thread.title,
+                                                    )}
                                                 </span>
                                             </NavLink>
                                             <Button
@@ -262,6 +260,13 @@ export default function ChatRoute({ loaderData }: Route.ComponentProps) {
                                     </li>
                                 )}
                             </ul>
+                            {loaderData.hasMore && (
+                                <p className="text-muted-foreground mt-3 px-1 text-xs">
+                                    {loaderData.query
+                                        ? `Showing the ${loaderData.limit} most recent matches. Refine your search to narrow them down.`
+                                        : `Showing your ${loaderData.limit} most recent conversations. Search to find older ones.`}
+                                </p>
+                            )}
                         </nav>
                     </div>
                     <div className="col-span-1 flex min-h-0 flex-col gap-4 overflow-hidden md:col-span-7 lg:col-span-9">

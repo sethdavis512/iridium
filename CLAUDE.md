@@ -104,7 +104,7 @@ API routes live under `/api` prefix and export only `loader`/`action` (no compon
 
 Plain async functions in `app/models/*.server.ts` — no classes, no ORM wrappers. Functions use the Prisma client directly.
 
-- `thread.server.ts` — thread CRUD + `saveChat` (upserts last 2 messages), `searchThreads`, `updateThreadModel`, `deleteTrailingAssistantMessages`
+- `thread.server.ts` — thread CRUD + `saveChat` (upserts last 2 messages), `searchThreads`, `updateThreadModel`, `deleteTrailingAssistantMessages`. Use `getThreadMeta` (id, owner, title, model; no messages) for ownership checks and `getThreadById` only when the messages are needed. Thread lists select no messages and are capped at `THREAD_LIST_LIMIT`
 - `note.server.ts` — note CRUD with search, counts, and pagination params
 - `message.server.ts` — `addMessageToThread`
 - `session.server.ts` — `getUserFromSession`, `requireUser`, `requireAnonymous`, `hasRole`, `requireRole`

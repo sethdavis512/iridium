@@ -12,7 +12,7 @@ import {
 import { getUserFromSession } from '~/models/session.server';
 import {
     deleteTrailingAssistantMessages,
-    getThreadById,
+    getThreadMeta,
     saveChat,
 } from '~/models/thread.server';
 import { agent, memory } from '~/voltagent';
@@ -67,7 +67,7 @@ export async function action({ request }: Route.ActionArgs) {
     // Ownership boundary: thread must exist AND belong to the user BEFORE any
     // tokens are spent or memory is written. Threads are created via the
     // /chat route action, not implicitly here.
-    const thread = await getThreadById(threadId);
+    const thread = await getThreadMeta(threadId);
 
     if (!thread) {
         return Response.json({ error: 'Thread not found' }, { status: 404 });
