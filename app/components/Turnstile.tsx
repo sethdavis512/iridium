@@ -209,7 +209,13 @@ export function Turnstile({ socialProviders = [] }: Props) {
                         disabled={isSubmitting}
                     />
                 </div>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {/* method="post": a submit before hydration must never put
+                    the credentials in the URL; the route action bounces it. */}
+                <form
+                    method="post"
+                    onSubmit={handleSubmit(onSubmit)}
+                    className="space-y-4"
+                >
                     {!isSignIn && (
                         <Field
                             label="Name"

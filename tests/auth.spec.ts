@@ -54,6 +54,29 @@ test.describe('Login', () => {
         ).toBeVisible();
     });
 
+    test.describe('without JavaScript', () => {
+        // A click before hydration takes the same native-submit path.
+        test.use({ javaScriptEnabled: false });
+
+        test('a native submit never puts credentials in the URL', async ({
+            page,
+        }) => {
+            const password = 'never-in-the-url-123';
+            const urls: string[] = [];
+            page.on('request', (request) => urls.push(request.url()));
+
+            await page.goto('/login');
+            await page
+                .getByPlaceholder('name@example.com')
+                .fill(TEST_USER.email);
+            await page.getByPlaceholder('Your password').fill(password);
+            await page.getByRole('button', { name: 'Login' }).click();
+
+            await expect(page).toHaveURL(/\/login$/);
+            expect(urls.filter((url) => url.includes(password))).toEqual([]);
+        });
+    });
+
     test('validates short password', async ({ page }) => {
         await page.goto('/login');
         await waitForHydration(page);
