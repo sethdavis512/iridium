@@ -38,6 +38,23 @@ export function toDisplayName(name: string): string {
     return words.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
+/** The GitHub repository this template is published from. */
+export const TEMPLATE_REPO = 'sethdavis512/iridium';
+
+/**
+ * Whether a git remote URL (SSH or HTTPS) points at the template repository,
+ * so a copy's pushes and PRs would land on the template instead of the copy.
+ */
+export function isTemplateRemote(
+    url: string,
+    templateRepo: string = TEMPLATE_REPO,
+): boolean {
+    const repo = url
+        .trim()
+        .match(/github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?\/?$/)?.[1];
+    return repo?.toLowerCase() === templateRepo.toLowerCase();
+}
+
 /** Mirrors LOCAL_DATABASE_NAME in app/config.ts. */
 export function toDatabaseName(slug: string): string {
     return slug.replaceAll('-', '_');

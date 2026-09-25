@@ -3,7 +3,7 @@
  *
  *   bun tools/init.ts            # interactive
  *   bun run setup                # same thing
- *   bun tools/init.ts --non-interactive --name "My App"
+ *   bun tools/init.ts --non-interactive --name "My App" [--detach-origin]
  *
  * Gives the copy its own identity: derives a slug from the app name and
  * writes it to package.json, APP_NAME/APP_SLUG in app/config.ts (cookie
@@ -21,10 +21,12 @@ import { fileURLToPath } from 'node:url';
 import { confirm, input, password } from '@inquirer/prompts';
 import { APP_NAME, APP_SLUG } from '../app/config';
 import {
+    isTemplateRemote,
     localDatabaseUrl,
     replaceLocalDatabaseName,
     setAppIdentity,
     setComposeIdentity,
+    TEMPLATE_REPO,
     toDatabaseName,
     toDisplayName,
     toSlug,
@@ -116,6 +118,32 @@ if (slug !== APP_SLUG) {
     console.log(
         `  Docker project "${slug}" and database "${databaseName}", so this copy never shares containers, volumes, or cookies with another one.`,
     );
+
+    // A clone (rather than "Use this template") still has the template as
+    // origin, so pushes and agent-opened PRs would target the template.
+    const origin = await $`git remote get-url origin`
+        .cwd(root)
+        .quiet()
+        .nothrow();
+    const originUrl = origin.exitCode === 0 ? origin.stdout.toString() : '';
+    if (isTemplateRemote(originUrl)) {
+        const detach = nonInteractive
+            ? args.includes('--detach-origin')
+            : await confirm({
+                  message: `git origin still points at the template (${TEMPLATE_REPO}). Remove it?`,
+                  default: true,
+              });
+        if (detach) {
+            await $`git remote remove origin`.cwd(root);
+            step(
+                'Removed the template origin. Add yours with: git remote add origin <url>',
+            );
+        } else {
+            console.warn(
+                `  ! origin still points at ${TEMPLATE_REPO}; pushes and PRs will go there. Run: git remote remove origin`,
+            );
+        }
+    }
 }
 
 // 2. Write .env from .env.example
