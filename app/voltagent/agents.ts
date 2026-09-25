@@ -1,16 +1,28 @@
 import { Agent, Memory } from '@voltagent/core';
-import { PostgreSQLMemoryAdapter } from '@voltagent/postgres';
+import {
+    PostgreSQLMemoryAdapter,
+    type PostgreSQLMemoryOptions,
+} from '@voltagent/postgres';
 import { z } from 'zod';
 import { renderCardTool } from './tools/cards';
 import { createNoteTool, listNotesTool, searchNotesTool } from './tools/notes';
 import { getCurrentDatetimeTool, getWeatherTool } from './tools/weather';
 import { NotesRetriever } from './retrievers/notes';
 import { env } from '~/lib/env.server';
+import { pgPoolConfig, POOL_MAX } from '~/lib/db-pool.server';
 import { DEFAULT_MODEL_ID, isAllowedModel } from '~/lib/ai-models';
 import { onShutdown } from '~/lib/shutdown.server';
 
 const memoryStorage = new PostgreSQLMemoryAdapter({
-    connection: env.VOLTAGENT_DATABASE_URL,
+    // The adapter spreads an object `connection` into `new pg.Pool()`
+    // (verified in @voltagent/postgres 2.1.3), so the shared pg pool
+    // options pass through; its type only lists host/port/user fields,
+    // hence the cast. maxConnections sets the pool's `max`.
+    connection: pgPoolConfig(
+        env.VOLTAGENT_DATABASE_URL,
+        POOL_MAX.voltagent,
+    ) as PostgreSQLMemoryOptions['connection'],
+    maxConnections: POOL_MAX.voltagent,
 });
 onShutdown(() => memoryStorage.close());
 

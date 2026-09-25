@@ -9,6 +9,9 @@ vi.mock('~/lib/prisma', () => ({ default: { $queryRaw: queryRaw } }));
 vi.mock('pg', () => ({
     Pool: class {
         query = poolQuery;
+        on() {
+            return this;
+        }
     },
 }));
 

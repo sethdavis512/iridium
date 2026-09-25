@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 
+import { pgPoolConfig, POOL_MAX } from '~/lib/db-pool.server';
 import { env } from '~/lib/env.server';
 import { log } from '~/lib/logger.server';
 import prisma from '~/lib/prisma';
@@ -12,15 +13,19 @@ import { onShutdown } from '~/lib/shutdown.server';
  */
 export const CHECK_TIMEOUT_MS = 2_500;
 
+// The app DB check reuses Prisma's pool. VoltAgent's adapter keeps its pg
+// pool private, so the VoltAgent DB gets one small dedicated probe pool.
 let voltagentPool: Pool | null = null;
 
 function getVoltagentPool(): Pool {
     if (!voltagentPool) {
-        const pool = new Pool({
-            connectionString: env.VOLTAGENT_DATABASE_URL,
-            max: 1,
-            idleTimeoutMillis: 30_000,
-        });
+        const pool = new Pool(
+            pgPoolConfig(env.VOLTAGENT_DATABASE_URL, POOL_MAX.healthcheck),
+        );
+        // An idle client error with no listener crashes the process.
+        pool.on('error', (error) =>
+            log.exception('healthcheck_pool_error', error),
+        );
         onShutdown(() => pool.end());
         voltagentPool = pool;
     }

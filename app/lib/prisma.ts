@@ -1,15 +1,14 @@
 import { PrismaClient } from '~/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { env } from '~/lib/env.server';
+import { pgPoolConfig, POOL_MAX } from '~/lib/db-pool.server';
 import { onShutdown } from '~/lib/shutdown.server';
 
 const globalForPrisma = global as unknown as {
     prisma: PrismaClient;
 };
 
-const adapter = new PrismaPg({
-    connectionString: env.DATABASE_URL,
-});
+const adapter = new PrismaPg(pgPoolConfig(env.DATABASE_URL, POOL_MAX.app));
 
 const prisma =
     globalForPrisma.prisma ||
