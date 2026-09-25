@@ -3,16 +3,19 @@ import { Pool } from 'pg';
 import { env } from '~/lib/env.server';
 import { log } from '~/lib/logger.server';
 import prisma from '~/lib/prisma';
+import { onShutdown } from '~/lib/shutdown.server';
 
 let voltagentPool: Pool | null = null;
 
 function getVoltagentPool(): Pool {
     if (!voltagentPool) {
-        voltagentPool = new Pool({
+        const pool = new Pool({
             connectionString: env.VOLTAGENT_DATABASE_URL,
             max: 1,
             idleTimeoutMillis: 30_000,
         });
+        onShutdown(() => pool.end());
+        voltagentPool = pool;
     }
 
     return voltagentPool;

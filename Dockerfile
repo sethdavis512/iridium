@@ -21,7 +21,7 @@ RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" bunx --bun prisma generate 
 
 FROM node:24-alpine
 ENV NODE_ENV=production
-RUN apk add --no-cache wget \
+RUN apk add --no-cache tini wget \
     && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --chown=app:app ./package.json /app/
@@ -35,9 +35,13 @@ USER app
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD wget -qO- http://127.0.0.1:3000/healthcheck > /dev/null || exit 1
-# Plain Docker hosts: apply pending migrations on boot, then serve.
-# `migrate deploy` is a no-op when the schema is already current, so restarts
-# are safe. Needs DATABASE_URL at runtime; the copied prisma CLI + engines
-# (above) make this work. Railway replaces this CMD with the start command in
-# .railway/railway.ts and migrates once per deploy in its pre-deploy step.
-CMD ["npm", "run", "start:migrate"]
+# tini is PID 1: it forwards SIGTERM to the server and reaps zombies.
+ENTRYPOINT ["/sbin/tini", "--"]
+# Plain Docker hosts: apply pending migrations on boot, then exec node so it
+# receives signals directly, with no npm or shell in between. `migrate deploy`
+# is a no-op when the schema is already current, so restarts are safe. Needs
+# DATABASE_URL at runtime; the copied prisma CLI + engines (above) make this
+# work. On Railway the start command in .railway/railway.ts replaces both
+# ENTRYPOINT and CMD (so it names tini itself), and migrations run once per
+# deploy in the pre-deploy step.
+CMD ["sh", "-c", "npx --no-install prisma migrate deploy && exec node node_modules/@react-router/serve/bin.cjs build/server/index.js"]
