@@ -24,12 +24,44 @@ env:
     ANTHROPIC_API_KEY: test-key-not-used-in-e2e
 
 jobs:
+    # `code` is 'false' only when every changed file is docs or agent config,
+    # so unit, e2e, visual, and docker can skip. The jobs skip through `if:`
+    # rather than workflow-level paths-ignore, so every commit still gets a
+    # workflow result for Railway's Wait for CI. Assumes the app never imports
+    # markdown. Manual runs skip the filter and test everything.
+    changes:
+        name: Detect changes
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: read
+            pull-requests: read
+        outputs:
+            code: ${{ steps.filter.outputs.code != 'false' }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dorny/paths-filter@v4
+              id: filter
+              if: github.event_name != 'workflow_dispatch'
+              with:
+                  predicate-quantifier: every
+                  filters: |
+                      code:
+                          - '**'
+                          - '!.claude/**'
+                          - '!.agents/**'
+                          - '!.specify/**'
+                          - '!docs/**'
+                          - '!**/*.md'
+
     # Unit tests share this job's install and Prisma setup: they take a few
-    # seconds, less than a separate job spends on setup.
+    # seconds, less than a separate job spends on setup. Validate itself always
+    # runs, because Prettier checks markdown.
     validate:
         name: Validate + Unit Tests
         runs-on: ubuntu-latest
         timeout-minutes: 10
+        needs: changes
         steps:
             - uses: actions/checkout@v4
             - uses: oven-sh/setup-bun@v2
@@ -51,14 +83,17 @@ jobs:
             - name: Validate
               run: bun run validate
             - name: Run unit tests
+              if: needs.changes.outputs.code == 'true'
               run: bun run test
 
     e2e:
         name: Playwright
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        # No `needs`: e2e runs alongside validate to keep the critical path
-        # short. Railway's Wait for CI still waits for the whole run.
+        # Needs only `changes`, not validate: e2e runs alongside validate to
+        # keep the critical path short. Wait for CI still waits for the whole run.
+        needs: changes
+        if: needs.changes.outputs.code == 'true'
 
         # The health checks probe over TCP: during first-boot init the image
         # runs a socket-only temporary server that a plain `pg_isready` would
@@ -159,7 +194,8 @@ jobs:
         name: Visual inventory
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        if: github.event_name == 'pull_request'
+        needs: changes
+        if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
 
         services:
             postgres:
@@ -256,6 +292,8 @@ jobs:
         name: Docker image
         runs-on: ubuntu-latest
         timeout-minutes: 15
+        needs: changes
+        if: needs.changes.outputs.code == 'true'
 
         services:
             postgres:
