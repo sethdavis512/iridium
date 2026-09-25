@@ -332,9 +332,13 @@ service or variable missing from the file is deleted, and removing `source`
 disconnects the repo.
 
 There is no `railway.json`: Railway's Config as Code is deprecated (it stops being
-read on 2026-12-01), and `.railway/railway.ts` is the only Railway config. The `deploy` job in `.github/workflows/ci.yml` is a
-no-op unless a `RAILWAY_TOKEN` secret is set; provisioned projects deploy
-through Railway's GitHub integration instead.
+read on 2026-12-01), and `.railway/railway.ts` is the only Railway config.
+
+Production ships the same way, only by merging to `main`. Railway's GitHub
+integration builds the commit, and Wait for CI (`checkSuites: true` in
+`.railway/railway.ts`) holds the deploy until the CI workflow finishes and skips
+it if CI fails. CI has no deploy job, and `railway up` is not used against
+production.
 
 The image is also deployable to any Docker-compatible platform (Fly.io, AWS ECS,
 Google Cloud Run, …).
