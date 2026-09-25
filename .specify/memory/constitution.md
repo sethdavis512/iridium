@@ -1,6 +1,22 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.2.0 → 1.2.1
+Bump rationale: PATCH. Principle IV and Technology Constraints name React Router v8
+  (middleware always on) instead of v7 with the removed `v8_middleware` future flag.
+  Wording correction to match the installed version; no principle changes.
+
+Modified principles:
+  IV. Convention-Driven Architecture: framework version reference only.
+
+Modified sections:
+  - Technology Constraints: Framework line.
+
+Templates requiring updates: none.
+
+Follow-up TODOs: none.
+
+--- Prior report (v1.2.0) ---
 Version change: 1.1.0 → 1.2.0
 Bump rationale: MINOR. Principle VI and Technology Constraints now name the styling stack
   actually installed (COSS UI on Base UI with semantic tokens) instead of DaisyUI v5.
@@ -112,7 +128,7 @@ New code MUST follow the established patterns rather than inventing parallel one
 - Code uses the `~/` import alias, named function declarations, and named exports
   (no default exports); components additionally follow the Component Authoring Pattern
   (Principle VI).
-- React Router v7 framework-mode patterns are the source of truth for routing, error
+- React Router v8 framework-mode patterns are the source of truth for routing, error
   boundaries, and form/action handling.
 
 **Rationale**: A small codebase with one way to do each thing stays navigable. Divergent
@@ -167,7 +183,8 @@ styles without copy-paste.
 ## Technology Constraints
 
 - **Runtime/Tooling**: Bun for dev and scripts; Prisma CLI invoked as `bunx --bun prisma`.
-- **Framework**: React Router v7 (SSR, `v8_middleware` future flag).
+- **Framework**: React Router v8 (SSR; middleware always on, no `future.v8_middleware`
+  flag).
 - **Auth**: Better Auth with the Prisma adapter and admin plugin (roles USER < EDITOR < ADMIN).
 - **Data**: PostgreSQL via Prisma; app data and VoltAgent memory live in separate databases.
 - **AI**: Vercel AI SDK + VoltAgent; agent tools live in `app/voltagent/tools/`.
@@ -205,4 +222,4 @@ principle wins or the principle is amended — code does not silently diverge.
 - **Runtime guidance**: `CLAUDE.md` and `.claude/rules/*.md` provide day-to-day
   development guidance consistent with these principles.
 
-**Version**: 1.2.0 | **Ratified**: 2026-06-04 | **Last Amended**: 2026-09-25
+**Version**: 1.2.1 | **Ratified**: 2026-06-04 | **Last Amended**: 2026-09-25

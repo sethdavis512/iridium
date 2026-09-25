@@ -91,6 +91,13 @@ Auto-generated types: `import type { Route } from './+types/<routeName>'`.
 
 API routes live under `/api` prefix and export only `loader`/`action` (no component).
 
+**React Router 8 overrides the `react-router-framework-mode` skill.** The vendored skill predates React Router 8 (its upstream, `remix-run/agent-skills`, is archived). Where it disagrees, these rules win:
+
+- Middleware is always on. Never add `future.v8_middleware` (or any other removed `v8_*` flag) to `react-router.config.ts`; React Router 8 refuses to start with it.
+- `AppLoadContext` is gone. The `context` argument to loaders, actions, and middleware is always a `RouterContextProvider`: define keys with `createContext` and use `context.set()`/`context.get()` (see `app/context.ts` and `app/middleware/auth.ts`). A custom server's `getLoadContext` must return a `RouterContextProvider`.
+- Loaders and actions receive the raw incoming `request`. Use the `url` argument when you need the normalized URL (no `.data` suffix or `index`/`_routes` params).
+- For anything else version-sensitive, read the version-matched docs in `node_modules/react-router/docs/` and `node_modules/react-router/CHANGELOG.md`.
+
 ### Data Access Layer
 
 Plain async functions in `app/models/*.server.ts` — no classes, no ORM wrappers. Functions use the Prisma client directly.
