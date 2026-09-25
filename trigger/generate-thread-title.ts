@@ -8,7 +8,11 @@ import { generateAndSaveThreadTitle } from '~/lib/thread-title.server';
  */
 export const generateThreadTitleTask = task({
     id: 'generate-thread-title',
-    run: async (payload: { threadId: string; context: string }) => {
+    run: async (payload: {
+        threadId: string;
+        context: string;
+        fallbackTitle: string;
+    }) => {
         const title = await generateAndSaveThreadTitle(payload);
 
         logger.info('Thread title generated', {

@@ -13,6 +13,7 @@ const { mockPrisma } = vi.hoisted(() => ({
         message: {
             upsert: vi.fn(),
             findFirst: vi.fn(),
+            findMany: vi.fn(),
             deleteMany: vi.fn(),
         },
         $transaction: vi.fn(),
@@ -29,6 +30,7 @@ import {
     deleteTrailingAssistantMessages,
     getAllThreadsByUserId,
     getThreadById,
+    getThreadMeta,
     saveChat,
     searchThreads,
     updateThreadModel,
@@ -52,17 +54,29 @@ describe('createThread', () => {
 });
 
 describe('getAllThreadsByUserId', () => {
-    it('queries non-deleted threads desc by createdAt with first message included', async () => {
+    it('lists non-deleted threads desc by createdAt without loading messages', async () => {
         mockPrisma.thread.findMany.mockResolvedValue([]);
 
-        await getAllThreadsByUserId('user-1');
+        await getAllThreadsByUserId('user-1', { take: 51 });
 
         expect(mockPrisma.thread.findMany).toHaveBeenCalledWith({
             where: { createdById: 'user-1', deletedAt: null },
-            include: {
-                messages: { orderBy: { createdAt: 'asc' }, take: 1 },
-            },
+            select: { id: true, title: true, createdAt: true },
             orderBy: { createdAt: 'desc' },
+            take: 51,
+        });
+    });
+});
+
+describe('getThreadMeta', () => {
+    it('selects only ownership and settings fields, excluding soft-deleted threads', async () => {
+        mockPrisma.thread.findFirst.mockResolvedValue(null);
+
+        await getThreadMeta('t1');
+
+        expect(mockPrisma.thread.findFirst).toHaveBeenCalledWith({
+            where: { id: 't1', deletedAt: null },
+            select: { id: true, createdById: true, title: true, model: true },
         });
     });
 });
@@ -125,6 +139,16 @@ describe('searchThreads', () => {
                 },
             },
         ]);
+        expect(args.select).toEqual({ id: true, title: true, createdAt: true });
+        expect(args.take).toBe(50);
+    });
+
+    it('honors a custom limit', async () => {
+        mockPrisma.thread.findMany.mockResolvedValue([]);
+
+        await searchThreads('u1', 'tacos', { take: 5 });
+
+        expect(mockPrisma.thread.findMany.mock.calls[0][0].take).toBe(5);
     });
 });
 
@@ -188,6 +212,38 @@ describe('saveChat', () => {
             } as UIMessage,
         ];
     }
+
+    beforeEach(() => {
+        // No incoming id belongs to another thread unless a test says so.
+        mockPrisma.message.findMany.mockResolvedValue([]);
+    });
+
+    it('never upserts a message id that belongs to another thread', async () => {
+        mockPrisma.thread.findFirst.mockResolvedValue({
+            id: 't1',
+            createdById: 'u1',
+            messages: [],
+        });
+        // m1 is another user's message in a different thread.
+        mockPrisma.message.findMany.mockResolvedValue([{ id: 'm1' }]);
+        mockPrisma.$transaction.mockResolvedValue([]);
+        mockPrisma.message.upsert.mockImplementation((args) => args);
+
+        await saveChat({
+            messages: makeMessages(),
+            threadId: 't1',
+            userId: 'u1',
+        });
+
+        expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
+            where: { id: { in: ['m1', 'm2'] }, NOT: { threadId: 't1' } },
+            select: { id: true },
+        });
+        const upsertedIds = mockPrisma.message.upsert.mock.calls.map(
+            ([args]) => args.where.id,
+        );
+        expect(upsertedIds).toEqual(['m2']);
+    });
 
     it('throws when thread does not exist', async () => {
         mockPrisma.thread.findFirst.mockResolvedValue(null);
@@ -300,6 +356,33 @@ describe('saveChat', () => {
         const assistantMessageArgs = upsertCalls[1][0];
         expect(assistantMessageArgs.create.role).toBe('ASSISTANT');
         expect(assistantMessageArgs.create.userId).toBeNull();
+    });
+
+    it('looks up only the ids of incoming messages, not the whole thread', async () => {
+        mockPrisma.thread.findFirst.mockResolvedValue({
+            id: 't1',
+            createdById: 'u1',
+            messages: [],
+        });
+        mockPrisma.$transaction.mockResolvedValue([]);
+
+        await saveChat({
+            messages: makeMessages(),
+            threadId: 't1',
+            userId: 'u1',
+        });
+
+        expect(mockPrisma.thread.findFirst).toHaveBeenCalledWith({
+            where: { id: 't1', deletedAt: null },
+            select: {
+                id: true,
+                createdById: true,
+                messages: {
+                    where: { id: { in: ['m1', 'm2'] } },
+                    select: { id: true },
+                },
+            },
+        });
     });
 
     it('does not re-save messages already in the thread (older than the last 2)', async () => {

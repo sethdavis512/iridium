@@ -197,7 +197,7 @@ The AI assistant (defined in `app/voltagent/agents.ts`) has six tools:
 | Tool                   | Description                                                            |
 | ---------------------- | ---------------------------------------------------------------------- |
 | `create_note`          | Saves a note with a title and content for the user                     |
-| `list_notes`           | Lists all of the user's saved notes                                    |
+| `list_notes`           | Lists the user's 20 most recent notes                                  |
 | `search_notes`         | Searches notes by keyword across titles and content                    |
 | `render_card`          | Renders a rich visual card inline in the chat (info, steps, pros/cons) |
 | `get_weather`          | Current conditions for a location via Open-Meteo (no API key required) |

@@ -1,5 +1,6 @@
 import { type UIMessage } from 'ai';
 
+import { log } from '~/lib/logger.server';
 import prisma from '~/lib/prisma';
 
 export function createThread(createdById: string) {
@@ -11,18 +12,19 @@ export function createThread(createdById: string) {
     });
 }
 
+/** Default cap on thread lists (the chat sidebar and its search). */
+export const THREAD_LIST_LIMIT = 50;
+
+/** Fields a thread list needs: no messages, which can be arbitrarily large. */
+const threadListSelect = { id: true, title: true, createdAt: true } as const;
+
 export function getAllThreadsByUserId(
     userId: string,
     { take }: { take?: number } = {},
 ) {
     return prisma.thread.findMany({
         where: { createdById: userId, deletedAt: null },
-        include: {
-            messages: {
-                orderBy: { createdAt: 'asc' },
-                take: 1,
-            },
-        },
+        select: threadListSelect,
         orderBy: { createdAt: 'desc' },
         take,
     });
@@ -31,6 +33,18 @@ export function getAllThreadsByUserId(
 export function countThreadsByUserId(userId: string) {
     return prisma.thread.count({
         where: { createdById: userId, deletedAt: null },
+    });
+}
+
+/**
+ * Lean lookup for ownership checks and thread settings. Never loads messages;
+ * use getThreadById only when the conversation itself is needed.
+ */
+export function getThreadMeta(threadId: string) {
+    // findFirst, not findUnique: soft-deleted threads must behave as missing.
+    return prisma.thread.findFirst({
+        where: { id: threadId, deletedAt: null },
+        select: { id: true, createdById: true, title: true, model: true },
     });
 }
 
@@ -55,7 +69,18 @@ export async function saveChat({
     threadId: string;
     userId: string;
 }) {
-    const thread = await getThreadById(threadId);
+    const thread = await prisma.thread.findFirst({
+        where: { id: threadId, deletedAt: null },
+        select: {
+            id: true,
+            createdById: true,
+            // Only the ids of incoming messages that are already stored.
+            messages: {
+                where: { id: { in: messages.map((m) => m.id) } },
+                select: { id: true },
+            },
+        },
+    });
 
     if (!thread) throw new Error('Thread not found');
 
@@ -65,9 +90,34 @@ export async function saveChat({
 
     const existingIds = new Set(thread.messages.map((m) => m.id));
 
+    // Message ids come from the client. An id that already exists outside this
+    // thread must never be upserted, or a request could overwrite (and move)
+    // another thread's message.
+    const foreignIds = new Set(
+        (
+            await prisma.message.findMany({
+                where: {
+                    id: { in: messages.map((m) => m.id) },
+                    NOT: { threadId: thread.id },
+                },
+                select: { id: true },
+            })
+        ).map((m) => m.id),
+    );
+
+    if (foreignIds.size > 0) {
+        log.warn('save_chat_foreign_message_ids', {
+            threadId: thread.id,
+            userId,
+            count: foreignIds.size,
+        });
+    }
+
     // Always save the last 2 (latest exchange) plus any unsaved earlier messages.
     const messagesToSave = messages.filter(
-        (msg, i) => i >= messages.length - 2 || !existingIds.has(msg.id),
+        (msg, i) =>
+            !foreignIds.has(msg.id) &&
+            (i >= messages.length - 2 || !existingIds.has(msg.id)),
     );
 
     if (messagesToSave.length === 0) return;
@@ -113,7 +163,11 @@ export function updateThreadModel(threadId: string, model: string) {
  * JSON string of UIMessage parts, so `contains` can false-positive on JSON
  * keys or tool payloads; acceptable for sidebar search.
  */
-export function searchThreads(userId: string, query: string) {
+export function searchThreads(
+    userId: string,
+    query: string,
+    { take = THREAD_LIST_LIMIT }: { take?: number } = {},
+) {
     return prisma.thread.findMany({
         where: {
             createdById: userId,
@@ -129,13 +183,9 @@ export function searchThreads(userId: string, query: string) {
                 },
             ],
         },
-        include: {
-            messages: {
-                orderBy: { createdAt: 'asc' },
-                take: 1,
-            },
-        },
+        select: threadListSelect,
         orderBy: { createdAt: 'desc' },
+        take,
     });
 }
 

@@ -35,10 +35,14 @@ export async function enqueueAuthEmail(payload: AuthEmailPayload) {
     await deliverAuthEmail(payload);
 }
 
-/** Best-effort: a failed title (or a failed enqueue) never fails the chat. */
+/**
+ * Best-effort: a failed title (or a failed enqueue) never fails the chat, and
+ * this never throws, so callers can fire it without awaiting.
+ */
 export async function enqueueThreadTitle(payload: {
     threadId: string;
     context: string;
+    fallbackTitle: string;
 }) {
     try {
         if (isTriggerEnabled) {

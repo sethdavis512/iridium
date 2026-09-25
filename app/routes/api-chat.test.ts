@@ -1,8 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { consumeStream, streamText as aiStreamText, type UIMessage } from 'ai';
+import { MockLanguageModelV3 } from 'ai/test';
 
 const {
     getUserFromSession,
-    getThreadById,
+    getThreadMeta,
     saveChat,
     enqueueThreadTitle,
     streamText,
@@ -10,7 +12,7 @@ const {
     clearMessages,
 } = vi.hoisted(() => ({
     getUserFromSession: vi.fn(),
-    getThreadById: vi.fn(),
+    getThreadMeta: vi.fn(),
     saveChat: vi.fn(),
     enqueueThreadTitle: vi.fn(),
     streamText: vi.fn(),
@@ -23,7 +25,7 @@ vi.mock('~/models/session.server', () => ({
 }));
 
 vi.mock('~/models/thread.server', () => ({
-    getThreadById: (...args: unknown[]) => getThreadById(...args),
+    getThreadMeta: (...args: unknown[]) => getThreadMeta(...args),
     saveChat: (...args: unknown[]) => saveChat(...args),
     deleteTrailingAssistantMessages: vi.fn(),
 }));
@@ -35,6 +37,7 @@ vi.mock('~/lib/jobs.server', () => ({
 // The real module pulls in VoltAgent + Prisma (and env validation with them).
 vi.mock('~/lib/thread-title.server', () => ({
     buildTitleContext: () => 'mock conversation context',
+    buildFallbackTitle: () => 'mock fallback title',
 }));
 
 vi.mock('~/voltagent', () => ({
@@ -89,9 +92,32 @@ function makeRequest(body: unknown, method = 'POST'): Request {
     return new Request('http://localhost/api/chat', init);
 }
 
+/** A POST with a raw string body and optional extra headers. */
+function rawRequest(body: string, headers: Record<string, string> = {}) {
+    return new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body,
+    });
+}
+
 function actionCall(request: Request) {
     // The Route.ActionArgs type isn't exposed easily in tests; cast pragmatically.
     return action({ request } as unknown as Parameters<typeof action>[0]);
+}
+
+type OnFinish = (args: { messages: unknown[] }) => Promise<void>;
+
+/** Stub a successful stream and capture the onFinish it was given. */
+function captureOnFinish() {
+    const captured: { current: OnFinish | null } = { current: null };
+    streamText.mockResolvedValue({
+        toUIMessageStreamResponse: (opts: { onFinish: OnFinish }) => {
+            captured.current = opts.onFinish;
+            return new Response('ok', { status: 200 });
+        },
+    });
+    return captured;
 }
 
 const validBody = {
@@ -108,7 +134,16 @@ describe('/api/chat action', () => {
     });
 
     it('returns 400 for invalid request body', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+
         const res = await actionCall(makeRequest({ bogus: true }));
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for malformed JSON', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+
+        const res = await actionCall(rawRequest('{"id":'));
         expect(res.status).toBe(400);
     });
 
@@ -119,9 +154,75 @@ describe('/api/chat action', () => {
         expect(res.status).toBe(401);
     });
 
+    it('authenticates before reading the body', async () => {
+        getUserFromSession.mockResolvedValue(null);
+        const request = rawRequest('not even json');
+
+        const res = await actionCall(request);
+
+        expect(res.status).toBe(401);
+        expect(request.bodyUsed).toBe(false);
+    });
+
+    it('rejects a declared Content-Length over 1 MB before authenticating', async () => {
+        const request = rawRequest('{}', { 'content-length': '1000001' });
+
+        const res = await actionCall(request);
+
+        expect(res.status).toBe(413);
+        expect(getUserFromSession).not.toHaveBeenCalled();
+        expect(request.bodyUsed).toBe(false);
+    });
+
+    it('rejects a body over 1 MB sent without a Content-Length', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        const chunk = new TextEncoder().encode('x'.repeat(64 * 1024));
+        let sent = 0;
+        const body = new ReadableStream<Uint8Array>({
+            pull(controller) {
+                // Would stream forever; the server must stop reading.
+                sent += chunk.byteLength;
+                controller.enqueue(chunk);
+            },
+        });
+        const request = new Request('http://localhost/api/chat', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body,
+            duplex: 'half',
+        } as RequestInit);
+        expect(request.headers.get('content-length')).toBeNull();
+
+        const res = await actionCall(request);
+
+        expect(res.status).toBe(413);
+        expect(sent).toBeLessThan(2_000_000);
+        expect(getThreadMeta).not.toHaveBeenCalled();
+    });
+
+    it('rejects a text part over the length cap', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+
+        const res = await actionCall(
+            makeRequest({
+                id: 'thread-1',
+                messages: [
+                    {
+                        id: 'm1',
+                        role: 'user',
+                        parts: [{ type: 'text', text: 'x'.repeat(32_001) }],
+                    },
+                ],
+            }),
+        );
+
+        expect(res.status).toBe(400);
+        expect(getThreadMeta).not.toHaveBeenCalled();
+    });
+
     it('returns 404 when the thread does not exist', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue(null);
+        getThreadMeta.mockResolvedValue(null);
 
         const res = await actionCall(makeRequest(validBody));
         expect(res.status).toBe(404);
@@ -130,7 +231,7 @@ describe('/api/chat action', () => {
 
     it('returns 403 when the thread belongs to another user', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'other',
             title: 'Untitled',
@@ -143,7 +244,7 @@ describe('/api/chat action', () => {
 
     it('returns 429 when the rate limit is exceeded', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -159,13 +260,16 @@ describe('/api/chat action', () => {
             expect(res.status).toBe(200);
         }
 
-        const blocked = await actionCall(makeRequest(validBody));
+        const blockedRequest = makeRequest(validBody);
+        const blocked = await actionCall(blockedRequest);
         expect(blocked.status).toBe(429);
+        // Rate limiting happens before the body is read.
+        expect(blockedRequest.bodyUsed).toBe(false);
     });
 
     it('streams successfully on the happy path and wires onFinish to saveChat', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -207,7 +311,7 @@ describe('/api/chat action', () => {
 
     it('does not throw when saveChat fails (errors are logged, not propagated)', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -235,7 +339,7 @@ describe('/api/chat action', () => {
 
     it('self-heals memory on a duplicate-item error and retries the stream', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
@@ -259,57 +363,244 @@ describe('/api/chat action', () => {
 
     it('does not auto-generate a title when the title is already set', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Existing Title',
         });
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: () =>
-                new Response('ok', { status: 200 }),
-        });
+        const onFinish = captureOnFinish();
 
-        const longBody = {
-            id: 'thread-1',
-            messages: Array.from({ length: 4 }, (_, i) => ({
-                id: `m${i}`,
-                role: 'user' as const,
-                parts: [{ type: 'text', text: 'hi' }],
-            })),
-        };
-
-        await actionCall(makeRequest(longBody));
+        await actionCall(makeRequest(validBody));
+        await onFinish.current!({ messages: [] });
 
         expect(generateText).not.toHaveBeenCalled();
         expect(enqueueThreadTitle).not.toHaveBeenCalled();
     });
 
-    it('enqueues title generation for untitled threads after a few messages', async () => {
+    it('titles an untitled thread once the reply finishes, not before streaming', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadById.mockResolvedValue({
+        getThreadMeta.mockResolvedValue({
             id: 'thread-1',
             createdById: 'u1',
             title: 'Untitled',
         });
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: () =>
-                new Response('ok', { status: 200 }),
-        });
+        const onFinish = captureOnFinish();
 
-        const longBody = {
-            id: 'thread-1',
-            messages: Array.from({ length: 4 }, (_, i) => ({
-                id: `m${i}`,
-                role: 'user' as const,
-                parts: [{ type: 'text', text: 'hi' }],
-            })),
-        };
+        await actionCall(makeRequest(validBody));
 
-        await actionCall(makeRequest(longBody));
+        // Nothing on the request path: the response is returned first.
+        expect(enqueueThreadTitle).not.toHaveBeenCalled();
+
+        await onFinish.current!({ messages: [] });
 
         expect(enqueueThreadTitle).toHaveBeenCalledWith({
             threadId: 'thread-1',
             context: 'mock conversation context',
+            fallbackTitle: 'mock fallback title',
+        });
+    });
+
+    it('does not wait for title generation to finish the stream', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue({
+            id: 'thread-1',
+            createdById: 'u1',
+            title: 'Untitled',
+        });
+        // A title call that never settles must not hold up onFinish.
+        enqueueThreadTitle.mockReturnValue(new Promise(() => {}));
+        const onFinish = captureOnFinish();
+
+        await actionCall(makeRequest(validBody));
+
+        await expect(
+            onFinish.current!({ messages: [] }),
+        ).resolves.toBeUndefined();
+        expect(enqueueThreadTitle).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('/api/chat abort handling', () => {
+    beforeEach(() => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue({
+            id: 'thread-1',
+            createdById: 'u1',
+            title: 'Existing Title',
+        });
+    });
+
+    it('ties generation to the request signal with a timeout, and drains the stream server-side', async () => {
+        let responseOptions: Record<string, unknown> = {};
+        streamText.mockResolvedValue({
+            toUIMessageStreamResponse: (opts: Record<string, unknown>) => {
+                responseOptions = opts;
+                return new Response('ok', { status: 200 });
+            },
+        });
+        const request = makeRequest(validBody);
+
+        await actionCall(request);
+
+        const options = streamText.mock.calls[0][1];
+        expect(options.abortSignal).toBe(request.signal);
+        expect(options.timeout).toEqual(
+            expect.objectContaining({ totalMs: expect.any(Number) }),
+        );
+        expect(responseOptions.consumeSseStream).toBe(consumeStream);
+    });
+
+    it('saves the partial reply when the client disconnects mid-stream', async () => {
+        // A model that streams part of a reply, then hangs until aborted.
+        let modelSignal: AbortSignal | undefined;
+        const model = new MockLanguageModelV3({
+            doStream: async ({ abortSignal }) => ({
+                stream: new ReadableStream({
+                    start(controller) {
+                        controller.enqueue({
+                            type: 'stream-start',
+                            warnings: [],
+                        });
+                        controller.enqueue({ type: 'text-start', id: 't1' });
+                        controller.enqueue({
+                            type: 'text-delta',
+                            id: 't1',
+                            delta: 'Partial reply',
+                        });
+                        modelSignal = abortSignal;
+                        abortSignal?.addEventListener('abort', () =>
+                            controller.error(abortSignal.reason),
+                        );
+                    },
+                }),
+            }),
+        });
+        streamText.mockImplementation(
+            async (_input: unknown, options: { abortSignal: AbortSignal }) =>
+                aiStreamText({
+                    model,
+                    prompt: 'hi',
+                    abortSignal: options.abortSignal,
+                }),
+        );
+
+        const client = new AbortController();
+        const request = new Request('http://localhost/api/chat', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(validBody),
+            signal: client.signal,
+        });
+
+        const res = await actionCall(request);
+        expect(res.status).toBe(200);
+
+        // The client reads until the partial reply arrives, then stops
+        // reading and disconnects, as a closed tab or Stop would.
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let received = '';
+        while (!received.includes('Partial reply')) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            received += decoder.decode(value, { stream: true });
+        }
+        client.abort();
+
+        await vi.waitFor(() => expect(saveChat).toHaveBeenCalledTimes(1));
+        const saved = saveChat.mock.calls[0][0].messages as UIMessage[];
+        expect(saved.map((m) => m.role)).toEqual(['user', 'assistant']);
+        expect(saved[1].parts).toContainEqual(
+            expect.objectContaining({ type: 'text', text: 'Partial reply' }),
+        );
+        // The disconnect reached the model call, so generation stopped.
+        expect(modelSignal?.aborted).toBe(true);
+    });
+
+    it('still saves the reply when the client stops reading the stream', async () => {
+        // A long reply: enough chunks to back up an unread response stream.
+        const deltas = Array.from({ length: 500 }, (_, i) => ({
+            type: 'text-delta' as const,
+            id: 't1',
+            delta: i === 0 ? 'Start' : '.',
+        }));
+        const model = new MockLanguageModelV3({
+            doStream: async () => ({
+                stream: new ReadableStream({
+                    start(controller) {
+                        controller.enqueue({
+                            type: 'stream-start',
+                            warnings: [],
+                        });
+                        controller.enqueue({ type: 'text-start', id: 't1' });
+                        deltas.forEach((delta) => controller.enqueue(delta));
+                        controller.enqueue({ type: 'text-end', id: 't1' });
+                        controller.enqueue({
+                            type: 'finish',
+                            finishReason: { unified: 'stop', raw: 'stop' },
+                            usage: {
+                                inputTokens: {
+                                    total: 1,
+                                    noCache: 1,
+                                    cacheRead: 0,
+                                    cacheWrite: 0,
+                                },
+                                outputTokens: {
+                                    total: 500,
+                                    text: 500,
+                                    reasoning: 0,
+                                },
+                            },
+                        });
+                        controller.close();
+                    },
+                }),
+            }),
+        });
+        streamText.mockImplementation(async () =>
+            aiStreamText({ model, prompt: 'hi' }),
+        );
+
+        const res = await actionCall(makeRequest(validBody));
+
+        // Read only the first chunk, then leave the body unread.
+        await res.body!.getReader().read();
+
+        await vi.waitFor(() => expect(saveChat).toHaveBeenCalledTimes(1));
+        const saved = saveChat.mock.calls[0][0].messages as UIMessage[];
+        expect(saved[1].parts).toContainEqual(
+            expect.objectContaining({
+                type: 'text',
+                text: `Start${'.'.repeat(499)}`,
+            }),
+        );
+    });
+
+    it('keeps the user message but drops an empty aborted reply', async () => {
+        const onFinish = captureOnFinish();
+
+        await actionCall(makeRequest(validBody));
+        await (
+            onFinish.current as unknown as (args: {
+                messages: unknown[];
+                isAborted: boolean;
+            }) => Promise<void>
+        )({
+            isAborted: true,
+            messages: [
+                validBody.messages[0],
+                {
+                    id: 'a1',
+                    role: 'assistant',
+                    parts: [{ type: 'step-start' }],
+                },
+            ],
+        });
+
+        expect(saveChat).toHaveBeenCalledWith({
+            messages: [validBody.messages[0]],
+            threadId: 'thread-1',
+            userId: 'u1',
         });
     });
 });
