@@ -110,14 +110,57 @@ type Env = z.infer<typeof envSchema>;
 /** Test-only switches that must never be enabled in production. */
 const TEST_ONLY_FLAGS = ['E2E_TEST_HOOKS', 'DISABLE_AUTH_RATE_LIMIT'] as const;
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
 /**
- * The schema validated at boot: envSchema plus cross-field rules. With
- * NODE_ENV=production, E2E_TEST_HOOKS would expose /api/test-role (anyone can
- * become ADMIN) and /api/test-mailbox (password-reset links), and
+ * `host:port/database` for a Postgres URL, with loopback aliases and the
+ * default port folded together so two spellings of one database compare
+ * equal. Credentials and query params are ignored. Null when unparseable.
+ */
+function databaseIdentity(url: string): string | null {
+    try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+        // With no path, Postgres connects to the database named after the user.
+        const database =
+            decodeURIComponent(parsed.pathname.slice(1)) ||
+            decodeURIComponent(parsed.username);
+        return `${LOOPBACK_HOSTS.has(host) ? 'localhost' : host}:${parsed.port || '5432'}/${database}`;
+    } catch {
+        return null;
+    }
+}
+
+/** Whether two Postgres URLs resolve to the same database. */
+export function isSameDatabase(a: string, b: string): boolean {
+    const identity = databaseIdentity(a);
+    return identity !== null && identity === databaseIdentity(b);
+}
+
+/**
+ * The schema validated at boot: envSchema plus cross-field rules.
+ *
+ * In every environment, VOLTAGENT_DATABASE_URL must name a different database
+ * than DATABASE_URL. VoltAgent's adapter creates its voltagent_memory_* tables
+ * wherever it connects as soon as ~/voltagent loads, and Prisma then reports
+ * them as drift and asks to reset the app database.
+ *
+ * With NODE_ENV=production, E2E_TEST_HOOKS would expose /api/test-role (anyone
+ * can become ADMIN) and /api/test-mailbox (password-reset links), and
  * DISABLE_AUTH_RATE_LIMIT would remove brute-force protection, so either one
  * fails boot instead of running.
  */
 export const bootEnvSchema = envSchema.superRefine((value, ctx) => {
+    if (isSameDatabase(value.DATABASE_URL, value.VOLTAGENT_DATABASE_URL)) {
+        ctx.addIssue({
+            code: 'custom',
+            path: ['VOLTAGENT_DATABASE_URL'],
+            message:
+                'must name a different database than DATABASE_URL, or ' +
+                'VoltAgent creates its tables in the app database',
+        });
+    }
+
     if (value.NODE_ENV !== 'production') return;
     for (const key of TEST_ONLY_FLAGS) {
         if (value[key]) {
@@ -182,6 +225,9 @@ function validateEnv(): { env: Env; placeholdered: string[] } {
     const patched: NodeJS.ProcessEnv = { ...process.env };
     const placeholdered: string[] = [];
     for (const issue of result.error.issues) {
+        // Cross-field rules flag a set value that is wrong, not a missing one,
+        // so no placeholder applies; the retry below fails boot on them.
+        if (issue.code === 'custom') continue;
         const key = String(issue.path[0]);
         if (key in DEV_FALLBACKS && !placeholdered.includes(key)) {
             patched[key] = DEV_FALLBACKS[key];

@@ -142,10 +142,12 @@ export class MyRetriever extends BaseRetriever {
 ```ts
 import { Memory } from '@voltagent/core';
 import { PostgreSQLMemoryAdapter } from '@voltagent/postgres';
+import { env } from '~/lib/env.server';
 
 const memory = new Memory({
     storage: new PostgreSQLMemoryAdapter({
-        connection: process.env.DATABASE_URL!,
+        // The separate VoltAgent database, never DATABASE_URL.
+        connection: env.VOLTAGENT_DATABASE_URL,
     }),
     workingMemory: {
         enabled: true,
@@ -158,7 +160,7 @@ const memory = new Memory({
 });
 ```
 
-- Memory is PostgreSQL-backed — no additional infrastructure needed
+- Memory lives in its own Postgres database (`VOLTAGENT_DATABASE_URL`, port 5433 locally). Constructing the adapter creates its `voltagent_memory_*` tables in whatever database it points at, so never pass `DATABASE_URL` (env validation refuses a VoltAgent URL that names the app database). The real wiring, with pool options, is in `app/voltagent/agents.ts`
 - Working memory scope is `'user'` (shared across threads) — use `'conversation'` for thread-specific memory
 - The Zod schema defines what the agent can store/retrieve in working memory
 - `memory.clearMessages(userId, conversationId)` clears provider messages for self-healing

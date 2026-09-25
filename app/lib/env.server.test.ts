@@ -3,6 +3,7 @@ import { LOCAL_DATABASE_NAME } from '~/config';
 import {
     bootEnvSchema,
     computeEnvWarnings,
+    isSameDatabase,
     productionEmailWarnings,
 } from './env.server';
 
@@ -65,6 +66,56 @@ describe('bootEnvSchema test-only flags', () => {
                 }),
             ).toEqual([]);
         }
+    });
+});
+
+describe('bootEnvSchema separate VoltAgent database', () => {
+    it('fails in every environment when both URLs name one database', () => {
+        for (const NODE_ENV of ['development', 'test', 'production']) {
+            expect(
+                failingKeys({
+                    ...baseEnv,
+                    NODE_ENV,
+                    VOLTAGENT_DATABASE_URL: baseEnv.DATABASE_URL,
+                }),
+            ).toEqual(['VOLTAGENT_DATABASE_URL']);
+        }
+    });
+
+    it('boots when the URLs name different databases', () => {
+        expect(failingKeys(baseEnv)).toEqual([]);
+    });
+});
+
+describe('isSameDatabase', () => {
+    const app = 'postgresql://postgres:postgres@localhost:5432/iridium';
+
+    it('sees through loopback aliases, the default port, credentials, and params', () => {
+        for (const other of [
+            app,
+            'postgresql://voltagent:secret@127.0.0.1/iridium',
+            'postgres://postgres:postgres@[::1]:5432/iridium?sslmode=disable',
+            'postgresql://postgres:postgres@LOCALHOST:5432/iridium',
+            // No database in the path: Postgres uses the user's name.
+            'postgresql://iridium:postgres@localhost:5432',
+        ]) {
+            expect(isSameDatabase(app, other)).toBe(true);
+        }
+    });
+
+    it('treats a different port, host, or database name as separate', () => {
+        for (const other of [
+            'postgresql://postgres:postgres@localhost:5433/iridium',
+            'postgresql://postgres:postgres@localhost:5432/voltagent',
+            'postgresql://postgres:postgres@db.example.com:5432/iridium',
+            'postgresql://postgres:postgres@localhost:5432/Iridium',
+        ]) {
+            expect(isSameDatabase(app, other)).toBe(false);
+        }
+    });
+
+    it('never matches an unparseable URL', () => {
+        expect(isSameDatabase('not a url', 'not a url')).toBe(false);
     });
 });
 

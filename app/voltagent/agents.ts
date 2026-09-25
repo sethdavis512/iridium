@@ -5,6 +5,7 @@ import {
 } from '@voltagent/postgres';
 import { z } from 'zod';
 import './observability';
+import { logMemoryPoolErrors } from './pool-errors';
 import { renderCardTool } from './tools/cards';
 import { createNoteTool, listNotesTool, searchNotesTool } from './tools/notes';
 import { getCurrentDatetimeTool, getWeatherTool } from './tools/weather';
@@ -25,6 +26,7 @@ const memoryStorage = new PostgreSQLMemoryAdapter({
     ) as PostgreSQLMemoryOptions['connection'],
     maxConnections: POOL_MAX.voltagent,
 });
+logMemoryPoolErrors(memoryStorage);
 onShutdown(() => memoryStorage.close());
 
 export const memory = new Memory({
