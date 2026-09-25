@@ -334,3 +334,7 @@ Google Cloud Run, …).
 
 - [Adding a feature](docs/adding-a-feature.md) — the route → action → model → test walkthrough, using Notes as the worked example
 - [Chat tool-calling troubleshooting](docs/chat-tool-calling.md)
+
+## License
+
+[MIT](LICENSE). Iridium is meant to be copied: use "Use this template" on GitHub to start a new project with fresh history, then run `bun run setup`.
