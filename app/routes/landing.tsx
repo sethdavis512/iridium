@@ -11,7 +11,7 @@ import { Card } from '~/components/Card';
 import { Container } from '~/components/Container';
 import { Button } from '~/components/ui/button';
 import { OgMeta } from '~/lib/seo';
-import { APP_NAME } from '~/config';
+import { APP_NAME, APP_REPO_URL } from '~/config';
 
 const FEATURES = [
     {
@@ -86,15 +86,15 @@ export default function LandingPage() {
                         <Button size="lg" render={<Link to="/login" />}>
                             Get started
                         </Button>
-                        <Button
-                            size="lg"
-                            variant="outline"
-                            render={
-                                <a href="https://github.com/sethdavis512/iridium" />
-                            }
-                        >
-                            View source
-                        </Button>
+                        {APP_REPO_URL && (
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                render={<a href={APP_REPO_URL} />}
+                            >
+                                View source
+                            </Button>
+                        )}
                     </div>
                 </section>
 
