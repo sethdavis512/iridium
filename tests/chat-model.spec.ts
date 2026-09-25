@@ -47,6 +47,56 @@ test.describe('Per-thread model selection', () => {
     });
 });
 
+test.describe('Chat request payload', () => {
+    test('a normal turn sends only the newest message; regenerate sends the history', async ({
+        authedPage: page,
+    }) => {
+        const bodies: { messages: unknown[]; trigger?: string }[] = [];
+        const { SSE_HEADERS, sseBody, textReplyChunks } =
+            await import('./chat-mock');
+        await page.route('/api/chat', async (route) => {
+            bodies.push(route.request().postDataJSON());
+            await route.fulfill({
+                status: 200,
+                headers: SSE_HEADERS,
+                body: sseBody(
+                    textReplyChunks(
+                        `Answer ${bodies.length}`,
+                        `mock-msg-${bodies.length}`,
+                    ),
+                ),
+            });
+        });
+
+        await page.goto('/chat');
+        await page.getByRole('button', { name: 'New Thread' }).click();
+        await expect(page).toHaveURL(/\/chat\/.+/);
+        await waitForHydration(page);
+
+        await page.getByLabel('Message').fill('First question');
+        await page.getByRole('button', { name: 'Send' }).click();
+        await expect(page.getByText('Answer 1')).toBeVisible();
+
+        await page.getByLabel('Message').fill('Second question');
+        await page.getByRole('button', { name: 'Send' }).click();
+        await expect(page.getByText('Answer 2')).toBeVisible();
+
+        expect(bodies[1].messages).toEqual([
+            expect.objectContaining({
+                role: 'user',
+                parts: [{ type: 'text', text: 'Second question' }],
+            }),
+        ]);
+
+        await page.getByRole('button', { name: 'Regenerate' }).click();
+        await expect(page.getByText('Answer 3')).toBeVisible();
+
+        // First question, first answer, second question.
+        expect(bodies[2].trigger).toBe('regenerate-message');
+        expect(bodies[2].messages).toHaveLength(3);
+    });
+});
+
 test.describe('Message regeneration', () => {
     test('regenerate replaces the last assistant response', async ({
         authedPage: page,

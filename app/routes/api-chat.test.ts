@@ -92,6 +92,15 @@ function makeRequest(body: unknown, method = 'POST'): Request {
     return new Request('http://localhost/api/chat', init);
 }
 
+/** A POST with a raw string body and optional extra headers. */
+function rawRequest(body: string, headers: Record<string, string> = {}) {
+    return new Request('http://localhost/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers },
+        body,
+    });
+}
+
 function actionCall(request: Request) {
     // The Route.ActionArgs type isn't exposed easily in tests; cast pragmatically.
     return action({ request } as unknown as Parameters<typeof action>[0]);
@@ -125,7 +134,16 @@ describe('/api/chat action', () => {
     });
 
     it('returns 400 for invalid request body', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+
         const res = await actionCall(makeRequest({ bogus: true }));
+        expect(res.status).toBe(400);
+    });
+
+    it('returns 400 for malformed JSON', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+
+        const res = await actionCall(rawRequest('{"id":'));
         expect(res.status).toBe(400);
     });
 
@@ -134,6 +152,72 @@ describe('/api/chat action', () => {
 
         const res = await actionCall(makeRequest(validBody));
         expect(res.status).toBe(401);
+    });
+
+    it('authenticates before reading the body', async () => {
+        getUserFromSession.mockResolvedValue(null);
+        const request = rawRequest('not even json');
+
+        const res = await actionCall(request);
+
+        expect(res.status).toBe(401);
+        expect(request.bodyUsed).toBe(false);
+    });
+
+    it('rejects a declared Content-Length over 1 MB before authenticating', async () => {
+        const request = rawRequest('{}', { 'content-length': '1000001' });
+
+        const res = await actionCall(request);
+
+        expect(res.status).toBe(413);
+        expect(getUserFromSession).not.toHaveBeenCalled();
+        expect(request.bodyUsed).toBe(false);
+    });
+
+    it('rejects a body over 1 MB sent without a Content-Length', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        const chunk = new TextEncoder().encode('x'.repeat(64 * 1024));
+        let sent = 0;
+        const body = new ReadableStream<Uint8Array>({
+            pull(controller) {
+                // Would stream forever; the server must stop reading.
+                sent += chunk.byteLength;
+                controller.enqueue(chunk);
+            },
+        });
+        const request = new Request('http://localhost/api/chat', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body,
+            duplex: 'half',
+        } as RequestInit);
+        expect(request.headers.get('content-length')).toBeNull();
+
+        const res = await actionCall(request);
+
+        expect(res.status).toBe(413);
+        expect(sent).toBeLessThan(2_000_000);
+        expect(getThreadMeta).not.toHaveBeenCalled();
+    });
+
+    it('rejects a text part over the length cap', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+
+        const res = await actionCall(
+            makeRequest({
+                id: 'thread-1',
+                messages: [
+                    {
+                        id: 'm1',
+                        role: 'user',
+                        parts: [{ type: 'text', text: 'x'.repeat(32_001) }],
+                    },
+                ],
+            }),
+        );
+
+        expect(res.status).toBe(400);
+        expect(getThreadMeta).not.toHaveBeenCalled();
     });
 
     it('returns 404 when the thread does not exist', async () => {
@@ -176,8 +260,11 @@ describe('/api/chat action', () => {
             expect(res.status).toBe(200);
         }
 
-        const blocked = await actionCall(makeRequest(validBody));
+        const blockedRequest = makeRequest(validBody);
+        const blocked = await actionCall(blockedRequest);
         expect(blocked.status).toBe(429);
+        // Rate limiting happens before the body is read.
+        expect(blockedRequest.bodyUsed).toBe(false);
     });
 
     it('streams successfully on the happy path and wires onFinish to saveChat', async () => {

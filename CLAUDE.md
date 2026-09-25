@@ -126,8 +126,8 @@ Plain async functions in `app/models/*.server.ts` — no classes, no ORM wrapper
 
 ### AI Chat Flow
 
-1. Client sends messages via `useChat` (`@ai-sdk/react`) with `DefaultChatTransport` → `/api/chat`
-2. Server validates session, applies rate limiting (20 req/min), streams via `agent.streamText()`
+1. Client sends messages via `useChat` (`@ai-sdk/react`) with `DefaultChatTransport` → `/api/chat`. A normal turn sends only the newest message (`prepareSendMessagesRequest` in `thread.tsx`); regeneration sends the full history
+2. Server checks the session and rate limit (20 req/min) before reading the body, rejects bodies over 1 MB (413, by `Content-Length` and while reading), validates with Zod (text parts capped at 32k chars), checks thread ownership, then streams via `agent.streamText()`
 3. VoltAgent manages conversation memory (PostgreSQL-backed) and calls tools as needed
 4. `UIMessage.parts` are serialized as JSON string in the `content` DB column
 5. On completion, `saveChat()` upserts messages to the database. Generation stops when the client disconnects or presses Stop (`abortSignal: request.signal`, plus a timeout), and `consumeSseStream` drains the stream server-side so an aborted turn's partial reply is still saved

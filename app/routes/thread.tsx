@@ -34,6 +34,28 @@ import { ALLOWED_MODELS, DEFAULT_MODEL_ID } from '~/lib/ai-models';
 const transport = new DefaultChatTransport({
     api: '/api/chat',
     credentials: 'include',
+    // The server rebuilds context from VoltAgent memory, so a normal turn
+    // sends only the new message and the payload no longer grows with the
+    // thread. Regeneration clears that memory and replays the history, so it
+    // still sends every message.
+    prepareSendMessagesRequest: ({
+        id,
+        messages,
+        trigger,
+        messageId,
+        body,
+    }) => ({
+        body: {
+            ...body,
+            id,
+            messages:
+                trigger === 'regenerate-message'
+                    ? messages
+                    : messages.slice(-1),
+            trigger,
+            messageId,
+        },
+    }),
 });
 
 const PRESET_MESSAGES = [

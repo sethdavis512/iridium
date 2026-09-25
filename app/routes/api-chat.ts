@@ -18,8 +18,15 @@ import {
 import { agent, memory } from '~/voltagent';
 import type { Route } from './+types/api-chat';
 
+/** Request bodies over this size are rejected (413) before being parsed. */
+const MAX_BODY_BYTES = 1_000_000;
+
+/** Per text part: room for a long pasted document, far below the body cap. */
+const MAX_TEXT_PART_LENGTH = 32_000;
+
 const uiMessagePartSchema = z.object({
     type: z.string().max(50),
+    text: z.string().max(MAX_TEXT_PART_LENGTH).optional(),
 });
 
 const uiMessageSchema = z.object({
@@ -52,6 +59,36 @@ function hasContent(message: UIMessage): boolean {
     );
 }
 
+/**
+ * Read the body as text, giving up (null) once it passes `maxBytes`. The
+ * Content-Length check only catches honest clients; this also bounds a body
+ * sent without the header or with an understated one.
+ */
+async function readBodyWithLimit(
+    request: Request,
+    maxBytes: number,
+): Promise<string | null> {
+    if (!request.body) return '';
+
+    const reader = request.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        size += value.byteLength;
+        if (size > maxBytes) {
+            await reader.cancel();
+            return null;
+        }
+        chunks.push(value);
+    }
+
+    return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
 function isDuplicateItemError(error: unknown): boolean {
     if (!(error instanceof Error)) return false;
     return /Duplicate item found with id/i.test(error.message);
@@ -62,35 +99,21 @@ export async function action({ request }: Route.ActionArgs) {
         return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
 
-    let parsed: z.infer<typeof chatRequestSchema>;
-    try {
-        parsed = chatRequestSchema.parse(await request.json());
-    } catch {
+    // Everything before the body is read is cheap: an unauthenticated,
+    // rate-limited, or oversized request is rejected without buffering or
+    // parsing its payload.
+    const declaredLength = Number(request.headers.get('content-length'));
+    if (declaredLength > MAX_BODY_BYTES) {
         return Response.json(
-            { error: 'Invalid request body' },
-            { status: 400 },
+            { error: 'Request body too large' },
+            { status: 413 },
         );
     }
 
-    const { messages: validatedMessages, id: threadId } = parsed;
-    const messages = validatedMessages as UIMessage[];
     const user = await getUserFromSession(request);
 
     if (!user) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Ownership boundary: thread must exist AND belong to the user BEFORE any
-    // tokens are spent or memory is written. Threads are created via the
-    // /chat route action, not implicitly here.
-    const thread = await getThreadMeta(threadId);
-
-    if (!thread) {
-        return Response.json({ error: 'Thread not found' }, { status: 404 });
-    }
-
-    if (thread.createdById !== user.id) {
-        return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { success: withinLimit } = await rateLimit({
@@ -104,6 +127,41 @@ export async function action({ request }: Route.ActionArgs) {
             { error: 'Too many requests. Please wait a moment.' },
             { status: 429 },
         );
+    }
+
+    const body = await readBodyWithLimit(request, MAX_BODY_BYTES);
+
+    if (body === null) {
+        return Response.json(
+            { error: 'Request body too large' },
+            { status: 413 },
+        );
+    }
+
+    let parsed: z.infer<typeof chatRequestSchema>;
+    try {
+        parsed = chatRequestSchema.parse(JSON.parse(body));
+    } catch {
+        return Response.json(
+            { error: 'Invalid request body' },
+            { status: 400 },
+        );
+    }
+
+    const { messages: validatedMessages, id: threadId } = parsed;
+    const messages = validatedMessages as UIMessage[];
+
+    // Ownership boundary: thread must exist AND belong to the user BEFORE any
+    // tokens are spent or memory is written. Threads are created via the
+    // /chat route action, not implicitly here.
+    const thread = await getThreadMeta(threadId);
+
+    if (!thread) {
+        return Response.json({ error: 'Thread not found' }, { status: 404 });
+    }
+
+    if (thread.createdById !== user.id) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Only send the latest user message — VoltAgent memory provides

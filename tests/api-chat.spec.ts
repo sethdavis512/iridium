@@ -40,9 +40,33 @@ test.describe('POST /api/chat', () => {
         expect(res.status()).toBe(401);
     });
 
-    test('returns 400 for an invalid request body', async ({ request }) => {
+    test('checks auth before validating the body', async ({ request }) => {
         const res = await request.post('/api/chat', { data: { nope: true } });
-        expect(res.status()).toBe(400);
+        expect(res.status()).toBe(401);
+    });
+
+    test('returns 413 for a body over 1 MB, before auth', async ({
+        request,
+    }) => {
+        const res = await request.post('/api/chat', {
+            data: { id: 'x', padding: 'x'.repeat(1_100_000) },
+        });
+        expect(res.status()).toBe(413);
+    });
+
+    test('returns 400 for an invalid request body', async ({
+        browser,
+        baseURL,
+    }) => {
+        const context = await createAuthedContext(browser, baseURL!, 'chat400');
+        try {
+            const res = await context.request.post('/api/chat', {
+                data: { nope: true },
+            });
+            expect(res.status()).toBe(400);
+        } finally {
+            await context.close();
+        }
     });
 
     test('returns 404 for a thread that does not exist', async ({
