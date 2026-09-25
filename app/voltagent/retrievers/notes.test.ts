@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BaseMessage, RetrieveOptions } from '@voltagent/core';
 
-const { searchNotes } = vi.hoisted(() => ({ searchNotes: vi.fn() }));
+const { searchNotesByKeywords } = vi.hoisted(() => ({
+    searchNotesByKeywords: vi.fn(),
+}));
 
 vi.mock('~/models/note.server', () => ({
-    searchNotes: (...args: unknown[]) => searchNotes(...args),
+    searchNotesByKeywords: (...args: unknown[]) =>
+        searchNotesByKeywords(...args),
 }));
 
 import { NotesRetriever, RETRIEVER_NOTE_LIMIT } from './notes';
@@ -13,12 +16,12 @@ const options = { userId: 'u1' } as RetrieveOptions;
 
 beforeEach(() => {
     vi.clearAllMocks();
-    searchNotes.mockResolvedValue([]);
+    searchNotesByKeywords.mockResolvedValue([]);
 });
 
 describe('NotesRetriever', () => {
     it('searches with the text parts of array-shaped message content', async () => {
-        searchNotes.mockResolvedValue([
+        searchNotesByKeywords.mockResolvedValue([
             { title: 'Tacos', content: 'Al pastor on Friday' },
         ]);
         const messages: BaseMessage[] = [
@@ -39,9 +42,9 @@ describe('NotesRetriever', () => {
 
         const context = await new NotesRetriever().retrieve(messages, options);
 
-        expect(searchNotes).toHaveBeenCalledWith({
+        expect(searchNotesByKeywords).toHaveBeenCalledWith({
             userId: 'u1',
-            query: 'tacos recipe',
+            text: 'tacos recipe',
             take: RETRIEVER_NOTE_LIMIT,
         });
         expect(context).toBe('## Tacos\nAl pastor on Friday');
@@ -56,8 +59,8 @@ describe('NotesRetriever', () => {
             options,
         );
 
-        expect(searchNotes).toHaveBeenCalledWith(
-            expect.objectContaining({ query: 'weather' }),
+        expect(searchNotesByKeywords).toHaveBeenCalledWith(
+            expect.objectContaining({ text: 'weather' }),
         );
     });
 
@@ -70,10 +73,9 @@ describe('NotesRetriever', () => {
         );
         await retriever.retrieve('budget', options);
 
-        expect(searchNotes.mock.calls.map(([args]) => args.query)).toEqual([
-            'groceries',
-            'budget',
-        ]);
+        expect(
+            searchNotesByKeywords.mock.calls.map(([args]) => args.text),
+        ).toEqual(['groceries', 'budget']);
     });
 
     it('skips the query without a user, or without any user text', async () => {
@@ -95,6 +97,6 @@ describe('NotesRetriever', () => {
             options,
         );
 
-        expect(searchNotes).not.toHaveBeenCalled();
+        expect(searchNotesByKeywords).not.toHaveBeenCalled();
     });
 });
