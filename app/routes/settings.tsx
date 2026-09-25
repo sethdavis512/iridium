@@ -87,7 +87,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 export async function action({ request, context }: Route.ActionArgs) {
     const user = requireUserFromContext(context);
 
-    const { success } = rateLimit({
+    const { success } = await rateLimit({
         key: `settings:${user.id}`,
         maxRequests: 10,
         windowMs: 60_000,

@@ -51,12 +51,31 @@ vi.mock('~/lib/logger.server', () => ({
     log: { exception: vi.fn(), error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
 
+// The real limiter is Postgres-backed; count hits per key in memory instead.
+const { rateLimitHits } = vi.hoisted(() => ({
+    rateLimitHits: new Map<string, number>(),
+}));
+
+vi.mock('~/lib/rate-limit.server', () => ({
+    rateLimit: async ({
+        key,
+        maxRequests,
+    }: {
+        key: string;
+        maxRequests: number;
+    }) => {
+        const used = (rateLimitHits.get(key) ?? 0) + 1;
+        if (used > maxRequests) return { success: false, remaining: 0 };
+        rateLimitHits.set(key, used);
+        return { success: true, remaining: maxRequests - used };
+    },
+}));
+
 import { action } from './api-chat';
-import { _resetRateLimitStore } from '~/lib/rate-limit.server';
 
 beforeEach(() => {
     vi.clearAllMocks();
-    _resetRateLimitStore();
+    rateLimitHits.clear();
 });
 
 function makeRequest(body: unknown, method = 'POST'): Request {

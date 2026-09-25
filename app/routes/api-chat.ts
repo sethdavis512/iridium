@@ -74,7 +74,7 @@ export async function action({ request }: Route.ActionArgs) {
         return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { success: withinLimit } = rateLimit({
+    const { success: withinLimit } = await rateLimit({
         key: `chat:${user.id}`,
         maxRequests: 20,
         windowMs: 60_000,

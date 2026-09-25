@@ -56,7 +56,7 @@ export const myTool = createTool({
         invariant(userId, 'User not authenticated');
 
         // Rate limit if the tool creates/mutates data
-        const { success } = rateLimit({
+        const { success } = await rateLimit({
             key: `tool-name:${userId}`,
             maxRequests: 10,
             windowMs: 3_600_000,

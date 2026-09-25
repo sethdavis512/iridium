@@ -58,7 +58,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const intent = String(form.get('intent'));
 
     if (intent === 'new-thread') {
-        const { success } = rateLimit({
+        const { success } = await rateLimit({
             key: `thread-create:${user.id}`,
             maxRequests: 30,
             windowMs: 60_000,
@@ -105,7 +105,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
 
     if (intent === 'delete-thread') {
-        const { success } = rateLimit({
+        const { success } = await rateLimit({
             key: `thread-delete:${user.id}`,
             maxRequests: 60,
             windowMs: 60_000,

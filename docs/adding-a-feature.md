@@ -76,7 +76,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const intent = String(form.get('intent'));
 
     if (intent === 'create-note') {
-        const { success } = rateLimit({
+        const { success } = await rateLimit({
             key: `note-write:${user.id}`,
             maxRequests: 30,
             windowMs: 60_000,
@@ -110,8 +110,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 The pieces:
 
-- `rateLimit` (`~/lib/rate-limit.server`) is an in-memory sliding window,
-  keyed per user per operation
+- `rateLimit` (`~/lib/rate-limit.server`) is a Postgres-backed sliding
+  window (shared across instances), keyed per user per operation; `await` it
 - Validation errors return `400` with `fieldErrors`; the component shows them
   through the `Field` component's `error` prop
 - `redirectWithToast` (`~/lib/toast.server`) flashes a message that
