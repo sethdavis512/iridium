@@ -9,6 +9,12 @@ export const APP_NAME = 'Iridium';
 export const APP_TAGLINE = 'Go build. Be bold.';
 
 /**
+ * Source repository behind the landing page's "View source" button. Point it
+ * at your own repo, or set it to '' to hide the button.
+ */
+export const APP_REPO_URL: string = 'https://github.com/sethdavis512/iridium';
+
+/**
  * Machine-safe identity for this copy of the template: lowercase letters,
  * digits, and hyphens, starting with a letter. `bun run setup` derives it from
  * the app name. It namespaces everything that would otherwise collide between

@@ -1,5 +1,6 @@
 import { redirect } from 'react-router';
 import type { Route } from './+types/login';
+import { AuthIllustration } from '~/components/AuthIllustration';
 import { Turnstile } from '~/components/Turnstile';
 import { enabledSocialProviders } from '~/lib/auth.server';
 import { OgMeta } from '~/lib/seo';
@@ -30,20 +31,16 @@ export default function LoginRoute({ loaderData }: Route.ComponentProps) {
                 title={`Login | ${APP_NAME}`}
                 description={`Login or sign up to access your ${APP_NAME} account.`}
             />
-            <div className="grid h-full grid-cols-2">
-                <div className="bg-muted flex flex-col items-center justify-center gap-6 p-8">
-                    <div className="bg-card border-border min-w-[500px] rounded-xl border shadow-lg">
+            <div className="grid h-full lg:grid-cols-2">
+                <div className="bg-muted flex flex-col items-center justify-center gap-6 p-4 sm:p-8">
+                    <div className="bg-card border-border w-full max-w-lg rounded-xl border shadow-lg">
                         <Turnstile
                             socialProviders={loaderData.socialProviders}
                         />
                     </div>
                 </div>
-                <div>
-                    <img
-                        src="https://res.cloudinary.com/setholito/image/upload/v1779412504/replicate-generated/abstract-1779412503954.png"
-                        alt="Login illustration"
-                        className="h-full w-full object-cover"
-                    />
+                <div className="bg-background border-border hidden border-l lg:block">
+                    <AuthIllustration className="block size-full" />
                 </div>
             </div>
         </>

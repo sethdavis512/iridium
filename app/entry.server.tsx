@@ -55,7 +55,7 @@ function setSecurityHeaders(headers: Headers, nonce: string) {
             "base-uri 'self'",
             "frame-ancestors 'none'",
             "form-action 'self'",
-            "img-src 'self' data: blob: https://res.cloudinary.com",
+            "img-src 'self' data: blob:",
             "font-src 'self' https://fonts.gstatic.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             `script-src 'self' 'nonce-${nonce}'`,

@@ -95,6 +95,31 @@ test.describe('logged out', () => {
         await snap(page, testInfo, 'login');
         await context.close();
     });
+
+    test('login, dark', async ({ browser }, testInfo) => {
+        const context = await browser.newContext({
+            baseURL: projectBaseURL(testInfo),
+        });
+        await setTheme(context, 'dark');
+        const page = await context.newPage();
+        await page.goto('/login');
+        await settle(page);
+        await snap(page, testInfo, 'login-dark');
+        await context.close();
+    });
+
+    test('login, mobile', async ({ browser }, testInfo) => {
+        const context = await browser.newContext({
+            baseURL: projectBaseURL(testInfo),
+            viewport: MOBILE_VIEWPORT,
+        });
+        await setTheme(context, 'light');
+        const page = await context.newPage();
+        await page.goto('/login');
+        await settle(page);
+        await snap(page, testInfo, 'login-mobile');
+        await context.close();
+    });
 });
 
 test.describe('dashboard', () => {
