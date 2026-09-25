@@ -147,8 +147,8 @@ jobs:
             - uses: oven-sh/setup-bun@v2
             - name: Deploy to Railway
               if: ${{ env.RAILWAY_TOKEN != '' }}
-              # `railway up` builds the Dockerfile and runs the startCommand from
-              # railway.json (npm run start:migrate), so migrations apply on boot.
+              # `railway up` builds the Dockerfile; migrations then run once as
+              # the pre-deploy command from .railway/railway.ts, not on boot.
               # Use a project-scoped token; set RAILWAY_SERVICE if the project has
               # more than one service.
               run: bunx @railway/cli up --ci ${RAILWAY_SERVICE:+--service "$RAILWAY_SERVICE"}

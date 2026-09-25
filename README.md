@@ -267,8 +267,12 @@ docker build -t iridium .
 docker run -p 3000:3000 iridium
 ```
 
-The container's start command is `npm run start:migrate`, which applies pending
-Prisma migrations (`migrate deploy`) before serving, so deploys self-migrate.
+The image's default command applies pending Prisma migrations
+(`prisma migrate deploy`, a no-op when current) before serving, so plain Docker
+hosts self-migrate on boot. Railway replaces that command: the start command in
+`.railway/railway.ts` only serves, and migrations run once per deploy as its
+pre-deploy command, so a failed migration fails that deploy while the current
+release keeps serving.
 
 ### Railway
 
