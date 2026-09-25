@@ -138,13 +138,14 @@ const isProduction = process.env.NODE_ENV === 'production';
  * (and surface it in the dev banner) instead of crashing. Production never uses
  * these — it fails fast on misconfiguration.
  *
- * The database URLs mirror the docker-compose.dev.yml defaults, so a fresh
- * clone + `bun run docker:up` + `bun run dev` connects with zero configuration.
+ * The database URLs mirror docker-compose.dev.yml, so a fresh clone +
+ * `bun run docker:up` + `bun run dev` connects with zero configuration. Like
+ * Compose, they honor POSTGRES_PORT / VOLTAGENT_POSTGRES_PORT (the host ports
+ * `bun run setup` picks when another project holds 5432/5433).
  */
 const DEV_FALLBACKS: Record<string, string> = {
-    DATABASE_URL: `postgresql://postgres:postgres@localhost:5432/${LOCAL_DATABASE_NAME}`,
-    VOLTAGENT_DATABASE_URL:
-        'postgresql://postgres:postgres@localhost:5433/voltagent',
+    DATABASE_URL: `postgresql://postgres:postgres@localhost:${process.env.POSTGRES_PORT || 5432}/${LOCAL_DATABASE_NAME}`,
+    VOLTAGENT_DATABASE_URL: `postgresql://postgres:postgres@localhost:${process.env.VOLTAGENT_POSTGRES_PORT || 5433}/voltagent`,
     BETTER_AUTH_SECRET: 'dev-only-placeholder-secret-change-me-please',
     BETTER_AUTH_BASE_URL: 'http://localhost:5173',
 };

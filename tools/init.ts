@@ -8,10 +8,12 @@
  * Gives the copy its own identity: derives a slug from the app name and
  * writes it to package.json, APP_NAME/APP_SLUG in app/config.ts (cookie
  * names and demo emails follow the slug), the Docker Compose project and
- * database name, and the local database URLs. Then writes .env from
- * .env.example with a generated BETTER_AUTH_SECRET, starts the Docker
- * databases, applies migrations, seeds demo users, and prints what is left
- * to rebrand by hand.
+ * database name, and the local database URLs. When another project already
+ * holds the database host ports (5432/5433), it picks a free pair (asking
+ * first, automatic with --non-interactive). Then writes .env from
+ * .env.example with a generated BETTER_AUTH_SECRET and those ports, starts
+ * the Docker databases, applies migrations, seeds demo users, and prints
+ * what is left to rebrand by hand.
  */
 import { $, file, sleep, write } from 'bun';
 import { randomBytes } from 'node:crypto';
@@ -19,6 +21,7 @@ import { existsSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { confirm, input, password } from '@inquirer/prompts';
+import { parse } from 'dotenv';
 import { APP_NAME, APP_SLUG } from '../app/config';
 import {
     isTemplateRemote,
@@ -31,6 +34,14 @@ import {
     toDisplayName,
     toSlug,
 } from './identity';
+import {
+    configuredDevPorts,
+    findFreeDevPorts,
+    isPortFree,
+    parsePort,
+    setEnvDevPorts,
+    voltagentDatabaseUrl,
+} from './ports';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -146,7 +157,58 @@ if (slug !== APP_SLUG) {
     }
 }
 
-// 2. Write .env from .env.example
+// 2. Database host ports. Every copy defaults to 5432/5433, so another
+// project's databases (the original Iridium, another copy, a native Postgres)
+// may hold them. This project's own running containers don't count, so a
+// re-run keeps its ports.
+async function publishedPort(service: string): Promise<number | undefined> {
+    const result =
+        await $`docker compose -f docker-compose.dev.yml port ${service} 5432`
+            .cwd(root)
+            .quiet()
+            .nothrow();
+    if (result.exitCode !== 0) return undefined;
+    return parsePort(result.stdout.toString().trim().split(':').pop());
+}
+
+const currentPorts = configuredDevPorts(process.env);
+const taken: number[] = [];
+for (const [service, port] of [
+    ['postgres', currentPorts.app],
+    ['postgres-voltagent', currentPorts.voltagent],
+] as const) {
+    if (!(await isPortFree(port)) && (await publishedPort(service)) !== port) {
+        taken.push(port);
+    }
+}
+
+let ports = currentPorts;
+if (taken.length > 0) {
+    const inUse =
+        taken.length > 1
+            ? `Ports ${taken.join(' and ')} are already in use`
+            : `Port ${taken[0]} is already in use`;
+    const free = await findFreeDevPorts(isPortFree);
+    const move =
+        free !== undefined &&
+        (nonInteractive ||
+            (await confirm({
+                message: `${inUse} (another project's databases?). Use ${free.app}/${free.voltagent} for this copy instead?`,
+                default: true,
+            })));
+    if (move) {
+        ports = free;
+        step(
+            `${inUse}; this copy's databases will use ${ports.app}/${ports.voltagent}`,
+        );
+    } else {
+        console.warn(
+            `  ! ${inUse}. Stop the other project's databases, or set POSTGRES_PORT / VOLTAGENT_POSTGRES_PORT and the matching URLs in .env.`,
+        );
+    }
+}
+
+// 3. Write .env from .env.example
 const envPath = join(root, '.env');
 const envExamplePath = join(root, '.env.example');
 
@@ -165,11 +227,20 @@ if (existsSync(envPath)) {
                 source,
                 previousDatabaseName,
                 databaseName,
+                currentPorts.app,
             ),
         );
         if (repointed) {
             console.log(
                 `  Pointed its local DATABASE_URL at "${databaseName}".`,
+            );
+        }
+        if (ports !== currentPorts) {
+            await rewrite('.env', (source) =>
+                setEnvDevPorts(source, currentPorts, ports),
+            );
+            console.log(
+                `  Moved its database ports and local URLs to ${ports.app}/${ports.voltagent}.`,
             );
         }
     }
@@ -189,9 +260,10 @@ if (writeEnv) {
           });
 
     const values: Record<string, string> = {
-        DATABASE_URL: localDatabaseUrl(databaseName),
-        VOLTAGENT_DATABASE_URL:
-            'postgresql://postgres:postgres@localhost:5433/voltagent',
+        DATABASE_URL: localDatabaseUrl(databaseName, ports.app),
+        VOLTAGENT_DATABASE_URL: voltagentDatabaseUrl(ports.voltagent),
+        POSTGRES_PORT: String(ports.app),
+        VOLTAGENT_POSTGRES_PORT: String(ports.voltagent),
         BETTER_AUTH_SECRET: randomBytes(32).toString('base64'),
         BETTER_AUTH_BASE_URL: 'http://localhost:5173',
         ANTHROPIC_API_KEY: anthropicKey || 'sk-ant-REPLACE-ME',
@@ -220,14 +292,27 @@ if (writeEnv) {
     }
 }
 
-// 3. Docker databases
+// Bun loaded the previous .env into process.env at startup, and inherited
+// values beat the file for Compose (POSTGRES_PORT) and Prisma (DATABASE_URL),
+// so hand the commands below what .env says now.
+const finalEnv = parse(await file(envPath).text());
+for (const key of [
+    'DATABASE_URL',
+    'VOLTAGENT_DATABASE_URL',
+    'POSTGRES_PORT',
+    'VOLTAGENT_POSTGRES_PORT',
+]) {
+    if (finalEnv[key] !== undefined) process.env[key] = finalEnv[key];
+}
+
+// 4. Docker databases
 step('Starting Postgres containers');
 const up = await $`docker compose -f docker-compose.dev.yml up -d`
     .cwd(root)
     .nothrow();
 if (up.exitCode !== 0) {
     console.error(
-        '✗ docker compose up failed. If another project (the original Iridium, or another copy) holds ports 5432/5433, stop it first: docker compose -p <its project name> stop',
+        `✗ docker compose up failed. If another project holds port ${ports.app} or ${ports.voltagent}, stop it (docker compose -p <its project name> stop) or run setup again to pick free ports.`,
     );
     process.exit(1);
 }
@@ -256,7 +341,7 @@ for (const service of services) {
     console.log(`  ${service} ready`);
 }
 
-// 4. Migrate + generate + seed
+// 5. Migrate + generate + seed
 step('Applying migrations');
 await $`bunx --bun prisma migrate deploy`.cwd(root);
 

@@ -53,12 +53,16 @@ bun run dev
 the slug for the package name, the Docker Compose project, the local database
 (`my_app`), the cookie names, and the demo users' emails, so a copy never
 shares containers, data, or sessions with another copy on the same machine.
-Every copy still uses ports 5432 and 5433, so stop one project's databases
-before starting another's. When it finishes, it lists what is left to rebrand
-by hand (favicon, landing copy, README).
+The databases publish on host ports 5432 and 5433 by default. When another
+project (the original Iridium, another copy, or a native Postgres) already
+holds either one, setup offers the next free pair (5442/5443, 5452/5453, ...)
+and writes it to `.env` as `POSTGRES_PORT` and `VOLTAGENT_POSTGRES_PORT`, with
+the matching database URLs, so copies can run side by side. When it finishes,
+it lists what is left to rebrand by hand (favicon, landing copy, README).
 
 It also takes `--non-interactive` (and `--name "<App Name>"`) for scripted
-use. Prefer manual control? The steps below do the same thing by hand. To
+use; it then takes the free ports without asking. To pick them yourself,
+export `POSTGRES_PORT` and `VOLTAGENT_POSTGRES_PORT` before running it. Prefer manual control? The steps below do the same thing by hand. To
 stand up production on Railway, see [Railway](#railway).
 
 ### Installation
@@ -74,6 +78,9 @@ Copy `.env.example` to `.env` and fill in:
 ```
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/iridium"
 VOLTAGENT_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/voltagent"
+# Host ports for docker-compose.dev.yml; keep the URLs above on the same ports
+POSTGRES_PORT="5432"
+VOLTAGENT_POSTGRES_PORT="5433"
 BETTER_AUTH_SECRET="<openssl rand -base64 32>"
 BETTER_AUTH_BASE_URL="http://localhost:5173"
 ANTHROPIC_API_KEY="sk-ant-..."
@@ -103,6 +110,11 @@ The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
 | `voltagent` | 5433 | `VOLTAGENT_DATABASE_URL` | VoltAgent memory and state       |
 
 VoltAgent creates its own tables automatically on first connection -- no migration needed.
+
+The ports are defaults. Compose publishes on `POSTGRES_PORT` and
+`VOLTAGENT_POSTGRES_PORT` when `.env` sets them (as `bun run setup` does when
+5432/5433 are taken), and with the database URLs unset, `prisma.config.ts` and
+the dev env fallbacks follow the same two variables.
 
 | Command               | Purpose                            |
 | --------------------- | ---------------------------------- |
@@ -272,7 +284,8 @@ export const agent = new Agent({
 ## Troubleshooting
 
 - Chat/tool-calling duplicate provider item IDs (`fc_*`): see [docs/chat-tool-calling.md](docs/chat-tool-calling.md)
-- `ECONNREFUSED 127.0.0.1:5433` on `bun run dev`: the VoltAgent Postgres container isn't running. Make sure Docker Desktop is running (`open -a Docker`), then `bun run docker:up` before `bun run dev`. Port 5433 is the VoltAgent database; 5432 is the Prisma database.
+- `ECONNREFUSED 127.0.0.1:5433` on `bun run dev`: the VoltAgent Postgres container isn't running. Make sure Docker Desktop is running (`open -a Docker`), then `bun run docker:up` before `bun run dev`. Port 5433 (`VOLTAGENT_POSTGRES_PORT`) is the VoltAgent database; 5432 (`POSTGRES_PORT`) is the Prisma database.
+- `port is already allocated` on `bun run docker:up`: another project's databases hold the ports. Stop them, or run `bun run setup` again to move this copy to a free pair (or set `POSTGRES_PORT`/`VOLTAGENT_POSTGRES_PORT` and the matching URLs in `.env` by hand).
 
 ## Building for Production
 
