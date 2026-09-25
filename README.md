@@ -16,25 +16,26 @@ A full-stack starter kit for shipping AI-powered products. Clone the repo, confi
 - **UX patterns** — Light/dark/system theme switching (cookie-based, no flash), flash toast notifications, empty states, reusable form components, offset pagination
 - **Component library** — [COSS UI](https://coss.com/ui) (Base UI primitives styled with Tailwind v4), installed as copy-owned source in `app/components/ui/` via the shadcn CLI: `bunx shadcn@latest add @coss/<name>`
 - **Production patterns** — Soft deletes, Zod-validated env, structured logging, rate limiting, SEO (robots/sitemap/OG tags), husky + lint-staged pre-commit hooks
-- **Type-safe end to end** — Prisma generates types from the schema, Zod validates runtime data, React Router 7 types routes and loaders, CVA ensures type-safe component variants
+- **Type-safe end to end** — Prisma generates types from the schema, Zod validates runtime data, React Router 8 types routes and loaders, CVA ensures type-safe component variants
 
 ## Tech Stack
 
 | Layer      | Technology                                   |
 | ---------- | -------------------------------------------- |
-| Framework  | React Router v7 (SSR, config-based routing)  |
+| Framework  | React Router v8 (SSR, config-based routing)  |
 | UI         | React 19, Tailwind CSS v4, COSS UI (Base UI) |
 | Database   | PostgreSQL via Prisma ORM                    |
 | Auth       | Better Auth                                  |
 | AI         | VoltAgent, Vercel AI SDK, Anthropic Claude   |
 | Validation | Zod, React Hook Form                         |
-| Runtime    | Bun (dev), Node 20 Alpine (production)       |
+| Runtime    | Bun (dev), Node 24 Alpine (production)       |
 
 ## Getting Started
 
 ### Prerequisites
 
 - [Bun](https://bun.sh/) installed
+- [Node.js](https://nodejs.org/) 22.22 or newer (React Router 8 requires it; production runs Node 24)
 - [Docker](https://docs.docker.com/get-docker/) installed (for local PostgreSQL)
 - Anthropic API key
 

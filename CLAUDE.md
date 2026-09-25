@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Iridium is a full-stack AI chat application built with React Router v7 (SSR), Better Auth, Prisma/PostgreSQL, and Vercel AI SDK with VoltAgent.
+Iridium is a full-stack AI chat application built with React Router v8 (SSR), Better Auth, Prisma/PostgreSQL, and Vercel AI SDK with VoltAgent.
 
 ## Commands
 
@@ -70,13 +70,13 @@ Environment variables are validated at startup by `app/lib/env.server.ts` -- mis
 
 ## Tech Stack
 
-- **Framework**: React Router v7 with SSR and `v8_middleware` future flag
+- **Framework**: React Router v8 with SSR; middleware is always on (the v7 `future.v8_middleware` flag is gone and RR8 refuses to boot if it is set)
 - **Auth**: Better Auth with Prisma adapter, admin plugin (roles: USER < EDITOR < ADMIN)
 - **Database**: PostgreSQL via Prisma ORM (schema at `prisma/schema.prisma`, generated client at `app/generated/prisma/`)
 - **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`) + VoltAgent. Per-thread model selection against the allowlist in `app/lib/ai-models.ts` (Haiku 4.5 default)
 - **Email**: Resend + react-email behind `app/lib/email.server.ts` (console fallback without `RESEND_API_KEY`)
 - **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives, copy-owned in `app/components/ui/` via the shadcn CLI and the `@coss` registry — `bunx shadcn@latest add @coss/<name>`, config in `components.json`). Installed ui/ files use `cn()` from `app/lib/utils.ts`; app-authored components use CVA from `cva.config`. **Gotcha:** after adding a ui primitive, add any new client dep (including each `@base-ui/react/<subpath>` import) to `optimizeDeps.include` in `vite.config.ts` — late Vite dep discovery re-optimizes mid-session and splits React across module graphs, crashing hydration ("Invalid hook call") in dev and E2E
-- **Runtime**: Bun (dev), Node 20 Alpine (Docker/prod)
+- **Runtime**: Bun (dev), Node 24 Alpine (Docker/prod). React Router 8 needs Node 22.22+ locally and in CI (`actions/setup-node` pins 24)
 - **Validation**: Zod + React Hook Form
 - **Icons**: lucide-react
 
@@ -141,7 +141,7 @@ In-memory sliding window in `app/lib/rate-limit.server.ts`. Used for chat (20/mi
 
 ### Deployment
 
-Production runs the multi-stage `Dockerfile` (Node 20 Alpine runtime). The container CMD is `npm run start:migrate`, which applies pending Prisma migrations (`migrate deploy` — a no-op when current) before serving, so deploys self-migrate. `railway.json` configures the Railway build (Dockerfile) and start command, with `/healthcheck` as the health probe. CI (`.github/workflows/ci.yml`) has a `deploy` job that runs only on pushes to `main` after e2e passes; it deploys via the Railway CLI and no-ops unless a `RAILWAY_TOKEN` repo secret is set (set `RAILWAY_SERVICE` repo variable if the project has multiple services).
+Production runs the multi-stage `Dockerfile` (Node 24 Alpine runtime). The container CMD is `npm run start:migrate`, which applies pending Prisma migrations (`migrate deploy` — a no-op when current) before serving, so deploys self-migrate. `railway.json` configures the Railway build (Dockerfile) and start command, with `/healthcheck` as the health probe. CI (`.github/workflows/ci.yml`) has a `deploy` job that runs only on pushes to `main` after e2e passes; it deploys via the Railway CLI and no-ops unless a `RAILWAY_TOKEN` repo secret is set (set `RAILWAY_SERVICE` repo variable if the project has multiple services).
 
 ### Background Jobs
 

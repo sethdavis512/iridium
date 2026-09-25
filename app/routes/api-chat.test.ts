@@ -153,8 +153,7 @@ describe('/api/chat action', () => {
         });
 
         let capturedOnFinish:
-            | ((args: { messages: unknown[] }) => Promise<void>)
-            | null = null;
+            ((args: { messages: unknown[] }) => Promise<void>) | null = null;
         streamText.mockResolvedValue({
             toUIMessageStreamResponse: (opts: {
                 onFinish: (args: { messages: unknown[] }) => Promise<void>;
@@ -197,8 +196,7 @@ describe('/api/chat action', () => {
         saveChat.mockRejectedValue(new Error('db down'));
 
         let capturedOnFinish:
-            | ((args: { messages: unknown[] }) => Promise<void>)
-            | null = null;
+            ((args: { messages: unknown[] }) => Promise<void>) | null = null;
         streamText.mockResolvedValue({
             toUIMessageStreamResponse: (opts: {
                 onFinish: (args: { messages: unknown[] }) => Promise<void>;

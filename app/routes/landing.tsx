@@ -53,7 +53,7 @@ const FEATURES = [
 ];
 
 const STACK = [
-    ['React Router v7', 'Full-stack SSR framework mode'],
+    ['React Router v8', 'Full-stack SSR framework mode'],
     ['Better Auth', 'Authentication with admin plugin'],
     ['Prisma + PostgreSQL', 'Type-safe data layer'],
     ['Vercel AI SDK + VoltAgent', 'Streaming agents with memory'],

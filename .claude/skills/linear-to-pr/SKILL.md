@@ -12,13 +12,13 @@ Take a Linear issue to an open, reviewable pull request on this repo.
 Work through every step. Skip a step only when its "when" condition does not
 apply, and say so in the final summary.
 
-- [ ]   1. Load Linear tools and fetch the issue
-- [ ]   2. Mark In Progress and create the branch
-- [ ]   3. Implement
-- [ ]   4. Validate (typecheck, unit, targeted e2e)
-- [ ]   5. Capture visual documentation (when UI changed)
-- [ ]   6. Commit, push, open the PR
-- [ ]   7. Update the Linear issue (review status + comment)
+- [ ] 1. Load Linear tools and fetch the issue
+- [ ] 2. Mark In Progress and create the branch
+- [ ] 3. Implement
+- [ ] 4. Validate (typecheck, unit, targeted e2e)
+- [ ] 5. Capture visual documentation (when UI changed)
+- [ ] 6. Commit, push, open the PR
+- [ ] 7. Update the Linear issue (review status + comment)
 
 ## 1. Fetch the issue
 

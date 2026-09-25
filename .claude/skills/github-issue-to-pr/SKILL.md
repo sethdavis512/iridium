@@ -12,12 +12,12 @@ Take a GitHub issue on this repo to an open, reviewable pull request.
 Work through every step. Skip a step only when its "when" condition does not
 apply, and say so in the final summary.
 
-- [ ]   1. Fetch the issue
-- [ ]   2. Self-assign and create the linked branch
-- [ ]   3. Implement
-- [ ]   4. Validate (typecheck, unit, targeted e2e)
-- [ ]   5. Capture visual documentation (when UI changed)
-- [ ]   6. Commit, push, open the PR
+- [ ] 1. Fetch the issue
+- [ ] 2. Self-assign and create the linked branch
+- [ ] 3. Implement
+- [ ] 4. Validate (typecheck, unit, targeted e2e)
+- [ ] 5. Capture visual documentation (when UI changed)
+- [ ] 6. Commit, push, open the PR
 
 ## 1. Fetch the issue
 

@@ -10,13 +10,13 @@ inputs, do things out of order. File only what you can reproduce.
 
 ## Workflow checklist
 
-- [ ]   1. Boot the QA environment
-- [ ]   2. Pick charter(s)
-- [ ]   3. Explore within budget
-- [ ]   4. Reproduce every finding twice
-- [ ]   5. Triage and dedupe
-- [ ]   6. File issues
-- [ ]   7. Clean up
+- [ ] 1. Boot the QA environment
+- [ ] 2. Pick charter(s)
+- [ ] 3. Explore within budget
+- [ ] 4. Reproduce every finding twice
+- [ ] 5. Triage and dedupe
+- [ ] 6. File issues
+- [ ] 7. Clean up
 
 ## 1. Environment
 
