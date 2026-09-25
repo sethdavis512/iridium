@@ -1,16 +1,17 @@
-FROM oven/bun:1-alpine AS development-dependencies-env
+# Keep the oven/bun tags in sync with "packageManager" in package.json.
+FROM oven/bun:1.4.2-alpine AS development-dependencies-env
 # Dependency stages copy only the manifest and lockfile, so their install
 # layers stay cached until dependencies change. Source enters in build-env.
 COPY ./package.json bun.lock /app/
 WORKDIR /app
 RUN bun install --frozen-lockfile
 
-FROM oven/bun:1-alpine AS production-dependencies-env
+FROM oven/bun:1.4.2-alpine AS production-dependencies-env
 COPY ./package.json bun.lock /app/
 WORKDIR /app
 RUN bun install --frozen-lockfile --production
 
-FROM oven/bun:1-alpine AS build-env
+FROM oven/bun:1.4.2-alpine AS build-env
 # node_modules before the source, so a source-only change reuses this layer.
 COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 COPY . /app/
