@@ -7,6 +7,9 @@
 # inside a dedicated repository or git worktree where any file modification or
 # shell command the agent decides to issue would be acceptable. Do NOT run in
 # $HOME or any tree containing unrelated work.
+#
+# By default Ralph only commits locally. Pushing the branch (--push) and
+# opening a pull request (--pr) are opt-in.
 
 set -euo pipefail
 
@@ -17,8 +20,8 @@ DEFAULT_STUCK_LIMIT=2
 MAX_ITERATIONS=$DEFAULT_MAX_ITERATIONS
 TIMEOUT="$DEFAULT_TIMEOUT"
 STUCK_LIMIT=$DEFAULT_STUCK_LIMIT
-PUSH_ON_COMPLETE=1
-OPEN_PR=1
+PUSH_ON_COMPLETE=0
+OPEN_PR=0
 
 usage() {
   cat <<EOF
@@ -34,13 +37,16 @@ Options:
                         (default: $DEFAULT_TIMEOUT, e.g. 45m, 1h, 90s)
   --stuck-limit <n>     Consecutive no-op iterations (no new commit, no status
                         signal) tolerated before aborting (default: $DEFAULT_STUCK_LIMIT)
-  --no-push             Do not push the branch when the loop completes
-  --no-pr               Push but do not open a pull request
+  --push                Push the branch to origin when the loop completes
+                        (default: off, commits stay local)
+  --pr                  Push the branch and open a pull request when the loop
+                        completes (implies --push; default: off)
+  --no-push, --no-pr    Accepted for compatibility; not pushing is the default
   -h, --help            Show this help
 
 Completion protocol:
   The agent signals end-of-run by writing .ralph-status.json next to ralph.sh:
-    {"status": "complete"}                      -> exit 0, push + open PR
+    {"status": "complete"}                      -> exit 0 (push/PR only with --push/--pr)
     {"status": "blocked", "reason": "<text>"}   -> exit 2, no push
 
 Exit codes:
@@ -71,6 +77,15 @@ while [[ $# -gt 0 ]]; do
       [[ "$2" =~ ^[0-9]+$ ]] || { echo "--stuck-limit must be an integer" >&2; exit 64; }
       STUCK_LIMIT="$2"
       shift 2
+      ;;
+    --push)
+      PUSH_ON_COMPLETE=1
+      shift
+      ;;
+    --pr)
+      PUSH_ON_COMPLETE=1
+      OPEN_PR=1
+      shift
       ;;
     --no-push)
       PUSH_ON_COMPLETE=0
@@ -198,7 +213,7 @@ finalize_complete() {
   branch=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
 
   if [ "$PUSH_ON_COMPLETE" -ne 1 ]; then
-    echo "Skipping push (--no-push). Branch $branch is complete locally."
+    echo "Not pushing (pass --push or --pr to push). Branch $branch is complete locally."
     return 0
   fi
 
@@ -209,7 +224,7 @@ finalize_complete() {
   fi
 
   if [ "$OPEN_PR" -ne 1 ]; then
-    echo "Skipping PR (--no-pr). Branch pushed."
+    echo "Not opening a PR (pass --pr to open one). Branch pushed."
     return 0
   fi
 

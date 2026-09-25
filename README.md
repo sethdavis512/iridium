@@ -330,6 +330,38 @@ Google Cloud Run, …).
 | `/robots.txt`      | Robots policy                                  |
 | `/sitemap.xml`     | Sitemap of public routes                       |
 
+## Optional Agent Tooling
+
+The repo ships configuration for AI coding agents. None of it is needed to
+build, run, test, or deploy the app, so delete whatever you don't use.
+
+- **Claude Code agents and skills** (`CLAUDE.md`, `.claude/agents/`,
+  `.claude/skills/`): `CLAUDE.md` is the agent guide to this codebase. The
+  agents are specialists (Tailwind, accessibility, Prisma, security, and
+  more); the project skills cover forms, Railway provisioning, GitHub issue to
+  PR, and QA. Third-party skills are vendored in `.agents/skills/`, symlinked
+  into `.claude/skills/`, and pinned in `skills-lock.json`.
+- **GitHub Copilot** (`.github/agents/`, `.github/prompts/`,
+  `.github/copilot-instructions.md`): Copilot versions of the same agents,
+  plus Spec Kit prompts.
+- **Spec Kit** (`.specify/`, `.claude/skills/speckit-*`,
+  `.github/agents/speckit.*`): the [Spec Kit](https://github.com/github/spec-kit)
+  spec-driven workflow (`/speckit-specify`, `/speckit-plan`, `/speckit-tasks`,
+  `/speckit-implement`), governed by `.specify/memory/constitution.md`.
+- **Ralph** (`scripts/ralph/`, plus the `prd` and `ralph` skills): an
+  autonomous loop that runs Claude Code once per user story in
+  `scripts/ralph/prd.json` and commits each one. It runs
+  `claude --dangerously-skip-permissions`, so use it only in a dedicated clone
+  or worktree. Commits stay local unless you pass `--push` or `--pr`. Run
+  state (`prd.json`, `progress.txt`, `archive/`) is gitignored.
+- **Linear** (`linear-triage` and `linear-to-pr` skills): triage backlog
+  issues against the code and implement them as PRs. `linear-triage` reads the
+  Linear team and project from the `## Linear` section of `CLAUDE.md`; point it
+  at your own project or delete the section.
+
+Personal Claude Code state (`.claude/settings.local.json`, `.claude/projects/`,
+`.claude/worktrees/`) is gitignored.
+
 ## Docs
 
 - [Adding a feature](docs/adding-a-feature.md) — the route → action → model → test walkthrough, using Notes as the worked example
