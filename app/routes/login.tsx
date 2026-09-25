@@ -1,4 +1,5 @@
 import type { Route } from './+types/login';
+import { AuthIllustration } from '~/components/AuthIllustration';
 import { Turnstile } from '~/components/Turnstile';
 import { enabledSocialProviders } from '~/lib/auth.server';
 import { OgMeta } from '~/lib/seo';
@@ -30,12 +31,8 @@ export default function LoginRoute({ loaderData }: Route.ComponentProps) {
                         />
                     </div>
                 </div>
-                <div>
-                    <img
-                        src="https://res.cloudinary.com/setholito/image/upload/v1779412504/replicate-generated/abstract-1779412503954.png"
-                        alt="Login illustration"
-                        className="h-full w-full object-cover"
-                    />
+                <div className="bg-background border-border border-l">
+                    <AuthIllustration className="block size-full" />
                 </div>
             </div>
         </>
