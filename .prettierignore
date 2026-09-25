@@ -1,0 +1,7 @@
+# Prettier also reads .gitignore, so only list extra paths here.
+
+# Agent tooling that isn't ours to format: vendored skills (hashes pinned in
+# skills-lock.json), spec-kit scaffolding, and nested git worktrees.
+.agents/
+.specify/
+.claude/worktrees/

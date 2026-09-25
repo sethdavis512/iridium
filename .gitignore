@@ -25,3 +25,6 @@ app/generated/prisma
 /scripts/ralph/archive/
 /scripts/ralph/.last-branch
 /scripts/ralph/.ralph-status.json
+
+# Lint cache (Prettier's cache lives in node_modules/.cache)
+.eslintcache
