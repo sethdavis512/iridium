@@ -214,7 +214,7 @@ Auth is explicit per test: the `authedPage` fixture in `tests/fixtures.ts` signs
 
 ### Context & Shared Styles
 
-- `app/context.ts` — `userContext` via React Router's `createContext<SessionUser | null>`
+- `app/context.ts` — `userContext` via React Router's `createContext<SessionUser | null>`, plus `requestIdContext`, set by the root `requestIdMiddleware` (`app/middleware/request-id.ts`), which reuses or mints `x-request-id`, echoes it on the response, and wraps the request in `withLogContext` so every `log.*` line carries `requestId`. `handleError` in `entry.server.tsx` logs loader/action/render errors the same way
 - `app/shared.ts` — shared className helpers (`listItemClassName`, `navLinkClassName`)
 - `app/hooks.ts` — shared hooks: `useDialogState` (controlled Base UI Dialog/AlertDialog state: `open`/`onOpenChange`/`openDialog(target?)`/`close`/`target`, with derived reopen-on-error — no setState-in-effect), `usePendingIntent`, `useIsSubmitting`
 

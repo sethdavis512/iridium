@@ -16,9 +16,13 @@ import { envWarnings, shouldShowEnvBanner } from '~/lib/env.server';
 import { Toaster } from '~/components/Toaster';
 import { ToastProvider } from '~/components/ui/toast';
 import { EnvBanner } from '~/components/EnvBanner';
+import { requestIdMiddleware } from '~/middleware/request-id';
 import type { Route } from './+types/root';
 
 import './app.css';
+
+// Root middleware runs for every route, including /api/* and /healthcheck.
+export const middleware: Route.MiddlewareFunction[] = [requestIdMiddleware];
 
 export async function loader({ request }: Route.LoaderArgs) {
     const [session, theme, { toast, headers }] = await Promise.all([

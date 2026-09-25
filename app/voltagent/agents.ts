@@ -4,6 +4,7 @@ import {
     type PostgreSQLMemoryOptions,
 } from '@voltagent/postgres';
 import { z } from 'zod';
+import './observability';
 import { renderCardTool } from './tools/cards';
 import { createNoteTool, listNotesTool, searchNotesTool } from './tools/notes';
 import { getCurrentDatetimeTool, getWeatherTool } from './tools/weather';

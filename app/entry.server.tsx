@@ -1,12 +1,18 @@
 import { PassThrough } from 'node:stream';
 
-import type { EntryContext, RouterContextProvider } from 'react-router';
+import type {
+    EntryContext,
+    HandleErrorFunction,
+    RouterContextProvider,
+} from 'react-router';
 import { createReadableStreamFromReadable } from '@react-router/node';
-import { ServerRouter } from 'react-router';
+import { isRouteErrorResponse, ServerRouter } from 'react-router';
 import { isbot } from 'isbot';
 import type { RenderToPipeableStreamOptions } from 'react-dom/server';
 import { renderToPipeableStream } from 'react-dom/server';
+import { requestIdContext } from '~/context';
 import { env } from '~/lib/env.server';
+import { log } from '~/lib/logger.server';
 import { installGracefulShutdown } from '~/lib/shutdown.server';
 
 export const streamTimeout = 5_000;
@@ -56,12 +62,60 @@ function setSecurityHeaders(headers: Headers) {
     );
 }
 
+/** Correlation fields for server error logs. The query string is left out
+ * because it can carry secrets (e.g. /reset-password?token=...). */
+function requestFields(
+    request: Request,
+    context: Readonly<RouterContextProvider> | undefined,
+) {
+    return {
+        // context is undefined only if React Router fails before creating it.
+        requestId: context?.get(requestIdContext) ?? null,
+        method: request.method,
+        path: new URL(request.url).pathname,
+    };
+}
+
+/**
+ * Errors thrown from loaders, actions, and rendering. Logged as JSON with the
+ * request id so they correlate with the request's other log lines. 4xx route
+ * errors (e.g. no matching route) are routine traffic, so they log as warnings.
+ */
+export const handleError: HandleErrorFunction = (
+    error,
+    { request, context },
+) => {
+    if (request.signal.aborted) return;
+
+    const fields = requestFields(request, context);
+
+    if (isRouteErrorResponse(error)) {
+        if (error.status < 500) {
+            log.warn('request_error_response', {
+                ...fields,
+                status: error.status,
+                statusText: error.statusText,
+            });
+            return;
+        }
+        // React Router wraps some internal errors; log the underlying one.
+        const cause = (error as { error?: unknown }).error;
+        log.exception('request_error', cause ?? error, {
+            ...fields,
+            status: error.status,
+        });
+        return;
+    }
+
+    log.exception('request_error', error, fields);
+};
+
 export default function handleRequest(
     request: Request,
     responseStatusCode: number,
     responseHeaders: Headers,
     routerContext: EntryContext,
-    _loadContext: RouterContextProvider,
+    loadContext: RouterContextProvider,
 ) {
     setSecurityHeaders(responseHeaders);
 
@@ -117,7 +171,11 @@ export default function handleRequest(
                 onError(error: unknown) {
                     responseStatusCode = 500;
                     if (shellRendered) {
-                        console.error(error);
+                        log.exception(
+                            'render_error',
+                            error,
+                            requestFields(request, loadContext),
+                        );
                     }
                 },
             },
