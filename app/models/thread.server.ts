@@ -1,5 +1,6 @@
 import { type UIMessage } from 'ai';
 
+import { log } from '~/lib/logger.server';
 import prisma from '~/lib/prisma';
 
 export function createThread(createdById: string) {
@@ -89,9 +90,34 @@ export async function saveChat({
 
     const existingIds = new Set(thread.messages.map((m) => m.id));
 
+    // Message ids come from the client. An id that already exists outside this
+    // thread must never be upserted, or a request could overwrite (and move)
+    // another thread's message.
+    const foreignIds = new Set(
+        (
+            await prisma.message.findMany({
+                where: {
+                    id: { in: messages.map((m) => m.id) },
+                    NOT: { threadId: thread.id },
+                },
+                select: { id: true },
+            })
+        ).map((m) => m.id),
+    );
+
+    if (foreignIds.size > 0) {
+        log.warn('save_chat_foreign_message_ids', {
+            threadId: thread.id,
+            userId,
+            count: foreignIds.size,
+        });
+    }
+
     // Always save the last 2 (latest exchange) plus any unsaved earlier messages.
     const messagesToSave = messages.filter(
-        (msg, i) => i >= messages.length - 2 || !existingIds.has(msg.id),
+        (msg, i) =>
+            !foreignIds.has(msg.id) &&
+            (i >= messages.length - 2 || !existingIds.has(msg.id)),
     );
 
     if (messagesToSave.length === 0) return;

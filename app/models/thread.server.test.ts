@@ -13,6 +13,7 @@ const { mockPrisma } = vi.hoisted(() => ({
         message: {
             upsert: vi.fn(),
             findFirst: vi.fn(),
+            findMany: vi.fn(),
             deleteMany: vi.fn(),
         },
         $transaction: vi.fn(),
@@ -211,6 +212,38 @@ describe('saveChat', () => {
             } as UIMessage,
         ];
     }
+
+    beforeEach(() => {
+        // No incoming id belongs to another thread unless a test says so.
+        mockPrisma.message.findMany.mockResolvedValue([]);
+    });
+
+    it('never upserts a message id that belongs to another thread', async () => {
+        mockPrisma.thread.findFirst.mockResolvedValue({
+            id: 't1',
+            createdById: 'u1',
+            messages: [],
+        });
+        // m1 is another user's message in a different thread.
+        mockPrisma.message.findMany.mockResolvedValue([{ id: 'm1' }]);
+        mockPrisma.$transaction.mockResolvedValue([]);
+        mockPrisma.message.upsert.mockImplementation((args) => args);
+
+        await saveChat({
+            messages: makeMessages(),
+            threadId: 't1',
+            userId: 'u1',
+        });
+
+        expect(mockPrisma.message.findMany).toHaveBeenCalledWith({
+            where: { id: { in: ['m1', 'm2'] }, NOT: { threadId: 't1' } },
+            select: { id: true },
+        });
+        const upsertedIds = mockPrisma.message.upsert.mock.calls.map(
+            ([args]) => args.where.id,
+        );
+        expect(upsertedIds).toEqual(['m2']);
+    });
 
     it('throws when thread does not exist', async () => {
         mockPrisma.thread.findFirst.mockResolvedValue(null);
