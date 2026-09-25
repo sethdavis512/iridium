@@ -151,6 +151,100 @@ export function updateThreadTitle(threadId: string, title: string) {
     });
 }
 
+/** The title every thread starts with, until one is generated for it. */
+const UNTITLED_TITLE = 'Untitled';
+
+const TITLE_BACKFILL_BATCH_SIZE = 100;
+
+/** Stored message content: JSON UIMessage parts, or plain text in old rows. */
+function parseMessageParts(content: string): UIMessage['parts'] {
+    try {
+        const parts = JSON.parse(content);
+        if (Array.isArray(parts)) return parts;
+    } catch {
+        // Not JSON: plain-text content.
+    }
+
+    return [{ type: 'text', text: content }];
+}
+
+/**
+ * Title non-deleted threads still called "Untitled" from their first user
+ * message, using `buildTitle` (the fallback title of failed title
+ * generation). Idempotent: only "Untitled" threads are read or written, and
+ * a thread whose first user message has no text stays untitled so its next
+ * reply titles it. With `dryRun`, returns the titles without writing them.
+ */
+export async function backfillUntitledThreadTitles({
+    buildTitle,
+    dryRun = false,
+}: {
+    buildTitle: (messages: UIMessage[]) => string;
+    dryRun?: boolean;
+}) {
+    const titled: Array<{ threadId: string; title: string }> = [];
+    let skipped = 0;
+    let afterId: string | undefined;
+
+    for (;;) {
+        // Keyset pagination by id: skipped (and, in a dry run, all) threads
+        // stay "Untitled", so an offset or re-query would loop over them.
+        const threads = await prisma.thread.findMany({
+            where: {
+                title: UNTITLED_TITLE,
+                deletedAt: null,
+                ...(afterId ? { id: { gt: afterId } } : {}),
+            },
+            select: {
+                id: true,
+                messages: {
+                    where: { role: 'USER' },
+                    orderBy: { createdAt: 'asc' },
+                    take: 1,
+                    select: { id: true, content: true },
+                },
+            },
+            orderBy: { id: 'asc' },
+            take: TITLE_BACKFILL_BATCH_SIZE,
+        });
+
+        for (const { id: threadId, messages } of threads) {
+            const [first] = messages;
+            const parts = first ? parseMessageParts(first.content) : [];
+            const hasText = parts.some(
+                (part) => part.type === 'text' && part.text.trim(),
+            );
+
+            if (!first || !hasText) {
+                skipped++;
+                continue;
+            }
+
+            const title = buildTitle([{ id: first.id, role: 'user', parts }]);
+
+            if (!dryRun) {
+                // Guarded on the title, so one generated meanwhile is kept.
+                const { count } = await prisma.thread.updateMany({
+                    where: {
+                        id: threadId,
+                        title: UNTITLED_TITLE,
+                        deletedAt: null,
+                    },
+                    data: { title },
+                });
+                if (count === 0) continue;
+            }
+
+            titled.push({ threadId, title });
+        }
+
+        if (threads.length < TITLE_BACKFILL_BATCH_SIZE) break;
+        afterId = threads[threads.length - 1].id;
+    }
+
+    return { titled, skipped };
+}
+
 export function updateThreadModel(threadId: string, model: string) {
     return prisma.thread.update({
         where: { id: threadId },

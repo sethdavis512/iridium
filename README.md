@@ -124,6 +124,13 @@ passwords are public, the seed refuses to run when `NODE_ENV=production` or
 the `DATABASE_URL` host isn't `localhost`/`127.0.0.1`. Override with
 `bun prisma/seed.ts --force` only for a throwaway database.
 
+`bun run db:backfill-titles` titles threads still called "Untitled" from their
+first user message (cut to 30 characters, the same fallback failed title
+generation stores). Run it with `--dry-run` first to print what would change;
+it then asks before writing (`--non-interactive` skips the prompt). It is
+idempotent and targets `DATABASE_URL`, so running it against production needs
+the owner's go-ahead.
+
 ### Development
 
 ```bash

@@ -34,6 +34,7 @@
         "db:seed": "bunx --bun prisma db seed",
         "db:studio": "bunx --bun prisma studio",
         "db:fresh": "bun run db:reset -- --force && bun run db:seed",
+        "db:backfill-titles": "bun tools/backfill-thread-titles.ts",
         "trigger:dev": "bunx trigger.dev@4.6.4 dev",
         "trigger:deploy": "bunx trigger.dev@4.6.4 deploy",
         "docker:up": "docker compose -f docker-compose.dev.yml up -d",

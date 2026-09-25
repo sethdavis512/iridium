@@ -8,6 +8,7 @@ const { mockPrisma } = vi.hoisted(() => ({
             findMany: vi.fn(),
             findFirst: vi.fn(),
             update: vi.fn(),
+            updateMany: vi.fn(),
             count: vi.fn(),
         },
         message: {
@@ -25,6 +26,7 @@ vi.mock('~/lib/prisma', () => ({
 }));
 
 import {
+    backfillUntitledThreadTitles,
     createThread,
     deleteThread,
     deleteTrailingAssistantMessages,
@@ -421,5 +423,134 @@ describe('saveChat', () => {
             (c) => c[0].where.id,
         );
         expect(ids).toEqual(['m1', 'm2']);
+    });
+});
+
+describe('backfillUntitledThreadTitles', () => {
+    const buildTitle = (messages: UIMessage[]) =>
+        messages[0].parts
+            .map((part) => (part.type === 'text' ? part.text : ''))
+            .join('')
+            .slice(0, 5);
+
+    function untitledThread(id: string, content?: string) {
+        return {
+            id,
+            messages:
+                content === undefined ? [] : [{ id: `${id}-m1`, content }],
+        };
+    }
+
+    it('reads only non-deleted Untitled threads with their first user message', async () => {
+        mockPrisma.thread.findMany.mockResolvedValue([]);
+
+        await backfillUntitledThreadTitles({ buildTitle });
+
+        expect(mockPrisma.thread.findMany).toHaveBeenCalledWith({
+            where: { title: 'Untitled', deletedAt: null },
+            select: {
+                id: true,
+                messages: {
+                    where: { role: 'USER' },
+                    orderBy: { createdAt: 'asc' },
+                    take: 1,
+                    select: { id: true, content: true },
+                },
+            },
+            orderBy: { id: 'asc' },
+            take: 100,
+        });
+    });
+
+    it('titles threads from the first user message, guarded on the Untitled title', async () => {
+        mockPrisma.thread.findMany.mockResolvedValue([
+            untitledThread(
+                't1',
+                JSON.stringify([{ type: 'text', text: 'Plan a trip' }]),
+            ),
+            untitledThread('t2', 'legacy plain text'),
+        ]);
+        mockPrisma.thread.updateMany.mockResolvedValue({ count: 1 });
+
+        const result = await backfillUntitledThreadTitles({ buildTitle });
+
+        expect(result).toEqual({
+            titled: [
+                { threadId: 't1', title: 'Plan ' },
+                { threadId: 't2', title: 'legac' },
+            ],
+            skipped: 0,
+        });
+        expect(mockPrisma.thread.updateMany).toHaveBeenCalledWith({
+            where: { id: 't1', title: 'Untitled', deletedAt: null },
+            data: { title: 'Plan ' },
+        });
+        expect(mockPrisma.thread.updateMany).toHaveBeenCalledTimes(2);
+    });
+
+    it('leaves threads without user text untitled', async () => {
+        mockPrisma.thread.findMany.mockResolvedValue([
+            untitledThread('t1'),
+            untitledThread(
+                't2',
+                JSON.stringify([
+                    { type: 'file', mediaType: 'image/png', url: 'x' },
+                    { type: 'text', text: '   ' },
+                ]),
+            ),
+        ]);
+
+        const result = await backfillUntitledThreadTitles({ buildTitle });
+
+        expect(result).toEqual({ titled: [], skipped: 2 });
+        expect(mockPrisma.thread.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('does not report a thread titled by someone else meanwhile', async () => {
+        mockPrisma.thread.findMany.mockResolvedValue([
+            untitledThread('t1', 'hello there'),
+        ]);
+        mockPrisma.thread.updateMany.mockResolvedValue({ count: 0 });
+
+        const result = await backfillUntitledThreadTitles({ buildTitle });
+
+        expect(result.titled).toEqual([]);
+    });
+
+    it('writes nothing in a dry run', async () => {
+        mockPrisma.thread.findMany.mockResolvedValue([
+            untitledThread('t1', 'hello there'),
+        ]);
+
+        const result = await backfillUntitledThreadTitles({
+            buildTitle,
+            dryRun: true,
+        });
+
+        expect(result.titled).toEqual([{ threadId: 't1', title: 'hello' }]);
+        expect(mockPrisma.thread.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('pages through threads by id after a full batch', async () => {
+        const fullBatch = Array.from({ length: 100 }, (_, i) =>
+            untitledThread(`t${String(i).padStart(3, '0')}`),
+        );
+        mockPrisma.thread.findMany
+            .mockResolvedValueOnce(fullBatch)
+            .mockResolvedValueOnce([untitledThread('t100', 'last one')]);
+        mockPrisma.thread.updateMany.mockResolvedValue({ count: 1 });
+
+        const result = await backfillUntitledThreadTitles({ buildTitle });
+
+        expect(mockPrisma.thread.findMany).toHaveBeenCalledTimes(2);
+        expect(mockPrisma.thread.findMany.mock.calls[1][0].where).toEqual({
+            title: 'Untitled',
+            deletedAt: null,
+            id: { gt: 't099' },
+        });
+        expect(result).toEqual({
+            titled: [{ threadId: 't100', title: 'last ' }],
+            skipped: 100,
+        });
     });
 });
