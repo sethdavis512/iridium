@@ -75,6 +75,7 @@ export default defineRailway((ctx) => {
             BETTER_AUTH_SECRET: preserve(),
             BETTER_AUTH_BASE_URL: preserve(),
             BETTER_AUTH_TRUSTED_ORIGINS: preserve(),
+            ADMIN_EMAILS: preserve(),
             ANTHROPIC_API_KEY: preserve(),
             RESEND_API_KEY: preserve(),
             EMAIL_FROM: preserve(),

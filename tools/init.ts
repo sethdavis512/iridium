@@ -252,8 +252,8 @@ console.log(`
   - Landing copy and GitHub link: app/routes/landing.tsx
   - Tagline: APP_TAGLINE in app/config.ts
   - Titles and descriptions: README.md and CLAUDE.md
-  - Demo users with a known password: prisma/seed.ts (never seed production)
+  - Demo users with a known password: prisma/seed.ts (it refuses non-local databases)
 
-  Production: bun run provision (see README.md#railway)
+  Production: bun run provision, then ADMIN_EMAILS for the first admin (README.md#railway)
   Docs: README.md and docs/adding-a-feature.md
 `);

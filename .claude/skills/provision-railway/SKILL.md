@@ -85,9 +85,16 @@ intended.
   `/callback/google`; set the client ID/secret pairs.
 - **Background jobs:** the soft-delete purge only runs on Trigger.dev. Set
   `TRIGGER_SECRET_KEY` and deploy the tasks (`bun run trigger:deploy`).
-- **First admin:** there is no production-safe bootstrap yet. Never run
-  `bun run db:seed` against production: it creates known-password demo
-  accounts, including an admin.
+- **First admin:** set `ADMIN_EMAILS` (comma-separated) to the owner's
+  address with `railway variable set ADMIN_EMAILS --stdin --service <svc>`,
+  and set `RESEND_API_KEY` so the verification email arrives. The owner signs
+  up, clicks the verification link, then signs in again: a listed address is
+  promoted to ADMIN only once verified, never at sign-up. If sign-up says the
+  address already exists, someone else registered it first: don't click any
+  verification email for it; delete that user in the database, then sign up.
+  Never run `bun run db:seed` against production: it creates known-password
+  demo accounts, including an admin, and refuses non-local databases unless
+  forced.
 
 ## Changing infrastructure later
 

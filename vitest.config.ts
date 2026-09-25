@@ -5,6 +5,10 @@ export default defineConfig({
     plugins: [tsconfigPaths()],
     test: {
         environment: 'node',
-        include: ['app/**/*.test.ts', 'tools/**/*.test.ts'],
+        include: [
+            'app/**/*.test.ts',
+            'tools/**/*.test.ts',
+            'prisma/**/*.test.ts',
+        ],
     },
 });

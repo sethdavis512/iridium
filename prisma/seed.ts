@@ -3,7 +3,25 @@ import { DEMO_EMAIL_DOMAIN } from '../app/config';
 // Importing the Better Auth instance triggers env validation and reuses the
 // app's own Prisma client, so seeding works without a running dev server.
 import { auth } from '../app/lib/auth.server';
+import { env } from '../app/lib/env.server';
 import prisma from '../app/lib/prisma';
+import { seedRefusalReason } from './seed-guard';
+
+// Demo accounts with a known password (including an ADMIN) must never land in
+// production: refuse unless the database is local, or --force is passed.
+const refusal = seedRefusalReason({
+    nodeEnv: env.NODE_ENV,
+    databaseUrl: env.DATABASE_URL,
+    force: process.argv.includes('--force'),
+});
+if (refusal) {
+    console.error(
+        `✗ Refusing to seed: ${refusal}. The seed creates demo accounts with a ` +
+            'known password, including an ADMIN. Re-run with --force only if ' +
+            'this really is a throwaway database.',
+    );
+    process.exit(1);
+}
 
 const seedUsers = [
     {

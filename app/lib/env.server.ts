@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { EnvWarning } from '~/lib/env-status';
 import { APP_NAME, LOCAL_DATABASE_NAME } from '~/config';
+import { parseAdminEmails } from '~/lib/admin-emails';
 
 const envSchema = z.object({
     DATABASE_URL: z.url({ message: 'DATABASE_URL must be a valid URL' }),
@@ -23,6 +24,22 @@ const envSchema = z.object({
                       .map((s) => s.trim())
                       .filter(Boolean)
                 : [],
+        ),
+    /**
+     * Optional first-admin bootstrap: comma-separated emails promoted to ADMIN
+     * once the address is verified (when they verify, or at their next
+     * sign-in). Unverified sign-ups are never promoted.
+     */
+    ADMIN_EMAILS: z
+        .string()
+        .optional()
+        .transform(parseAdminEmails)
+        .pipe(
+            z.array(
+                z.email({
+                    message: 'ADMIN_EMAILS must be comma-separated emails',
+                }),
+            ),
         ),
     /**
      * Optional: when unset, AI chat is disabled but the app still boots. The
