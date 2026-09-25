@@ -38,9 +38,9 @@ test.describe('Content Security Policy', () => {
         const first = await request.get('/');
         const second = await request.get('/');
 
-        const scriptSrc = first
-            .headers()
-            ['content-security-policy'].split(';')
+        const csp = first.headers()['content-security-policy'];
+        const scriptSrc = csp
+            .split(';')
             .map((d) => d.trim())
             .find((d) => d.startsWith('script-src'));
         expect(scriptSrc).toBeDefined();
