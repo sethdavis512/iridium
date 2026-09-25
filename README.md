@@ -301,9 +301,8 @@ Change infrastructure by editing `.railway/railway.ts` and running
 service or variable missing from the file is deleted, and removing `source`
 disconnects the repo.
 
-`railway.json` still configures the original Iridium deployment until it moves
-to `.railway/railway.ts`. Railway stops reading it on 2026-12-01, and new
-services ignore it already. The `deploy` job in `.github/workflows/ci.yml` is a
+There is no `railway.json`: Railway's Config as Code is deprecated (it stops being
+read on 2026-12-01), and `.railway/railway.ts` is the only Railway config. The `deploy` job in `.github/workflows/ci.yml` is a
 no-op unless a `RAILWAY_TOKEN` secret is set; provisioned projects deploy
 through Railway's GitHub integration instead.
 
