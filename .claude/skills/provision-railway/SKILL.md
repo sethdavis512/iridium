@@ -111,7 +111,7 @@ railway config apply     # interactive confirm
 - **Keep `source` in the file:** removing `source` disconnects the GitHub
   repo, and autodeploys stop.
 - **Pin existing database images:** keep the `postgresImage` /
-  `voltagentPostgresImage` pins for databases that already hold data. An
+  `memoryPostgresImage` pins for databases that already hold data. An
   unpinned `postgres()` plans a switch to `postgres:18`, which breaks a
   database created on an older major version.
 - **Destructive changes need a person:** never pass `--confirm-destructive`

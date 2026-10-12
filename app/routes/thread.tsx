@@ -17,7 +17,7 @@ import { isToolDone, isToolLoading } from '~/components/ToolPartShell';
 import { FormAlert } from '~/components/forms/FormAlert';
 import { Select } from '~/components/forms/Select';
 import { Button } from '~/components/ui/button';
-import type { CardData } from '~/voltagent/tools/cards';
+import type { CardData } from '~/mastra/tools/cards';
 import type { Route } from './+types/thread';
 import { getThreadById } from '~/models/thread.server';
 import { authMiddleware } from '~/middleware/auth';
@@ -34,7 +34,7 @@ import { ALLOWED_MODELS, DEFAULT_MODEL_ID } from '~/lib/ai-models';
 const transport = new DefaultChatTransport({
     api: '/api/chat',
     credentials: 'include',
-    // The server rebuilds context from VoltAgent memory, so a normal turn
+    // The server rebuilds context from Mastra memory, so a normal turn
     // sends only the new message and the payload no longer grows with the
     // thread. Regeneration clears that memory and replays the history, so it
     // still sends every message.
@@ -130,7 +130,7 @@ type ToolPartState = 'input-available' | 'input-streaming' | 'output-available';
 
 interface ToolPart {
     toolCallId: string;
-    toolName: string;
+    toolName?: string;
     state: ToolPartState;
 }
 
@@ -140,13 +140,28 @@ function isToolPart(part: {
     return part.type.startsWith('tool-') || part.type === 'dynamic-tool';
 }
 
+/**
+ * The tool a part belongs to. A `dynamic-tool` part carries `toolName`; a
+ * static `tool-<name>` part (what Mastra's agent stream produces) only has
+ * the name in its type.
+ */
+function toolPartName(part: ToolPart & { type: string }): string {
+    return part.toolName ?? part.type.slice('tool-'.length);
+}
+
 const NOTE_TOOLS = new Set(['create_note', 'list_notes', 'search_notes']);
-function ToolPartFallback({ part }: { part: ToolPart }) {
+function ToolPartFallback({
+    part,
+    toolName,
+}: {
+    part: ToolPart;
+    toolName: string;
+}) {
     return (
         <div className="mt-1 flex items-center gap-1 text-xs opacity-70">
             <WrenchIcon aria-hidden="true" className="h-3 w-3" />
             <span>
-                {part.toolName}
+                {toolName}
                 {isToolDone(part.state) && ' \u2713'}
                 {isToolLoading(part.state) && ' \u2026'}
             </span>
@@ -178,7 +193,7 @@ function ChatMessage({
 
     const toolParts = message.parts.filter((part) =>
         isToolPart(part),
-    ) as unknown as ToolPart[];
+    ) as unknown as (ToolPart & { type: string })[];
 
     return (
         <div>
@@ -188,6 +203,7 @@ function ChatMessage({
             >
                 {textContent && <Markdown>{textContent}</Markdown>}
                 {toolParts.map((part) => {
+                    const toolName = toolPartName(part);
                     const output =
                         part.state === 'output-available'
                             ? (
@@ -197,18 +213,18 @@ function ChatMessage({
                               ).output
                             : undefined;
 
-                    if (NOTE_TOOLS.has(part.toolName)) {
+                    if (NOTE_TOOLS.has(toolName)) {
                         return (
                             <NoteToolPart
                                 key={part.toolCallId}
-                                toolName={part.toolName}
+                                toolName={toolName}
                                 state={part.state}
                                 output={output}
                             />
                         );
                     }
 
-                    if (part.toolName === 'render_card') {
+                    if (toolName === 'render_card') {
                         return (
                             <CardToolPart
                                 key={part.toolCallId}
@@ -219,7 +235,11 @@ function ChatMessage({
                     }
 
                     return (
-                        <ToolPartFallback key={part.toolCallId} part={part} />
+                        <ToolPartFallback
+                            key={part.toolCallId}
+                            part={part}
+                            toolName={toolName}
+                        />
                     );
                 })}
                 {!textContent &&

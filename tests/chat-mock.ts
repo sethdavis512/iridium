@@ -38,9 +38,9 @@ export function textReplyChunks(text: string, messageId = 'mock-msg-1') {
 
 /**
  * Chunks that stream a tool call which resolves to `output`. The `dynamic: true`
- * flag makes the SDK assemble a `dynamic-tool` part that carries `toolName` —
- * which is what the thread view reads to pick the right tool renderer (the
- * VoltAgent backend emits dynamic tool parts too).
+ * flag makes the SDK assemble a `dynamic-tool` part that carries `toolName`;
+ * the thread view reads the name from it, or from a static `tool-<name>` part
+ * (what the Mastra backend emits), to pick the right tool renderer.
  */
 export function toolCallChunks({
     toolName,

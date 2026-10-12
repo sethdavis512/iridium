@@ -1,4 +1,4 @@
-import { createTool } from '@voltagent/core';
+import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
 const infoCard = z.object({
@@ -36,7 +36,7 @@ const cardSchema = z.discriminatedUnion('variant', [
 export type CardData = z.infer<typeof cardSchema>;
 
 export const renderCardTool = createTool({
-    name: 'render_card',
+    id: 'render_card',
     description: [
         'Render a rich visual card inline in the chat.',
         'Use this when presenting structured information that benefits from visual formatting:',
@@ -49,11 +49,10 @@ export const renderCardTool = createTool({
     // requires a tool's root input schema to be `type: "object"` -- a
     // discriminated union at the root serializes to `anyOf` with no root
     // type and is rejected.
-    parameters: z.object({ card: cardSchema }),
+    inputSchema: z.object({ card: cardSchema }),
     execute: async ({ card }) => {
         // The tool returns the structured data as-is; the React component
-        // on the client renders it. This is VoltAgent's tool-driven
-        // approach to generative UI.
+        // on the client renders it: tool-driven generative UI.
         return card;
     },
 });

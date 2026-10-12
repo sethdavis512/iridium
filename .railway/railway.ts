@@ -1,6 +1,6 @@
 /**
  * Railway Infrastructure as Code: the app service built from the root
- * Dockerfile plus its two Postgres databases (app data and VoltAgent memory).
+ * Dockerfile plus its two Postgres databases (app data and Mastra memory).
  * Per-project values (project and service names, GitHub repo, pinned database
  * images) live in ./app.json, so each copy of this template describes its
  * own Railway project.
@@ -32,8 +32,13 @@ type AppConfig = {
     repo: string;
     branch: string;
     postgresImage?: string;
-    voltagentPostgresImage?: string;
+    /** Railway service name of the Mastra memory database. */
+    memoryPostgresService?: string;
+    memoryPostgresImage?: string;
 };
+
+/** New projects name the memory database after Mastra. */
+const DEFAULT_MEMORY_POSTGRES_SERVICE = 'Mastra Postgres';
 
 const config: AppConfig = app;
 
@@ -54,7 +59,12 @@ export default defineRailway((ctx) => {
     }
 
     const db = pg('Postgres', config.postgresImage);
-    const voltagentDb = pg('VoltAgent Postgres', config.voltagentPostgresImage);
+    // The service name is per project: renaming a Railway service in a plan
+    // replaces it, so an existing project keeps whatever name it has.
+    const memoryDb = pg(
+        config.memoryPostgresService ?? DEFAULT_MEMORY_POSTGRES_SERVICE,
+        config.memoryPostgresImage,
+    );
 
     const web = service(config.service, {
         // checkSuites = Railway's "Wait for CI": deploys start only after the
@@ -76,7 +86,7 @@ export default defineRailway((ctx) => {
         deploy: { restartPolicyMaxRetries: 3 },
         env: {
             DATABASE_URL: db.env.DATABASE_URL,
-            VOLTAGENT_DATABASE_URL: voltagentDb.env.DATABASE_URL,
+            MASTRA_DATABASE_URL: memoryDb.env.DATABASE_URL,
             // SIGTERM-to-SIGKILL window for the previous deploy (default 0):
             // long enough for the longest chat stream to finish.
             RAILWAY_DEPLOYMENT_DRAINING_SECONDS: '60',
@@ -99,6 +109,6 @@ export default defineRailway((ctx) => {
     });
 
     return project(ctx.projectName, {
-        resources: [web, db, voltagentDb],
+        resources: [web, db, memoryDb],
     });
 });

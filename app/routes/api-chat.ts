@@ -1,4 +1,11 @@
-import { consumeStream, type UIMessage } from 'ai';
+import { toAISdkStream } from '@mastra/ai-sdk';
+import type { MastraDBMessage } from '@mastra/core/agent';
+import {
+    consumeStream,
+    createUIMessageStream,
+    createUIMessageStreamResponse,
+    type UIMessage,
+} from 'ai';
 import z from 'zod';
 
 import { DEFAULT_MODEL_ID } from '~/lib/ai-models';
@@ -9,13 +16,16 @@ import {
     buildFallbackTitle,
     buildTitleContext,
 } from '~/lib/thread-title.server';
+import { getChat, ResourceUnavailableError } from '~/mastra';
+import { CHAT_LIMITS } from '~/mastra/agents';
+import { userRequestContext } from '~/mastra/context';
 import { getUserFromSession } from '~/models/session.server';
 import {
     deleteTrailingAssistantMessages,
+    getThreadById,
     getThreadMeta,
     saveChat,
 } from '~/models/thread.server';
-import { getChat, ResourceUnavailableError } from '~/voltagent';
 import type { Route } from './+types/api-chat';
 
 /** Request bodies over this size are rejected (413) before being parsed. */
@@ -44,14 +54,16 @@ const chatRequestSchema = z.object({
 });
 
 /**
- * Bounds for one chat turn. The request's abort signal stops generation when
- * the client disconnects or presses Stop; these stop a stalled or runaway
+ * Bound for one chat turn. The request's abort signal stops generation when
+ * the client disconnects or presses Stop; this stops a stalled or runaway
  * turn (worst case is maxSteps 10 x maxOutputTokens 2048).
  */
-const CHAT_TIMEOUT = { totalMs: 180_000, stepMs: 90_000 };
+export const CHAT_TIMEOUT_MS = 180_000;
+
+type Memory = Awaited<ReturnType<typeof getChat>>['memory'];
 
 /** False for a reply aborted before it produced anything to show. */
-function hasContent(message: UIMessage): boolean {
+export function hasContent(message: UIMessage): boolean {
     return message.parts.some((part) =>
         part.type === 'text'
             ? part.text.trim() !== ''
@@ -89,9 +101,52 @@ async function readBodyWithLimit(
     return new TextDecoder().decode(Buffer.concat(chunks));
 }
 
-function isDuplicateItemError(error: unknown): boolean {
-    if (!(error instanceof Error)) return false;
-    return /Duplicate item found with id/i.test(error.message);
+/**
+ * Mastra memory holds the conversation context, and a thread it has never
+ * seen (one that predates it, or whose memory was cleared) is seeded from the
+ * Prisma copy, stripped to text parts, so the model keeps the history.
+ */
+async function seedMemoryFromThread(
+    memory: Memory,
+    userId: string,
+    threadId: string,
+) {
+    if (await memory.getThreadById({ threadId })) return;
+
+    const thread = await getThreadById(threadId);
+    if (!thread || thread.messages.length === 0) return;
+
+    const seeded: MastraDBMessage[] = [];
+    for (const message of thread.messages) {
+        if (message.role === 'SYSTEM') continue;
+        try {
+            const parts = (JSON.parse(message.content) as UIMessage['parts'])
+                .filter((part) => part.type === 'text')
+                .map((part) => ({ type: 'text' as const, text: part.text }));
+            if (parts.length === 0) continue;
+            seeded.push({
+                id: message.id,
+                role: message.role === 'USER' ? 'user' : 'assistant',
+                createdAt: message.createdAt,
+                threadId,
+                resourceId: userId,
+                content: { format: 2, parts },
+            });
+        } catch {
+            // Skip a malformed row rather than failing the request.
+        }
+    }
+    if (seeded.length === 0) return;
+
+    await memory.createThread({ threadId, resourceId: userId });
+    await memory.saveMessages({ messages: seeded });
+}
+
+/** Forget a thread's conversation memory; working memory is per user. */
+async function clearThreadMemory(memory: Memory, threadId: string) {
+    if (await memory.getThreadById({ threadId })) {
+        await memory.deleteThread(threadId);
+    }
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -164,8 +219,8 @@ export async function action({ request }: Route.ActionArgs) {
         return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Only send the latest user message — VoltAgent memory provides
-    // conversation context and regenerate may end with an assistant message.
+    // Only send the latest user message: Mastra memory provides conversation
+    // context and regenerate may end with an assistant message.
     const latestUserMessage = [...messages]
         .reverse()
         .find((message) => message.role === 'user');
@@ -177,7 +232,7 @@ export async function action({ request }: Route.ActionArgs) {
         );
     }
 
-    // VoltAgent memory opens on first use and can be down (it is retried with
+    // Mastra memory opens on first use and can be down (it is retried with
     // backoff). Answer 503 before touching the thread or its memory, so a
     // retry finds both as they were.
     let chat: Awaited<ReturnType<typeof getChat>>;
@@ -205,12 +260,11 @@ export async function action({ request }: Route.ActionArgs) {
     let inputMessages: UIMessage[] = [latestUserMessage];
 
     if (isRegenerate) {
-        // Drop the response being regenerated, then clear conversation memory
-        // and resend the trimmed history. Clearing first sidesteps duplicate
-        // provider-item references in memory (the self-heal below remains as
-        // a backstop); resending history restores the model's context.
+        // Drop the response being regenerated, then forget the thread's
+        // conversation memory and resend the trimmed history, which rebuilds
+        // it from what the client shows.
         await deleteTrailingAssistantMessages(threadId);
-        await memory.clearMessages(user.id, threadId);
+        await clearThreadMemory(memory, threadId);
 
         let lastUserIndex = -1;
         for (let i = messages.length - 1; i >= 0; i--) {
@@ -220,46 +274,43 @@ export async function action({ request }: Route.ActionArgs) {
             }
         }
         inputMessages = messages.slice(0, lastUserIndex + 1);
+    } else {
+        await seedMemoryFromThread(memory, user.id, threadId);
     }
 
-    // VoltAgent always supplies its system prompt as a system-role message in
-    // the messages array (it never uses the AI SDK `system` option). The system
-    // content is our own instructions, so opt out of the AI SDK's
-    // prompt-injection warning. The flag is forwarded to the underlying AI SDK
-    // call but isn't part of VoltAgent's public option type, hence the cast.
-    const streamOptions = {
-        userId: user.id,
-        conversationId: threadId,
-        // The per-thread model is read by the agent's dynamic model callback.
-        context: new Map([['model', thread.model ?? DEFAULT_MODEL_ID]]),
+    const result = await agent.stream(inputMessages, {
+        memory: { thread: threadId, resource: user.id },
+        // The per-thread model is read by the agent's dynamic model callback;
+        // tools read the user id.
+        requestContext: userRequestContext({
+            userId: user.id,
+            threadId,
+            model: thread.model ?? DEFAULT_MODEL_ID,
+        }),
         // Stop generating (and billing) when the client disconnects or
-        // presses Stop. VoltAgent links this to its own abort controller.
-        abortSignal: request.signal,
-        timeout: CHAT_TIMEOUT,
-        allowSystemInMessages: true,
-    } as Parameters<typeof agent.streamText>[1] & {
-        allowSystemInMessages: boolean;
-    };
+        // presses Stop, and when a turn runs past its budget.
+        abortSignal: AbortSignal.any([
+            request.signal,
+            AbortSignal.timeout(CHAT_TIMEOUT_MS),
+        ]),
+        maxSteps: CHAT_LIMITS.maxSteps,
+        modelSettings: { maxOutputTokens: CHAT_LIMITS.maxOutputTokens },
+    });
 
-    let result;
-    try {
-        result = await agent.streamText(inputMessages, streamOptions);
-    } catch (error) {
-        if (!isDuplicateItemError(error)) throw error;
-
-        // Self-heal corrupted/stale provider item references in conversation memory.
-        log.warn('chat_memory_self_heal', { threadId, userId: user.id });
-        await memory.clearMessages(user.id, threadId);
-
-        result = await agent.streamText(inputMessages, streamOptions);
-    }
-
-    return result.toUIMessageStreamResponse({
+    const stream = createUIMessageStream({
+        execute: ({ writer }) => {
+            writer.merge(
+                toAISdkStream(result, { from: 'agent', version: 'v6' }),
+            );
+        },
+        onError: (error) => {
+            log.exception('chat_stream_error', error, {
+                threadId,
+                userId: user.id,
+            });
+            return 'The assistant hit an error mid-response. Please try again.';
+        },
         originalMessages: messages,
-        // Drain a copy of the stream server-side so onFinish runs even when
-        // the client goes away mid-reply; the partial reply is then saved and
-        // Postgres stays in step with VoltAgent memory.
-        consumeSseStream: consumeStream,
         onFinish: async ({ messages, isAborted }) => {
             if (isAborted) {
                 log.info('chat_aborted', { threadId, userId: user.id });
@@ -297,5 +348,13 @@ export async function action({ request }: Route.ActionArgs) {
                 });
             }
         },
+    });
+
+    return createUIMessageStreamResponse({
+        stream,
+        // Drain a copy of the stream server-side so onFinish runs even when
+        // the client goes away mid-reply; the partial reply is then saved and
+        // Postgres stays in step with Mastra memory.
+        consumeSseStream: consumeStream,
     });
 }

@@ -24,7 +24,7 @@ const FEATURES = [
         icon: BotIcon,
         title: 'AI chat with agent tools',
         description:
-            'Streaming chat built on the Vercel AI SDK and VoltAgent, with tool calling and persistent memory.',
+            'Streaming chat built on the Vercel AI SDK and Mastra, with tool calling and persistent memory.',
     },
     {
         icon: NotebookPenIcon,
@@ -56,7 +56,7 @@ const STACK = [
     ['React Router v8', 'Full-stack SSR framework mode'],
     ['Better Auth', 'Authentication with admin plugin'],
     ['Prisma + PostgreSQL', 'Type-safe data layer'],
-    ['Vercel AI SDK + VoltAgent', 'Streaming agents with memory'],
+    ['Vercel AI SDK + Mastra', 'Streaming agents with memory'],
     ['Tailwind CSS v4 + COSS UI', 'Utility styling with components'],
     ['Bun', 'Fast runtime and tooling'],
 ];

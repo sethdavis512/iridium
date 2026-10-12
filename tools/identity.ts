@@ -121,7 +121,7 @@ export function setAppIdentity(
 /**
  * Point docker-compose.dev.yml at the new identity: the Compose project name
  * (which namespaces containers and volumes) and the app database name. The
- * VoltAgent database keeps its generic name; it lives in the project's own
+ * Mastra database keeps its generic name; it lives in the project's own
  * volume.
  */
 export function setComposeIdentity(

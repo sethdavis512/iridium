@@ -18,7 +18,7 @@ concurrency:
 
 env:
     DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iridium_test
-    VOLTAGENT_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/voltagent_test
+    MASTRA_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mastra_test
     BETTER_AUTH_SECRET: test-secret-do-not-use-in-production!!
     BETTER_AUTH_BASE_URL: http://localhost:5173
     ANTHROPIC_API_KEY: test-key-not-used-in-e2e
@@ -113,12 +113,12 @@ jobs:
                     --health-timeout 5s
                     --health-retries 15
 
-            voltagent:
+            mastra:
                 image: postgres:16-alpine
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: voltagent_test
+                    POSTGRES_DB: mastra_test
                 ports:
                     - 5433:5432
                 options: >-
@@ -212,12 +212,12 @@ jobs:
                     --health-timeout 5s
                     --health-retries 15
 
-            voltagent:
+            mastra:
                 image: postgres:16-alpine
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: voltagent_test
+                    POSTGRES_DB: mastra_test
                 ports:
                     - 5433:5432
                 options: >-
@@ -310,12 +310,12 @@ jobs:
                     --health-timeout 5s
                     --health-retries 15
 
-            voltagent:
+            mastra:
                 image: postgres:16-alpine
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: voltagent_test
+                    POSTGRES_DB: mastra_test
                 ports:
                     - 5433:5432
                 options: >-
@@ -340,14 +340,14 @@ jobs:
                   cache-to: type=gha,mode=max
 
             # Host networking lets the container reach the service databases
-            # at the workflow's localhost DATABASE_URL and VOLTAGENT_DATABASE_URL.
+            # at the workflow's localhost DATABASE_URL and MASTRA_DATABASE_URL.
             # The image's CMD runs `prisma migrate deploy` before serving.
             - name: Boot image and wait for /healthcheck
               run: |
                   docker run -d --name iridium --network host \
                       -e NODE_ENV=production \
                       -e DATABASE_URL \
-                      -e VOLTAGENT_DATABASE_URL \
+                      -e MASTRA_DATABASE_URL \
                       -e BETTER_AUTH_SECRET \
                       -e BETTER_AUTH_BASE_URL=http://localhost:3000 \
                       iridium:ci

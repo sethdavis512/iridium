@@ -9,8 +9,7 @@ import {
 
 const baseEnv = {
     DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/iridium',
-    VOLTAGENT_DATABASE_URL:
-        'postgresql://postgres:postgres@localhost:5433/voltagent',
+    MASTRA_DATABASE_URL: 'postgresql://postgres:postgres@localhost:5433/mastra',
     BETTER_AUTH_SECRET: 'x'.repeat(32),
     BETTER_AUTH_BASE_URL: 'https://iridium.example.com',
 };
@@ -69,16 +68,16 @@ describe('bootEnvSchema test-only flags', () => {
     });
 });
 
-describe('bootEnvSchema separate VoltAgent database', () => {
+describe('bootEnvSchema separate Mastra database', () => {
     it('fails in every environment when both URLs name one database', () => {
         for (const NODE_ENV of ['development', 'test', 'production']) {
             expect(
                 failingKeys({
                     ...baseEnv,
                     NODE_ENV,
-                    VOLTAGENT_DATABASE_URL: baseEnv.DATABASE_URL,
+                    MASTRA_DATABASE_URL: baseEnv.DATABASE_URL,
                 }),
-            ).toEqual(['VOLTAGENT_DATABASE_URL']);
+            ).toEqual(['MASTRA_DATABASE_URL']);
         }
     });
 
@@ -93,7 +92,7 @@ describe('isSameDatabase', () => {
     it('sees through loopback aliases, the default port, credentials, and params', () => {
         for (const other of [
             app,
-            'postgresql://voltagent:secret@127.0.0.1/iridium',
+            'postgresql://mastra:secret@127.0.0.1/iridium',
             'postgres://postgres:postgres@[::1]:5432/iridium?sslmode=disable',
             'postgresql://postgres:postgres@LOCALHOST:5432/iridium',
             // No database in the path: Postgres uses the user's name.
@@ -106,7 +105,7 @@ describe('isSameDatabase', () => {
     it('treats a different port, host, or database name as separate', () => {
         for (const other of [
             'postgresql://postgres:postgres@localhost:5433/iridium',
-            'postgresql://postgres:postgres@localhost:5432/voltagent',
+            'postgresql://postgres:postgres@localhost:5432/mastra',
             'postgresql://postgres:postgres@db.example.com:5432/iridium',
             'postgresql://postgres:postgres@localhost:5432/Iridium',
         ]) {
@@ -198,7 +197,7 @@ describe('database dev fallbacks', () => {
 
     async function loadEnv(ports: Record<string, string | undefined>) {
         vi.stubEnv('DATABASE_URL', undefined);
-        vi.stubEnv('VOLTAGENT_DATABASE_URL', undefined);
+        vi.stubEnv('MASTRA_DATABASE_URL', undefined);
         for (const [key, value] of Object.entries(ports)) {
             vi.stubEnv(key, value);
         }
@@ -210,26 +209,26 @@ describe('database dev fallbacks', () => {
     it('use the docker-compose.dev.yml default ports', async () => {
         const env = await loadEnv({
             POSTGRES_PORT: undefined,
-            VOLTAGENT_POSTGRES_PORT: undefined,
+            MASTRA_POSTGRES_PORT: undefined,
         });
         expect(env.DATABASE_URL).toBe(
             `postgresql://postgres:postgres@localhost:5432/${LOCAL_DATABASE_NAME}`,
         );
-        expect(env.VOLTAGENT_DATABASE_URL).toBe(
-            'postgresql://postgres:postgres@localhost:5433/voltagent',
+        expect(env.MASTRA_DATABASE_URL).toBe(
+            'postgresql://postgres:postgres@localhost:5433/mastra',
         );
     });
 
     it('honor the host ports setup picked', async () => {
         const env = await loadEnv({
             POSTGRES_PORT: '5442',
-            VOLTAGENT_POSTGRES_PORT: '5443',
+            MASTRA_POSTGRES_PORT: '5443',
         });
         expect(env.DATABASE_URL).toBe(
             `postgresql://postgres:postgres@localhost:5442/${LOCAL_DATABASE_NAME}`,
         );
-        expect(env.VOLTAGENT_DATABASE_URL).toBe(
-            'postgresql://postgres:postgres@localhost:5443/voltagent',
+        expect(env.MASTRA_DATABASE_URL).toBe(
+            'postgresql://postgres:postgres@localhost:5443/mastra',
         );
     });
 });

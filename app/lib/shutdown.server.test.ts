@@ -83,13 +83,13 @@ describe('runShutdownCleanups', () => {
             throw new Error('pool already ended');
         });
         onShutdown(async () => {
-            closed.push('voltagent');
+            closed.push('mastra');
         });
 
         await runShutdownCleanups();
         await runShutdownCleanups();
 
-        expect(closed).toEqual(['prisma', 'voltagent']);
+        expect(closed).toEqual(['prisma', 'mastra']);
         expect(exception).toHaveBeenCalledTimes(1);
         expect(exception).toHaveBeenCalledWith(
             'shutdown_cleanup_failed',

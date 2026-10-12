@@ -9,9 +9,9 @@ import type { PoolConfig } from 'pg';
 export const POOL_MAX = {
     /** Prisma on DATABASE_URL (also used by seed and Trigger.dev tasks). */
     app: 10,
-    /** VoltAgent memory adapter on VOLTAGENT_DATABASE_URL. */
-    voltagent: 5,
-    /** /healthcheck probe on VOLTAGENT_DATABASE_URL. */
+    /** Mastra memory store on MASTRA_DATABASE_URL. */
+    mastra: 5,
+    /** /healthcheck probe on MASTRA_DATABASE_URL. */
     healthcheck: 1,
 } as const;
 

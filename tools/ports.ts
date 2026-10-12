@@ -2,7 +2,7 @@
  * Host ports for the two local databases in docker-compose.dev.yml. Every
  * copy of the template defaults to 5432/5433, so `bun run setup`
  * (tools/init.ts) checks them and, when another project already holds one,
- * picks a free pair and writes POSTGRES_PORT / VOLTAGENT_POSTGRES_PORT plus
+ * picks a free pair and writes POSTGRES_PORT / MASTRA_POSTGRES_PORT plus
  * the matching database URLs into .env. Compose, prisma.config.ts, and the
  * dev fallbacks in app/lib/env.server.ts read those two vars.
  *
@@ -10,10 +10,10 @@
  */
 import { createServer } from 'node:net';
 
-export type DevPorts = { app: number; voltagent: number };
+export type DevPorts = { app: number; mastra: number };
 
 /** The template's defaults, mirrored by docker-compose.dev.yml. */
-export const DEFAULT_DEV_PORTS: DevPorts = { app: 5432, voltagent: 5433 };
+export const DEFAULT_DEV_PORTS: DevPorts = { app: 5432, mastra: 5433 };
 
 /** A TCP port from an env var, or undefined when unset or not a valid port. */
 export function parsePort(value: string | undefined): number | undefined {
@@ -28,9 +28,7 @@ export function configuredDevPorts(
 ): DevPorts {
     return {
         app: parsePort(env.POSTGRES_PORT) ?? DEFAULT_DEV_PORTS.app,
-        voltagent:
-            parsePort(env.VOLTAGENT_POSTGRES_PORT) ??
-            DEFAULT_DEV_PORTS.voltagent,
+        mastra: parsePort(env.MASTRA_POSTGRES_PORT) ?? DEFAULT_DEV_PORTS.mastra,
     };
 }
 
@@ -45,29 +43,26 @@ export async function findFreeDevPorts(
     for (let i = 1; i <= attempts; i++) {
         const candidate = {
             app: DEFAULT_DEV_PORTS.app + i * step,
-            voltagent: DEFAULT_DEV_PORTS.voltagent + i * step,
+            mastra: DEFAULT_DEV_PORTS.mastra + i * step,
         };
-        if (
-            (await isFree(candidate.app)) &&
-            (await isFree(candidate.voltagent))
-        ) {
+        if ((await isFree(candidate.app)) && (await isFree(candidate.mastra))) {
             return candidate;
         }
     }
     return undefined;
 }
 
-/** The docker-compose.dev.yml VoltAgent database URL on a given port. */
-export function voltagentDatabaseUrl(
-    port: number = DEFAULT_DEV_PORTS.voltagent,
+/** The docker-compose.dev.yml Mastra database URL on a given port. */
+export function mastraDatabaseUrl(
+    port: number = DEFAULT_DEV_PORTS.mastra,
 ): string {
-    return `postgresql://postgres:postgres@localhost:${port}/voltagent`;
+    return `postgresql://postgres:postgres@localhost:${port}/mastra`;
 }
 
 /**
  * Move an existing .env to new host ports: set POSTGRES_PORT and
- * VOLTAGENT_POSTGRES_PORT (appending them when missing) and repoint the local
- * DATABASE_URL / VOLTAGENT_DATABASE_URL that were on the old ports. URLs on
+ * MASTRA_POSTGRES_PORT (appending them when missing) and repoint the local
+ * DATABASE_URL / MASTRA_DATABASE_URL that were on the old ports. URLs on
  * other hosts or ports are left alone.
  */
 export function setEnvDevPorts(
@@ -77,11 +72,11 @@ export function setEnvDevPorts(
 ): string {
     const portKeys: Record<string, number> = {
         POSTGRES_PORT: to.app,
-        VOLTAGENT_POSTGRES_PORT: to.voltagent,
+        MASTRA_POSTGRES_PORT: to.mastra,
     };
     const urlKeys: Record<string, [number, number]> = {
         DATABASE_URL: [from.app, to.app],
-        VOLTAGENT_DATABASE_URL: [from.voltagent, to.voltagent],
+        MASTRA_DATABASE_URL: [from.mastra, to.mastra],
     };
 
     const seen = new Set<string>();
