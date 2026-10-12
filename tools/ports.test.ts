@@ -11,7 +11,7 @@ import {
     isPortFree,
     parsePort,
     setEnvDevPorts,
-    voltagentDatabaseUrl,
+    mastraDatabaseUrl,
 } from './ports';
 
 const root = join(import.meta.dirname, '..');
@@ -35,16 +35,16 @@ describe('parsePort', () => {
 
 describe('configuredDevPorts', () => {
     it('defaults to 5432/5433', () => {
-        expect(configuredDevPorts({})).toEqual({ app: 5432, voltagent: 5433 });
+        expect(configuredDevPorts({})).toEqual({ app: 5432, mastra: 5433 });
     });
 
-    it('reads POSTGRES_PORT and VOLTAGENT_POSTGRES_PORT', () => {
+    it('reads POSTGRES_PORT and MASTRA_POSTGRES_PORT', () => {
         expect(
             configuredDevPorts({
                 POSTGRES_PORT: '5442',
-                VOLTAGENT_POSTGRES_PORT: '5443',
+                MASTRA_POSTGRES_PORT: '5443',
             }),
-        ).toEqual({ app: 5442, voltagent: 5443 });
+        ).toEqual({ app: 5442, mastra: 5443 });
     });
 
     it('ignores an invalid value', () => {
@@ -61,11 +61,11 @@ describe('findFreeDevPorts', () => {
     it('shifts the defaults by 10 until both ports are free', async () => {
         expect(await findFreeDevPorts(freeExcept())).toEqual({
             app: 5442,
-            voltagent: 5443,
+            mastra: 5443,
         });
         expect(await findFreeDevPorts(freeExcept(5442, 5453))).toEqual({
             app: 5462,
-            voltagent: 5463,
+            mastra: 5463,
         });
     });
 
@@ -84,18 +84,18 @@ describe('findFreeDevPorts', () => {
 
 describe('setEnvDevPorts', () => {
     const from = DEFAULT_DEV_PORTS;
-    const to = { app: 5442, voltagent: 5443 };
+    const to = { app: 5442, mastra: 5443 };
 
     it('moves the port vars and the local URLs in .env.example', () => {
         const source = read('.env.example');
         const next = setEnvDevPorts(source, from, to);
         expect(next).toContain('POSTGRES_PORT="5442"');
-        expect(next).toContain('VOLTAGENT_POSTGRES_PORT="5443"');
+        expect(next).toContain('MASTRA_POSTGRES_PORT="5443"');
         expect(next).toContain(
             `DATABASE_URL="${localDatabaseUrl(LOCAL_DATABASE_NAME, 5442)}"`,
         );
         expect(next).toContain(
-            `VOLTAGENT_DATABASE_URL="${voltagentDatabaseUrl(5443)}"`,
+            `MASTRA_DATABASE_URL="${mastraDatabaseUrl(5443)}"`,
         );
         expect(next.split('\n').length).toBe(source.split('\n').length);
     });
@@ -110,7 +110,7 @@ describe('setEnvDevPorts', () => {
             [
                 'DATABASE_URL="postgresql://postgres:postgres@localhost:5442/app"',
                 'POSTGRES_PORT="5442"',
-                'VOLTAGENT_POSTGRES_PORT="5443"',
+                'MASTRA_POSTGRES_PORT="5443"',
                 '',
             ].join('\n'),
         );
@@ -119,7 +119,7 @@ describe('setEnvDevPorts', () => {
     it('leaves URLs on other hosts or ports alone', () => {
         const source = [
             'DATABASE_URL="postgresql://u:p@db.example.com:5432/app"',
-            'VOLTAGENT_DATABASE_URL="postgresql://u:p@localhost:6000/mem"',
+            'MASTRA_DATABASE_URL="postgresql://u:p@localhost:6000/mem"',
             'OTHER_URL="postgresql://u:p@localhost:5432/app"',
         ].join('\n');
         const next = setEnvDevPorts(source, from, to);
@@ -167,13 +167,13 @@ describe('isPortFree', () => {
 // tools/ports.ts, so these checks catch a hand edit that moves one default
 // without the others.
 describe('files that mirror the default ports', () => {
-    it('docker-compose.dev.yml publishes POSTGRES_PORT / VOLTAGENT_POSTGRES_PORT', () => {
+    it('docker-compose.dev.yml publishes POSTGRES_PORT / MASTRA_POSTGRES_PORT', () => {
         const compose = read('docker-compose.dev.yml');
         expect(compose).toContain(
             `'\${POSTGRES_PORT:-${DEFAULT_DEV_PORTS.app}}:5432'`,
         );
         expect(compose).toContain(
-            `'\${VOLTAGENT_POSTGRES_PORT:-${DEFAULT_DEV_PORTS.voltagent}}:5432'`,
+            `'\${MASTRA_POSTGRES_PORT:-${DEFAULT_DEV_PORTS.mastra}}:5432'`,
         );
     });
 
@@ -187,10 +187,10 @@ describe('files that mirror the default ports', () => {
         const example = read('.env.example');
         expect(example).toContain(`POSTGRES_PORT="${DEFAULT_DEV_PORTS.app}"`);
         expect(example).toContain(
-            `VOLTAGENT_POSTGRES_PORT="${DEFAULT_DEV_PORTS.voltagent}"`,
+            `MASTRA_POSTGRES_PORT="${DEFAULT_DEV_PORTS.mastra}"`,
         );
         expect(example).toContain(
-            `VOLTAGENT_DATABASE_URL="${voltagentDatabaseUrl()}"`,
+            `MASTRA_DATABASE_URL="${mastraDatabaseUrl()}"`,
         );
     });
 });

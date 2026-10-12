@@ -8,11 +8,11 @@ A full-stack starter kit for shipping AI-powered products. Clone the repo, confi
 - **Account management** — A `/settings` page with profile editing, password change (revokes other sessions), and account deletion behind a password confirm
 - **Email** — Resend + react-email templates behind a pluggable `sendEmail()`; without an API key, emails render to the console so local dev needs no provider
 - **Role-based access control** — USER, EDITOR, and ADMIN roles baked into the schema and session helpers, with an `/admin` panel for role changes, ban/unban, and user impersonation
-- **AI chat** — Conversational interface powered by VoltAgent and the Vercel AI SDK. Messages persist to PostgreSQL and are organized into searchable threads with per-thread model selection and response regeneration
+- **AI chat** — Conversational interface powered by Mastra and the Vercel AI SDK. Messages persist to PostgreSQL and are organized into searchable threads with per-thread model selection and response regeneration
 - **Agent tools** — The AI assistant can manage notes, fetch live weather, and report the current time, with tool invocations rendered inline in the chat
-- **Generative UI** — The `render_card` tool lets the agent produce rich visual cards (info, steps, pros/cons) inline in the chat, demonstrating VoltAgent's tool-driven approach to generative UI
+- **Generative UI** — The `render_card` tool lets the agent produce rich visual cards (info, steps, pros/cons) inline in the chat, demonstrating the tool-driven approach to generative UI
 - **Notes** — A full CRUD notes page at `/notes` with search and pagination; the agent writes to the same store
-- **Working memory** — VoltAgent remembers user preferences and context across conversations via PostgreSQL-backed working memory
+- **Working memory** — Mastra remembers user preferences and context across conversations via PostgreSQL-backed working memory
 - **UX patterns** — Light/dark/system theme switching (cookie-based, no flash), flash toast notifications, empty states, reusable form components, offset pagination
 - **Component library** — [COSS UI](https://coss.com/ui) (Base UI primitives styled with Tailwind v4), installed as copy-owned source in `app/components/ui/` via the shadcn CLI: `bunx shadcn@latest add @coss/<name>`
 - **Production patterns** — Soft deletes, Zod-validated env, structured logging, rate limiting, SEO (robots/sitemap/OG tags), husky + lint-staged pre-commit hooks
@@ -26,7 +26,7 @@ A full-stack starter kit for shipping AI-powered products. Clone the repo, confi
 | UI         | React 19, Tailwind CSS v4, COSS UI (Base UI) |
 | Database   | PostgreSQL via Prisma ORM                    |
 | Auth       | Better Auth                                  |
-| AI         | VoltAgent, Vercel AI SDK, Anthropic Claude   |
+| AI         | Mastra, Vercel AI SDK, Anthropic Claude      |
 | Validation | Zod, React Hook Form                         |
 | Runtime    | Bun (dev), Node 24 Alpine (production)       |
 
@@ -56,13 +56,13 @@ shares containers, data, or sessions with another copy on the same machine.
 The databases publish on host ports 5432 and 5433 by default. When another
 project (the original Iridium, another copy, or a native Postgres) already
 holds either one, setup offers the next free pair (5442/5443, 5452/5453, ...)
-and writes it to `.env` as `POSTGRES_PORT` and `VOLTAGENT_POSTGRES_PORT`, with
+and writes it to `.env` as `POSTGRES_PORT` and `MASTRA_POSTGRES_PORT`, with
 the matching database URLs, so copies can run side by side. When it finishes,
 it lists what is left to rebrand by hand (favicon, landing copy, README).
 
 It also takes `--non-interactive` (and `--name "<App Name>"`) for scripted
 use; it then takes the free ports without asking. To pick them yourself,
-export `POSTGRES_PORT` and `VOLTAGENT_POSTGRES_PORT` before running it. Prefer manual control? The steps below do the same thing by hand. To
+export `POSTGRES_PORT` and `MASTRA_POSTGRES_PORT` before running it. Prefer manual control? The steps below do the same thing by hand. To
 stand up production on Railway, see [Railway](#railway).
 
 ### Installation
@@ -77,10 +77,10 @@ Copy `.env.example` to `.env` and fill in:
 
 ```
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/iridium"
-VOLTAGENT_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/voltagent"
+MASTRA_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/mastra"
 # Host ports for docker-compose.dev.yml; keep the URLs above on the same ports
 POSTGRES_PORT="5432"
-VOLTAGENT_POSTGRES_PORT="5433"
+MASTRA_POSTGRES_PORT="5433"
 BETTER_AUTH_SECRET="<openssl rand -base64 32>"
 BETTER_AUTH_BASE_URL="http://localhost:5173"
 ANTHROPIC_API_KEY="sk-ant-..."
@@ -104,15 +104,15 @@ ADMIN_EMAILS="you@example.com"
 
 The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
 
-| Database    | Port | Env Var                  | Purpose                          |
-| ----------- | ---- | ------------------------ | -------------------------------- |
-| `iridium`   | 5432 | `DATABASE_URL`           | Prisma (app data, auth, threads) |
-| `voltagent` | 5433 | `VOLTAGENT_DATABASE_URL` | VoltAgent memory and state       |
+| Database  | Port | Env Var               | Purpose                          |
+| --------- | ---- | --------------------- | -------------------------------- |
+| `iridium` | 5432 | `DATABASE_URL`        | Prisma (app data, auth, threads) |
+| `mastra`  | 5433 | `MASTRA_DATABASE_URL` | Mastra memory and state          |
 
-VoltAgent creates its own tables automatically on first connection -- no migration needed.
+Mastra creates its own tables automatically on first connection -- no migration needed.
 
 The ports are defaults. Compose publishes on `POSTGRES_PORT` and
-`VOLTAGENT_POSTGRES_PORT` when `.env` sets them (as `bun run setup` does when
+`MASTRA_POSTGRES_PORT` when `.env` sets them (as `bun run setup` does when
 5432/5433 are taken), and with the database URLs unset, `prisma.config.ts` and
 the dev env fallbacks follow the same two variables.
 
@@ -206,8 +206,11 @@ app/
 ├── middleware/           # Auth middleware
 ├── models/              # Server-side data access (thread, note, session)
 ├── routes/              # React Router route modules
-├── voltagent/           # Agent definition and tools
-│   ├── agents.ts        # Agent config, tool definitions
+├── mastra/              # Agent definition, memory, tools
+│   ├── agents.ts        # Agent config, memory, tool registration
+│   ├── context.ts       # Request context (user, thread, model) tools read
+│   ├── processors/      # Input processors (notes retrieval)
+│   ├── tools/           # Agent tools
 │   └── index.ts         # Agent export
 └── root.tsx             # HTML document + bare Outlet (chrome lives in routes/layouts/)
 prisma/
@@ -218,7 +221,7 @@ prisma/
 
 ## Agent Tools
 
-The AI assistant (defined in `app/voltagent/agents.ts`) has six tools:
+The AI assistant (defined in `app/mastra/agents.ts`) has six tools:
 
 | Tool                   | Description                                                            |
 | ---------------------- | ---------------------------------------------------------------------- |
@@ -233,7 +236,7 @@ Note tools are rendered via `NoteToolPart`; card tools are rendered via `CardToo
 
 ### Generative UI (Tool-Driven)
 
-VoltAgent does not support true generative UI (the model streaming arbitrary React components at runtime). Instead, it uses a tool-driven pattern: the agent calls a tool with structured data, and a predefined React component renders it.
+The agent does not stream arbitrary React components at runtime. Instead, it uses a tool-driven pattern: the agent calls a tool with structured data, and a predefined React component renders it.
 
 The `render_card` tool demonstrates this pattern with three card variants:
 
@@ -245,29 +248,30 @@ Try these prompts to trigger card rendering:
 
 - "Compare React and Vue as a pros and cons card"
 - "Give me a step-by-step guide to deploying on Railway"
-- "Summarize what VoltAgent is as an info card"
+- "Summarize what Mastra is as an info card"
 
-The pattern is extensible: define a new variant in the Zod schema (`app/voltagent/tools/cards.ts`), add a rendering branch in `CardToolPart` (`app/components/CardToolPart.tsx`), and the agent will use it when appropriate.
+The pattern is extensible: define a new variant in the Zod schema (`app/mastra/tools/cards.ts`), add a rendering branch in `CardToolPart` (`app/components/CardToolPart.tsx`), and the agent will use it when appropriate.
 
 ### Adding a Custom Tool
 
-1. **Define the server-side tool** in `app/voltagent/tools/` using `createTool()` with a Zod schema for parameters and an `execute` function. Access the user ID via `options?.userId`.
+1. **Define the server-side tool** in `app/mastra/tools/` using `createTool()` with a Zod `inputSchema` and an `execute` function. Read the user ID from the run's request context with `contextUserId(options)`.
 
 ```ts
-// app/voltagent/tools/my-tool.ts
-import { createTool } from '@voltagent/core';
+// app/mastra/tools/my-tool.ts
+import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import invariant from 'tiny-invariant';
+import { contextUserId } from '~/mastra/context';
 
 export const myTool = createTool({
-    name: 'my_tool',
+    id: 'my_tool',
     description:
         'What the tool does — the LLM reads this to decide when to call it.',
-    parameters: z.object({
+    inputSchema: z.object({
         input: z.string().describe('What to pass in'),
     }),
     execute: async (args, options) => {
-        const userId = options?.userId;
+        const userId = contextUserId(options);
         invariant(userId, 'User not authenticated');
         // ... your logic here
         return { result: 'done' };
@@ -275,14 +279,14 @@ export const myTool = createTool({
 });
 ```
 
-1. **Register it** in the agent's `tools` array in `app/voltagent/agents.ts`:
+1. **Register it** in the agent's `tools` in `app/mastra/agents.ts` (`byId` keys each tool by its id, which is the name the chat UI matches on):
 
 ```ts
 import { myTool } from './tools/my-tool';
 
 const agent = new Agent({
     // ...
-    tools: [createNoteTool, listNotesTool, searchNotesTool, myTool],
+    tools: byId([createNoteTool, listNotesTool, searchNotesTool, myTool]),
 });
 ```
 
@@ -292,9 +296,9 @@ const agent = new Agent({
 
 ## Troubleshooting
 
-- Chat/tool-calling duplicate provider item IDs (`fc_*`): see [docs/chat-tool-calling.md](docs/chat-tool-calling.md)
-- `ECONNREFUSED 127.0.0.1:5433` in the server log when you chat (and `/api/chat` answering 503): the VoltAgent Postgres container isn't running. Make sure Docker Desktop is running (`open -a Docker`), then `bun run docker:up` before `bun run dev`. Port 5433 (`VOLTAGENT_POSTGRES_PORT`) is the VoltAgent database; 5432 (`POSTGRES_PORT`) is the Prisma database.
-- `port is already allocated` on `bun run docker:up`: another project's databases hold the ports. Stop them, or run `bun run setup` again to move this copy to a free pair (or set `POSTGRES_PORT`/`VOLTAGENT_POSTGRES_PORT` and the matching URLs in `.env` by hand).
+- Chat memory and tool-calling notes: see [docs/chat-tool-calling.md](docs/chat-tool-calling.md)
+- `ECONNREFUSED 127.0.0.1:5433` in the server log when you chat (and `/api/chat` answering 503): the Mastra Postgres container isn't running. Make sure Docker Desktop is running (`open -a Docker`), then `bun run docker:up` before `bun run dev`. Port 5433 (`MASTRA_POSTGRES_PORT`) is the Mastra database; 5432 (`POSTGRES_PORT`) is the Prisma database.
+- `port is already allocated` on `bun run docker:up`: another project's databases hold the ports. Stop them, or run `bun run setup` again to move this copy to a free pair (or set `POSTGRES_PORT`/`MASTRA_POSTGRES_PORT` and the matching URLs in `.env` by hand).
 
 ## Building for Production
 

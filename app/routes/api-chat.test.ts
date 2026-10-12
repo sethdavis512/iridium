@@ -1,25 +1,31 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { consumeStream, streamText as aiStreamText, type UIMessage } from 'ai';
+import { streamText as aiStreamText, type UIMessage } from 'ai';
 import { MockLanguageModelV3 } from 'ai/test';
 
 const {
     getUserFromSession,
     getThreadMeta,
+    getThreadById,
     saveChat,
     enqueueThreadTitle,
-    streamText,
-    generateText,
-    clearMessages,
+    stream,
+    memoryGetThreadById,
+    deleteThread,
+    createThread,
+    saveMessages,
     getChat,
     deleteTrailingAssistantMessages,
 } = vi.hoisted(() => ({
     getUserFromSession: vi.fn(),
     getThreadMeta: vi.fn(),
+    getThreadById: vi.fn(),
     saveChat: vi.fn(),
     enqueueThreadTitle: vi.fn(),
-    streamText: vi.fn(),
-    generateText: vi.fn(),
-    clearMessages: vi.fn(),
+    stream: vi.fn(),
+    memoryGetThreadById: vi.fn(),
+    deleteThread: vi.fn(),
+    createThread: vi.fn(),
+    saveMessages: vi.fn(),
     getChat: vi.fn(),
     deleteTrailingAssistantMessages: vi.fn(),
 }));
@@ -30,6 +36,7 @@ vi.mock('~/models/session.server', () => ({
 
 vi.mock('~/models/thread.server', () => ({
     getThreadMeta: (...args: unknown[]) => getThreadMeta(...args),
+    getThreadById: (...args: unknown[]) => getThreadById(...args),
     saveChat: (...args: unknown[]) => saveChat(...args),
     deleteTrailingAssistantMessages: (...args: unknown[]) =>
         deleteTrailingAssistantMessages(...args),
@@ -39,7 +46,7 @@ vi.mock('~/lib/jobs.server', () => ({
     enqueueThreadTitle: (...args: unknown[]) => enqueueThreadTitle(...args),
 }));
 
-// The real module pulls in VoltAgent + Prisma (and env validation with them).
+// The real module pulls in Mastra + Prisma (and env validation with them).
 vi.mock('~/lib/thread-title.server', () => ({
     buildTitleContext: () => 'mock conversation context',
     buildFallbackTitle: () => 'mock fallback title',
@@ -47,18 +54,32 @@ vi.mock('~/lib/thread-title.server', () => ({
 
 const chat = {
     agent: {
-        streamText: (...args: unknown[]) => streamText(...args),
-        generateText: (...args: unknown[]) => generateText(...args),
+        stream: (...args: unknown[]) => stream(...args),
     },
     memory: {
-        clearMessages: (...args: unknown[]) => clearMessages(...args),
+        getThreadById: (...args: unknown[]) => memoryGetThreadById(...args),
+        deleteThread: (...args: unknown[]) => deleteThread(...args),
+        createThread: (...args: unknown[]) => createThread(...args),
+        saveMessages: (...args: unknown[]) => saveMessages(...args),
     },
 };
 
-vi.mock('~/voltagent', async () => ({
+vi.mock('~/mastra', async () => ({
     getChat: () => getChat(),
-    ResourceUnavailableError: (await import('~/voltagent/lazy-resource'))
+    ResourceUnavailableError: (await import('~/mastra/lazy-resource'))
         .ResourceUnavailableError,
+}));
+
+// The agent module opens memory and validates env at import.
+vi.mock('~/mastra/agents', () => ({
+    CHAT_LIMITS: { maxSteps: 10, maxOutputTokens: 2048 },
+}));
+
+// The mocked agent streams with the AI SDK directly, whose result already
+// speaks the UI message stream protocol Mastra's converter produces.
+vi.mock('@mastra/ai-sdk', () => ({
+    toAISdkStream: (result: ReturnType<typeof aiStreamText>) =>
+        result.toUIMessageStream(),
 }));
 
 vi.mock('~/lib/logger.server', () => ({
@@ -85,14 +106,16 @@ vi.mock('~/lib/rate-limit.server', () => ({
     },
 }));
 
-import { ResourceUnavailableError } from '~/voltagent/lazy-resource';
+import { ResourceUnavailableError } from '~/mastra/lazy-resource';
 
-import { action } from './api-chat';
+import { action, hasContent } from './api-chat';
 
 beforeEach(() => {
     vi.clearAllMocks();
     rateLimitHits.clear();
     getChat.mockResolvedValue(chat);
+    // Memory already knows the thread, so no seeding runs.
+    memoryGetThreadById.mockResolvedValue({ id: 'thread-1' });
 });
 
 function makeRequest(body: unknown, method = 'POST'): Request {
@@ -120,18 +143,65 @@ function actionCall(request: Request) {
     return action({ request } as unknown as Parameters<typeof action>[0]);
 }
 
-type OnFinish = (args: { messages: unknown[] }) => Promise<void>;
+const finishChunk = {
+    type: 'finish' as const,
+    finishReason: { unified: 'stop' as const, raw: 'stop' },
+    usage: {
+        inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+        outputTokens: { total: 1, text: 1, reasoning: 0 },
+    },
+};
 
-/** Stub a successful stream and capture the onFinish it was given. */
-function captureOnFinish() {
-    const captured: { current: OnFinish | null } = { current: null };
-    streamText.mockResolvedValue({
-        toUIMessageStreamResponse: (opts: { onFinish: OnFinish }) => {
-            captured.current = opts.onFinish;
-            return new Response('ok', { status: 200 });
-        },
+/** A model whose reply is `text`, streamed in one piece. */
+function replyModel(text: string) {
+    return new MockLanguageModelV3({
+        doStream: async () => ({
+            stream: new ReadableStream({
+                start(controller) {
+                    controller.enqueue({ type: 'stream-start', warnings: [] });
+                    controller.enqueue({ type: 'text-start', id: 't1' });
+                    controller.enqueue({
+                        type: 'text-delta',
+                        id: 't1',
+                        delta: text,
+                    });
+                    controller.enqueue({ type: 'text-end', id: 't1' });
+                    controller.enqueue(finishChunk);
+                    controller.close();
+                },
+            }),
+        }),
     });
-    return captured;
+}
+
+/** Make the agent stream a short reply through the real AI SDK. */
+function mockReply(text = 'Hello') {
+    stream.mockImplementation(
+        async (_input: unknown, options: { abortSignal: AbortSignal }) =>
+            aiStreamText({
+                model: replyModel(text),
+                prompt: 'hi',
+                abortSignal: options.abortSignal,
+            }),
+    );
+}
+
+/** Drain a reply and wait for its onFinish, so no save leaks into the next test. */
+async function settle(res: Response, saves = 1) {
+    const body = await readToEnd(res);
+    await vi.waitFor(() => expect(saveChat).toHaveBeenCalledTimes(saves));
+    return body;
+}
+
+async function readToEnd(res: Response) {
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let received = '';
+    for (;;) {
+        const { value, done } = await reader.read();
+        if (done) return received;
+        received += decoder.decode(value, { stream: true });
+    }
 }
 
 const validBody = {
@@ -139,6 +209,13 @@ const validBody = {
     messages: [
         { id: 'm1', role: 'user', parts: [{ type: 'text', text: 'hi' }] },
     ],
+};
+
+const ownedThread = {
+    id: 'thread-1',
+    createdById: 'u1',
+    title: 'Untitled',
+    model: 'anthropic/claude-sonnet-4-6',
 };
 
 describe('/api/chat action', () => {
@@ -240,38 +317,31 @@ describe('/api/chat action', () => {
 
         const res = await actionCall(makeRequest(validBody));
         expect(res.status).toBe(404);
-        expect(streamText).not.toHaveBeenCalled();
+        expect(stream).not.toHaveBeenCalled();
     });
 
     it('returns 403 when the thread belongs to another user', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
         getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
+            ...ownedThread,
             createdById: 'other',
-            title: 'Untitled',
         });
 
         const res = await actionCall(makeRequest(validBody));
         expect(res.status).toBe(403);
-        expect(streamText).not.toHaveBeenCalled();
+        expect(stream).not.toHaveBeenCalled();
     });
 
     it('returns 429 when the rate limit is exceeded', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: () =>
-                new Response('ok', { status: 200 }),
-        });
+        getThreadMeta.mockResolvedValue(ownedThread);
+        mockReply();
 
         // Burn through the 20-req/min limit.
         for (let i = 0; i < 20; i++) {
             const res = await actionCall(makeRequest(validBody));
             expect(res.status).toBe(200);
+            await settle(res, i + 1);
         }
 
         const blockedRequest = makeRequest(validBody);
@@ -281,86 +351,174 @@ describe('/api/chat action', () => {
         expect(blockedRequest.bodyUsed).toBe(false);
     });
 
-    it('streams successfully on the happy path and wires onFinish to saveChat', async () => {
+    it('streams the reply with the thread scoped to the user and model, then saves it', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
-
-        let capturedOnFinish:
-            ((args: { messages: unknown[] }) => Promise<void>) | null = null;
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: (opts: {
-                onFinish: (args: { messages: unknown[] }) => Promise<void>;
-            }) => {
-                capturedOnFinish = opts.onFinish;
-                return new Response('ok', { status: 200 });
-            },
-        });
+        getThreadMeta.mockResolvedValue(ownedThread);
+        mockReply('Hello');
 
         const res = await actionCall(makeRequest(validBody));
         expect(res.status).toBe(200);
-        expect(streamText).toHaveBeenCalledWith(
-            expect.any(Array),
+        expect(await settle(res)).toContain('Hello');
+
+        const [input, options] = stream.mock.calls[0];
+        expect(input).toEqual(validBody.messages);
+        expect(options).toEqual(
             expect.objectContaining({
-                userId: 'u1',
-                conversationId: 'thread-1',
+                memory: { thread: 'thread-1', resource: 'u1' },
+                maxSteps: 10,
+                modelSettings: { maxOutputTokens: 2048 },
             }),
         );
+        expect(options.requestContext.get('userId')).toBe('u1');
+        expect(options.requestContext.get('threadId')).toBe('thread-1');
+        expect(options.requestContext.get('model')).toBe(
+            'anthropic/claude-sonnet-4-6',
+        );
 
-        // Simulate the stream finishing and verify saveChat is invoked.
-        expect(capturedOnFinish).not.toBeNull();
-        await capturedOnFinish!({
-            messages: [{ id: 'm1', role: 'user', parts: [] }],
-        });
-
-        expect(saveChat).toHaveBeenCalledWith({
-            messages: [{ id: 'm1', role: 'user', parts: [] }],
-            threadId: 'thread-1',
-            userId: 'u1',
-        });
+        const saved = saveChat.mock.calls[0][0];
+        expect(saved).toEqual(
+            expect.objectContaining({ threadId: 'thread-1', userId: 'u1' }),
+        );
+        expect(
+            (saved.messages as UIMessage[]).map((message) => message.role),
+        ).toEqual(['user', 'assistant']);
     });
 
     it('does not throw when saveChat fails (errors are logged, not propagated)', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
+        getThreadMeta.mockResolvedValue(ownedThread);
         saveChat.mockRejectedValue(new Error('db down'));
+        mockReply();
 
-        let capturedOnFinish:
-            ((args: { messages: unknown[] }) => Promise<void>) | null = null;
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: (opts: {
-                onFinish: (args: { messages: unknown[] }) => Promise<void>;
-            }) => {
-                capturedOnFinish = opts.onFinish;
-                return new Response('ok', { status: 200 });
-            },
+        const res = await actionCall(makeRequest(validBody));
+
+        // The stream still completes cleanly.
+        await expect(settle(res)).resolves.toContain('[DONE]');
+    });
+
+    it('seeds memory from the stored thread the first time memory sees it', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue(ownedThread);
+        memoryGetThreadById.mockResolvedValue(null);
+        getThreadById.mockResolvedValue({
+            ...ownedThread,
+            messages: [
+                {
+                    id: 'old-user',
+                    role: 'USER',
+                    createdAt: new Date('2026-01-01'),
+                    content: JSON.stringify([
+                        { type: 'text', text: 'earlier question' },
+                    ]),
+                },
+                {
+                    id: 'old-assistant',
+                    role: 'ASSISTANT',
+                    createdAt: new Date('2026-01-02'),
+                    content: JSON.stringify([
+                        { type: 'step-start' },
+                        { type: 'text', text: 'earlier answer' },
+                    ]),
+                },
+                {
+                    id: 'broken',
+                    role: 'ASSISTANT',
+                    createdAt: new Date('2026-01-03'),
+                    content: 'not json',
+                },
+            ],
         });
+        mockReply();
 
-        await actionCall(makeRequest(validBody));
+        await settle(await actionCall(makeRequest(validBody)));
 
-        // Should not throw — the error is caught and logged.
-        await expect(
-            capturedOnFinish!({ messages: [] }),
-        ).resolves.toBeUndefined();
+        expect(createThread).toHaveBeenCalledWith({
+            threadId: 'thread-1',
+            resourceId: 'u1',
+        });
+        expect(saveMessages).toHaveBeenCalledWith({
+            messages: [
+                expect.objectContaining({
+                    id: 'old-user',
+                    role: 'user',
+                    threadId: 'thread-1',
+                    resourceId: 'u1',
+                    content: {
+                        format: 2,
+                        parts: [{ type: 'text', text: 'earlier question' }],
+                    },
+                }),
+                expect.objectContaining({
+                    id: 'old-assistant',
+                    role: 'assistant',
+                    content: {
+                        format: 2,
+                        parts: [{ type: 'text', text: 'earlier answer' }],
+                    },
+                }),
+            ],
+        });
+    });
+
+    it('does not seed a thread memory already knows', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue(ownedThread);
+        mockReply();
+
+        await settle(await actionCall(makeRequest(validBody)));
+
+        expect(getThreadById).not.toHaveBeenCalled();
+        expect(createThread).not.toHaveBeenCalled();
+    });
+
+    it('regenerates by dropping the reply, forgetting the thread, and resending history', async () => {
+        getUserFromSession.mockResolvedValue({ id: 'u1' });
+        getThreadMeta.mockResolvedValue(ownedThread);
+        mockReply();
+        const history = [
+            { id: 'm1', role: 'user', parts: [{ type: 'text', text: 'hi' }] },
+            {
+                id: 'a1',
+                role: 'assistant',
+                parts: [{ type: 'text', text: 'first try' }],
+            },
+            {
+                id: 'm2',
+                role: 'user',
+                parts: [{ type: 'text', text: 'again?' }],
+            },
+            {
+                id: 'a2',
+                role: 'assistant',
+                parts: [{ type: 'text', text: 'the reply to redo' }],
+            },
+        ];
+
+        const res = await actionCall(
+            makeRequest({
+                id: 'thread-1',
+                messages: history,
+                trigger: 'regenerate-message',
+            }),
+        );
+
+        expect(res.status).toBe(200);
+        await settle(res);
+        expect(deleteTrailingAssistantMessages).toHaveBeenCalledWith(
+            'thread-1',
+        );
+        expect(deleteThread).toHaveBeenCalledWith('thread-1');
+        // Everything up to the last user message, never the stale reply.
+        expect(stream.mock.calls[0][0]).toEqual(history.slice(0, 3));
+        expect(getThreadById).not.toHaveBeenCalled();
     });
 
     it('answers 503 with Retry-After while chat memory is unavailable', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
+        getThreadMeta.mockResolvedValue(ownedThread);
         getChat.mockRejectedValue(
             new ResourceUnavailableError(
-                'voltagent_memory',
+                'mastra_memory',
                 4_200,
                 new Error('connect ECONNREFUSED'),
             ),
@@ -376,9 +534,9 @@ describe('/api/chat action', () => {
             error: expect.stringMatching(/temporarily unavailable/),
         });
         // Nothing is changed before the 503, so a retry starts clean.
-        expect(streamText).not.toHaveBeenCalled();
+        expect(stream).not.toHaveBeenCalled();
         expect(deleteTrailingAssistantMessages).not.toHaveBeenCalled();
-        expect(clearMessages).not.toHaveBeenCalled();
+        expect(deleteThread).not.toHaveBeenCalled();
     });
 
     it('checks auth and thread ownership before opening chat memory', async () => {
@@ -387,9 +545,8 @@ describe('/api/chat action', () => {
 
         getUserFromSession.mockResolvedValue({ id: 'u1' });
         getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
+            ...ownedThread,
             createdById: 'other',
-            title: 'Untitled',
         });
         expect((await actionCall(makeRequest(validBody))).status).toBe(403);
 
@@ -398,97 +555,96 @@ describe('/api/chat action', () => {
 
     it('rethrows an unexpected error from opening chat memory', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
+        getThreadMeta.mockResolvedValue(ownedThread);
         const bug = new TypeError('not a connection problem');
         getChat.mockRejectedValue(bug);
 
         await expect(actionCall(makeRequest(validBody))).rejects.toBe(bug);
     });
 
-    it('self-heals memory on a duplicate-item error and retries the stream', async () => {
-        getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
-
-        streamText
-            .mockRejectedValueOnce(
-                new Error('Duplicate item found with id xyz'),
-            )
-            .mockResolvedValueOnce({
-                toUIMessageStreamResponse: () =>
-                    new Response('ok', { status: 200 }),
-            });
-
-        const res = await actionCall(makeRequest(validBody));
-
-        expect(res.status).toBe(200);
-        expect(clearMessages).toHaveBeenCalledWith('u1', 'thread-1');
-        expect(streamText).toHaveBeenCalledTimes(2);
-    });
-
     it('does not auto-generate a title when the title is already set', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
         getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
+            ...ownedThread,
             title: 'Existing Title',
         });
-        const onFinish = captureOnFinish();
+        mockReply();
 
-        await actionCall(makeRequest(validBody));
-        await onFinish.current!({ messages: [] });
+        await settle(await actionCall(makeRequest(validBody)));
 
-        expect(generateText).not.toHaveBeenCalled();
         expect(enqueueThreadTitle).not.toHaveBeenCalled();
     });
 
     it('titles an untitled thread once the reply finishes, not before streaming', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
-        const onFinish = captureOnFinish();
+        getThreadMeta.mockResolvedValue(ownedThread);
+        mockReply();
 
-        await actionCall(makeRequest(validBody));
+        const res = await actionCall(makeRequest(validBody));
 
         // Nothing on the request path: the response is returned first.
         expect(enqueueThreadTitle).not.toHaveBeenCalled();
 
-        await onFinish.current!({ messages: [] });
+        await settle(res);
 
-        expect(enqueueThreadTitle).toHaveBeenCalledWith({
-            threadId: 'thread-1',
-            context: 'mock conversation context',
-            fallbackTitle: 'mock fallback title',
-        });
+        await vi.waitFor(() =>
+            expect(enqueueThreadTitle).toHaveBeenCalledWith({
+                threadId: 'thread-1',
+                context: 'mock conversation context',
+                fallbackTitle: 'mock fallback title',
+            }),
+        );
     });
 
     it('does not wait for title generation to finish the stream', async () => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
-        getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
-            title: 'Untitled',
-        });
-        // A title call that never settles must not hold up onFinish.
+        getThreadMeta.mockResolvedValue(ownedThread);
+        // A title call that never settles must not hold up the response.
         enqueueThreadTitle.mockReturnValue(new Promise(() => {}));
-        const onFinish = captureOnFinish();
+        mockReply();
 
-        await actionCall(makeRequest(validBody));
+        const res = await actionCall(makeRequest(validBody));
 
-        await expect(
-            onFinish.current!({ messages: [] }),
-        ).resolves.toBeUndefined();
-        expect(enqueueThreadTitle).toHaveBeenCalledTimes(1);
+        await expect(settle(res)).resolves.toContain('[DONE]');
+        await vi.waitFor(() =>
+            expect(enqueueThreadTitle).toHaveBeenCalledTimes(1),
+        );
+    });
+});
+
+describe('hasContent', () => {
+    it('is false for a reply with nothing to show', () => {
+        expect(
+            hasContent({
+                id: 'a1',
+                role: 'assistant',
+                parts: [{ type: 'step-start' }, { type: 'text', text: ' ' }],
+            }),
+        ).toBe(false);
+    });
+
+    it('is true once the reply has text or a tool part', () => {
+        expect(
+            hasContent({
+                id: 'a1',
+                role: 'assistant',
+                parts: [{ type: 'text', text: 'Partial' }],
+            }),
+        ).toBe(true);
+        expect(
+            hasContent({
+                id: 'a2',
+                role: 'assistant',
+                parts: [
+                    {
+                        type: 'tool-get_weather',
+                        toolCallId: 'c1',
+                        state: 'input-available',
+                        input: {},
+                    },
+                ],
+            }),
+        ).toBe(true);
     });
 });
 
@@ -496,30 +652,30 @@ describe('/api/chat abort handling', () => {
     beforeEach(() => {
         getUserFromSession.mockResolvedValue({ id: 'u1' });
         getThreadMeta.mockResolvedValue({
-            id: 'thread-1',
-            createdById: 'u1',
+            ...ownedThread,
             title: 'Existing Title',
         });
     });
 
-    it('ties generation to the request signal with a timeout, and drains the stream server-side', async () => {
-        let responseOptions: Record<string, unknown> = {};
-        streamText.mockResolvedValue({
-            toUIMessageStreamResponse: (opts: Record<string, unknown>) => {
-                responseOptions = opts;
-                return new Response('ok', { status: 200 });
-            },
+    it('ties generation to the request signal and a timeout', async () => {
+        mockReply();
+        const client = new AbortController();
+        const request = new Request('http://localhost/api/chat', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(validBody),
+            signal: client.signal,
         });
-        const request = makeRequest(validBody);
 
         await actionCall(request);
 
-        const options = streamText.mock.calls[0][1];
-        expect(options.abortSignal).toBe(request.signal);
-        expect(options.timeout).toEqual(
-            expect.objectContaining({ totalMs: expect.any(Number) }),
-        );
-        expect(responseOptions.consumeSseStream).toBe(consumeStream);
+        const signal = stream.mock.calls[0][1].abortSignal as AbortSignal;
+        expect(signal).toBeInstanceOf(AbortSignal);
+        expect(signal.aborted).toBe(false);
+        client.abort();
+        expect(signal.aborted).toBe(true);
+        // The aborted turn still settles (and saves) before the next test.
+        await vi.waitFor(() => expect(saveChat).toHaveBeenCalledTimes(1));
     });
 
     it('saves the partial reply when the client disconnects mid-stream', async () => {
@@ -547,7 +703,7 @@ describe('/api/chat abort handling', () => {
                 }),
             }),
         });
-        streamText.mockImplementation(
+        stream.mockImplementation(
             async (_input: unknown, options: { abortSignal: AbortSignal }) =>
                 aiStreamText({
                     model,
@@ -607,29 +763,13 @@ describe('/api/chat abort handling', () => {
                         controller.enqueue({ type: 'text-start', id: 't1' });
                         deltas.forEach((delta) => controller.enqueue(delta));
                         controller.enqueue({ type: 'text-end', id: 't1' });
-                        controller.enqueue({
-                            type: 'finish',
-                            finishReason: { unified: 'stop', raw: 'stop' },
-                            usage: {
-                                inputTokens: {
-                                    total: 1,
-                                    noCache: 1,
-                                    cacheRead: 0,
-                                    cacheWrite: 0,
-                                },
-                                outputTokens: {
-                                    total: 500,
-                                    text: 500,
-                                    reasoning: 0,
-                                },
-                            },
-                        });
+                        controller.enqueue(finishChunk);
                         controller.close();
                     },
                 }),
             }),
         });
-        streamText.mockImplementation(async () =>
+        stream.mockImplementation(async () =>
             aiStreamText({ model, prompt: 'hi' }),
         );
 
@@ -646,33 +786,5 @@ describe('/api/chat abort handling', () => {
                 text: `Start${'.'.repeat(499)}`,
             }),
         );
-    });
-
-    it('keeps the user message but drops an empty aborted reply', async () => {
-        const onFinish = captureOnFinish();
-
-        await actionCall(makeRequest(validBody));
-        await (
-            onFinish.current as unknown as (args: {
-                messages: unknown[];
-                isAborted: boolean;
-            }) => Promise<void>
-        )({
-            isAborted: true,
-            messages: [
-                validBody.messages[0],
-                {
-                    id: 'a1',
-                    role: 'assistant',
-                    parts: [{ type: 'step-start' }],
-                },
-            ],
-        });
-
-        expect(saveChat).toHaveBeenCalledWith({
-            messages: [validBody.messages[0]],
-            threadId: 'thread-1',
-            userId: 'u1',
-        });
     });
 });

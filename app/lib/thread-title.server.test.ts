@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UIMessage } from 'ai';
 
-const { generateText, updateThreadTitle, logException } = vi.hoisted(() => ({
-    generateText: vi.fn(),
+const { generate, updateThreadTitle, logException } = vi.hoisted(() => ({
+    generate: vi.fn(),
     updateThreadTitle: vi.fn(),
     logException: vi.fn(),
 }));
 
-vi.mock('@voltagent/core', () => ({
+vi.mock('@mastra/core/agent', () => ({
     Agent: class {
-        generateText = generateText;
+        generate = generate;
     },
 }));
 
@@ -66,7 +66,7 @@ describe('generateAndSaveThreadTitle', () => {
     };
 
     it('saves the generated title without surrounding quotes', async () => {
-        generateText.mockResolvedValue({ text: ' "Trip Planning" ' });
+        generate.mockResolvedValue({ text: ' "Trip Planning" ' });
 
         await expect(generateAndSaveThreadTitle(payload)).resolves.toBe(
             'Trip Planning',
@@ -75,7 +75,7 @@ describe('generateAndSaveThreadTitle', () => {
     });
 
     it('saves the fallback when the model returns nothing', async () => {
-        generateText.mockResolvedValue({ text: '   ' });
+        generate.mockResolvedValue({ text: '   ' });
 
         await generateAndSaveThreadTitle(payload);
 
@@ -83,7 +83,7 @@ describe('generateAndSaveThreadTitle', () => {
     });
 
     it('saves the fallback and logs when the model call fails', async () => {
-        generateText.mockRejectedValue(new Error('provider down'));
+        generate.mockRejectedValue(new Error('provider down'));
 
         await expect(generateAndSaveThreadTitle(payload)).resolves.toBe('hi');
         expect(updateThreadTitle).toHaveBeenCalledWith('t1', 'hi');

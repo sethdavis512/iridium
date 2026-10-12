@@ -186,8 +186,8 @@ styles without copy-paste.
 - **Framework**: React Router v8 (SSR; middleware always on, no `future.v8_middleware`
   flag).
 - **Auth**: Better Auth with the Prisma adapter and admin plugin (roles USER < EDITOR < ADMIN).
-- **Data**: PostgreSQL via Prisma; app data and VoltAgent memory live in separate databases.
-- **AI**: Vercel AI SDK + VoltAgent; agent tools live in `app/voltagent/tools/`.
+- **Data**: PostgreSQL via Prisma; app data and Mastra memory live in separate databases.
+- **AI**: Vercel AI SDK + Mastra; agent tools live in `app/mastra/tools/`.
 - **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives copy-owned in
   `app/components/ui/`, semantic tokens in `app/app.css`); CVA via `cva.config` with
   tailwind-merge; lucide-react icons.

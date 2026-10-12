@@ -1,18 +1,19 @@
 import type { UIMessage } from 'ai';
-import { Agent } from '@voltagent/core';
+import { Agent } from '@mastra/core/agent';
 import { DEFAULT_MODEL_ID } from '~/lib/ai-models';
 import { log } from '~/lib/logger.server';
 import { updateThreadTitle } from '~/models/thread.server';
 
 /**
  * A minimal agent for one-shot title generation: no memory, no tools, so the
- * Trigger.dev worker doesn't drag in the VoltAgent Postgres store.
+ * Trigger.dev worker doesn't drag in the Mastra Postgres store.
  */
 const titleAgent = new Agent({
+    id: 'thread-titler',
     name: 'Thread Titler',
     instructions: 'You generate short, descriptive conversation titles.',
     model: DEFAULT_MODEL_ID,
-    maxOutputTokens: 64,
+    defaultOptions: { modelSettings: { maxOutputTokens: 64 } },
 });
 
 /** Flatten the first few messages into a prompt-ready transcript. */
@@ -65,7 +66,7 @@ export async function generateAndSaveThreadTitle({
     let generated = '';
 
     try {
-        const result = await titleAgent.generateText(
+        const result = await titleAgent.generate(
             `Generate a concise, descriptive title (max 6 words) for this conversation. The title should capture the main topic or question being discussed.\n\nConversation:\n${context}\n\nGenerate only the title, no quotes or extra text.`,
         );
 

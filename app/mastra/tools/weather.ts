@@ -1,4 +1,4 @@
-import { createTool } from '@voltagent/core';
+import { createTool } from '@mastra/core/tools';
 import z from 'zod';
 
 const FETCH_TIMEOUT_MS = 8_000;
@@ -41,10 +41,10 @@ const WEATHER_CODES: Record<number, string> = {
 };
 
 export const getWeatherTool = createTool({
-    name: 'get_weather',
+    id: 'get_weather',
     description:
         'Get the current weather for a location. Use when the user asks about weather conditions or temperature somewhere.',
-    parameters: z.object({
+    inputSchema: z.object({
         location: z
             .string()
             .max(200, 'Location must be 200 characters or fewer')
@@ -104,10 +104,10 @@ export const getWeatherTool = createTool({
 });
 
 export const getCurrentDatetimeTool = createTool({
-    name: 'get_current_datetime',
+    id: 'get_current_datetime',
     description:
         'Get the current date and time (UTC). Use when the user asks what day or time it is, or when a calculation needs the current date.',
-    parameters: z.object({}),
+    inputSchema: z.object({}),
     execute: async () => {
         const now = new Date();
 

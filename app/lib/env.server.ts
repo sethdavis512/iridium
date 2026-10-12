@@ -80,8 +80,8 @@ const envSchema = z.object({
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     STRIPE_PRICE_ID: z.string().optional(),
-    VOLTAGENT_DATABASE_URL: z.url({
-        message: 'VOLTAGENT_DATABASE_URL must be a valid URL',
+    MASTRA_DATABASE_URL: z.url({
+        message: 'MASTRA_DATABASE_URL must be a valid URL',
     }),
     NODE_ENV: z
         .enum(['development', 'production', 'test'])
@@ -140,10 +140,10 @@ export function isSameDatabase(a: string, b: string): boolean {
 /**
  * The schema validated at boot: envSchema plus cross-field rules.
  *
- * In every environment, VOLTAGENT_DATABASE_URL must name a different database
- * than DATABASE_URL. VoltAgent's adapter creates its voltagent_memory_* tables
- * wherever it connects the first time chat uses it, and Prisma then reports
- * them as drift and asks to reset the app database.
+ * In every environment, MASTRA_DATABASE_URL must name a different database
+ * than DATABASE_URL. Mastra's store creates its mastra_* tables wherever it
+ * connects the first time chat uses it, and Prisma then reports them as drift
+ * and asks to reset the app database.
  *
  * With NODE_ENV=production, E2E_TEST_HOOKS would expose /api/test-role (anyone
  * can become ADMIN) and /api/test-mailbox (password-reset links), and
@@ -151,13 +151,13 @@ export function isSameDatabase(a: string, b: string): boolean {
  * fails boot instead of running.
  */
 export const bootEnvSchema = envSchema.superRefine((value, ctx) => {
-    if (isSameDatabase(value.DATABASE_URL, value.VOLTAGENT_DATABASE_URL)) {
+    if (isSameDatabase(value.DATABASE_URL, value.MASTRA_DATABASE_URL)) {
         ctx.addIssue({
             code: 'custom',
-            path: ['VOLTAGENT_DATABASE_URL'],
+            path: ['MASTRA_DATABASE_URL'],
             message:
                 'must name a different database than DATABASE_URL, or ' +
-                'VoltAgent creates its tables in the app database',
+                'Mastra creates its tables in the app database',
         });
     }
 
@@ -183,12 +183,12 @@ const isProduction = process.env.NODE_ENV === 'production';
  *
  * The database URLs mirror docker-compose.dev.yml, so a fresh clone +
  * `bun run docker:up` + `bun run dev` connects with zero configuration. Like
- * Compose, they honor POSTGRES_PORT / VOLTAGENT_POSTGRES_PORT (the host ports
+ * Compose, they honor POSTGRES_PORT / MASTRA_POSTGRES_PORT (the host ports
  * `bun run setup` picks when another project holds 5432/5433).
  */
 const DEV_FALLBACKS: Record<string, string> = {
     DATABASE_URL: `postgresql://postgres:postgres@localhost:${process.env.POSTGRES_PORT || 5432}/${LOCAL_DATABASE_NAME}`,
-    VOLTAGENT_DATABASE_URL: `postgresql://postgres:postgres@localhost:${process.env.VOLTAGENT_POSTGRES_PORT || 5433}/voltagent`,
+    MASTRA_DATABASE_URL: `postgresql://postgres:postgres@localhost:${process.env.MASTRA_POSTGRES_PORT || 5433}/mastra`,
     BETTER_AUTH_SECRET: 'dev-only-placeholder-secret-change-me-please',
     BETTER_AUTH_BASE_URL: 'http://localhost:5173',
 };
@@ -197,8 +197,7 @@ const DEV_FALLBACKS: Record<string, string> = {
 const INFRA_EFFECTS: Record<string, string> = {
     DATABASE_URL:
         'Using the docker-compose default database — run `bun run docker:up`.',
-    VOLTAGENT_DATABASE_URL:
-        'Using the docker-compose default AI-memory database.',
+    MASTRA_DATABASE_URL: 'Using the docker-compose default AI-memory database.',
     BETTER_AUTH_SECRET: 'Sessions use an insecure placeholder secret.',
     BETTER_AUTH_BASE_URL: 'Auth callbacks use a placeholder URL.',
 };

@@ -40,7 +40,7 @@ import {
     isPortFree,
     parsePort,
     setEnvDevPorts,
-    voltagentDatabaseUrl,
+    mastraDatabaseUrl,
 } from './ports';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -175,7 +175,7 @@ const currentPorts = configuredDevPorts(process.env);
 const taken: number[] = [];
 for (const [service, port] of [
     ['postgres', currentPorts.app],
-    ['postgres-voltagent', currentPorts.voltagent],
+    ['postgres-mastra', currentPorts.mastra],
 ] as const) {
     if (!(await isPortFree(port)) && (await publishedPort(service)) !== port) {
         taken.push(port);
@@ -193,17 +193,17 @@ if (taken.length > 0) {
         free !== undefined &&
         (nonInteractive ||
             (await confirm({
-                message: `${inUse} (another project's databases?). Use ${free.app}/${free.voltagent} for this copy instead?`,
+                message: `${inUse} (another project's databases?). Use ${free.app}/${free.mastra} for this copy instead?`,
                 default: true,
             })));
     if (move) {
         ports = free;
         step(
-            `${inUse}; this copy's databases will use ${ports.app}/${ports.voltagent}`,
+            `${inUse}; this copy's databases will use ${ports.app}/${ports.mastra}`,
         );
     } else {
         console.warn(
-            `  ! ${inUse}. Stop the other project's databases, or set POSTGRES_PORT / VOLTAGENT_POSTGRES_PORT and the matching URLs in .env.`,
+            `  ! ${inUse}. Stop the other project's databases, or set POSTGRES_PORT / MASTRA_POSTGRES_PORT and the matching URLs in .env.`,
         );
     }
 }
@@ -240,7 +240,7 @@ if (existsSync(envPath)) {
                 setEnvDevPorts(source, currentPorts, ports),
             );
             console.log(
-                `  Moved its database ports and local URLs to ${ports.app}/${ports.voltagent}.`,
+                `  Moved its database ports and local URLs to ${ports.app}/${ports.mastra}.`,
             );
         }
     }
@@ -261,9 +261,9 @@ if (writeEnv) {
 
     const values: Record<string, string> = {
         DATABASE_URL: localDatabaseUrl(databaseName, ports.app),
-        VOLTAGENT_DATABASE_URL: voltagentDatabaseUrl(ports.voltagent),
+        MASTRA_DATABASE_URL: mastraDatabaseUrl(ports.mastra),
         POSTGRES_PORT: String(ports.app),
-        VOLTAGENT_POSTGRES_PORT: String(ports.voltagent),
+        MASTRA_POSTGRES_PORT: String(ports.mastra),
         BETTER_AUTH_SECRET: randomBytes(32).toString('base64'),
         BETTER_AUTH_BASE_URL: 'http://localhost:5173',
         ANTHROPIC_API_KEY: anthropicKey || 'sk-ant-REPLACE-ME',
@@ -298,9 +298,9 @@ if (writeEnv) {
 const finalEnv = parse(await file(envPath).text());
 for (const key of [
     'DATABASE_URL',
-    'VOLTAGENT_DATABASE_URL',
+    'MASTRA_DATABASE_URL',
     'POSTGRES_PORT',
-    'VOLTAGENT_POSTGRES_PORT',
+    'MASTRA_POSTGRES_PORT',
 ]) {
     if (finalEnv[key] !== undefined) process.env[key] = finalEnv[key];
 }
@@ -312,14 +312,14 @@ const up = await $`docker compose -f docker-compose.dev.yml up -d`
     .nothrow();
 if (up.exitCode !== 0) {
     console.error(
-        `✗ docker compose up failed. If another project holds port ${ports.app} or ${ports.voltagent}, stop it (docker compose -p <its project name> stop) or run setup again to pick free ports.`,
+        `✗ docker compose up failed. If another project holds port ${ports.app} or ${ports.mastra}, stop it (docker compose -p <its project name> stop) or run setup again to pick free ports.`,
     );
     process.exit(1);
 }
 
 // Wait until both databases accept connections.
 step('Waiting for databases to become healthy');
-const services = ['postgres', 'postgres-voltagent'];
+const services = ['postgres', 'postgres-mastra'];
 for (const service of services) {
     let healthy = false;
     for (let attempt = 0; attempt < 30; attempt++) {

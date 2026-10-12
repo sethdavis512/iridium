@@ -5,9 +5,9 @@
             "command": "npx",
             "args": ["-y", "@railway/mcp-server"]
         },
-        "voltagent": {
+        "mastra": {
             "command": "npx",
-            "args": ["-y", "@voltagent/docs-mcp"],
+            "args": ["-y", "@mastra/mcp-docs-server"],
             "type": "stdio"
         }
     }

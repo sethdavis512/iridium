@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getCurrentDatetimeTool, getWeatherTool } from './weather';
 
+/** Tools that read nothing from their run context. */
+const context = {} as Parameters<NonNullable<typeof getWeatherTool.execute>>[1];
+
 function jsonResponse(body: unknown) {
     return {
         ok: true,
@@ -41,7 +44,10 @@ describe('get_weather', () => {
             );
         vi.stubGlobal('fetch', fetchMock);
 
-        const result = await getWeatherTool.execute!({ location: 'Austin' });
+        const result = await getWeatherTool.execute!(
+            { location: 'Austin' },
+            context,
+        );
 
         expect(result).toEqual({
             location: 'Austin, United States',
@@ -59,9 +65,12 @@ describe('get_weather', () => {
             vi.fn().mockResolvedValue(jsonResponse({ results: [] })),
         );
 
-        const result = await getWeatherTool.execute!({
-            location: 'Nowheresville',
-        });
+        const result = await getWeatherTool.execute!(
+            {
+                location: 'Nowheresville',
+            },
+            context,
+        );
 
         expect(result).toEqual({
             error: 'Could not find a place named "Nowheresville".',
@@ -74,7 +83,10 @@ describe('get_weather', () => {
             vi.fn().mockRejectedValue(new Error('network down')),
         );
 
-        const result = await getWeatherTool.execute!({ location: 'Austin' });
+        const result = await getWeatherTool.execute!(
+            { location: 'Austin' },
+            context,
+        );
 
         expect(result).toEqual({
             error: 'Weather lookup failed. Try again later.',
@@ -84,7 +96,7 @@ describe('get_weather', () => {
 
 describe('get_current_datetime', () => {
     it('returns ISO and UTC timestamps', async () => {
-        const result = (await getCurrentDatetimeTool.execute!({})) as {
+        const result = (await getCurrentDatetimeTool.execute!({}, context)) as {
             iso: string;
             utc: string;
         };

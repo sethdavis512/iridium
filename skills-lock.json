@@ -28,11 +28,6 @@
             "skillPath": "apps/ui/skills/coss-particles/SKILL.md",
             "computedHash": "a3448e835713342e4625d1f97a38265fea03cf840723ad23eeef0b53dcc21609"
         },
-        "create-voltagent": {
-            "source": "VoltAgent/skills",
-            "sourceType": "github",
-            "computedHash": "fd2fc9877afada74de4387c95d74ae7c0ee90723d8f78c2e16730272b5c6a29c"
-        },
         "email-and-password-best-practices": {
             "source": "better-auth/skills",
             "sourceType": "github",
@@ -47,16 +42,6 @@
             "source": "remix-run/agent-skills",
             "sourceType": "github",
             "computedHash": "26c5bdac2f686c47eb4c4b48b6cb52401cde1dc833e6d26408ddfb22ea83c5ca"
-        },
-        "voltagent-best-practices": {
-            "source": "VoltAgent/skills",
-            "sourceType": "github",
-            "computedHash": "bae60c5ed59943c3641a6be41c29497e34a2355cbee05985fba465b92263ea53"
-        },
-        "voltagent-docs-bundle": {
-            "source": "VoltAgent/skills",
-            "sourceType": "github",
-            "computedHash": "6e59f523ae46b69571cda2d68f72de4e770824c1eee5025288a13f6dd36ebee3"
         }
     }
 }

@@ -7,7 +7,7 @@ Full-stack AI chat app built with React Router v8, Better Auth, Prisma, and Verc
 - **Framework**: React Router v8 (SSR; middleware is always on, so never set the removed `future.v8_middleware` flag)
 - **Auth**: Better Auth with Prisma adapter, admin plugin (roles: USER, EDITOR, ADMIN)
 - **Database**: PostgreSQL via Prisma (schema at `prisma/schema.prisma`, client generated to `app/generated/prisma/`)
-- **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`), VoltAgent, with per-thread model selection from the allowlist in `app/lib/ai-models.ts` (Haiku 4.5 default)
+- **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`), Mastra, with per-thread model selection from the allowlist in `app/lib/ai-models.ts` (Haiku 4.5 default)
 - **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives, copy-owned in `app/components/ui/`), CVA with tailwind-merge for app components
 - **Runtime**: Bun (local dev), Node 24 Alpine (Docker/prod)
 - **Validation**: Zod
@@ -35,12 +35,12 @@ Prisma CLI: always use `bunx --bun prisma <command>`.
 
 The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
 
-| Database    | Port | Env Var                  | Purpose                          |
-| ----------- | ---- | ------------------------ | -------------------------------- |
-| `iridium`   | 5432 | `DATABASE_URL`           | Prisma (app data, auth, threads) |
-| `voltagent` | 5433 | `VOLTAGENT_DATABASE_URL` | VoltAgent memory and state       |
+| Database  | Port | Env Var               | Purpose                          |
+| --------- | ---- | --------------------- | -------------------------------- |
+| `iridium` | 5432 | `DATABASE_URL`        | Prisma (app data, auth, threads) |
+| `mastra`  | 5433 | `MASTRA_DATABASE_URL` | Mastra memory and state          |
 
-VoltAgent creates its own tables automatically on first connection -- no migration needed.
+Mastra creates its own tables automatically on first connection -- no migration needed.
 
 ## Architecture
 

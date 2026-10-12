@@ -41,7 +41,9 @@ type AppConfig = {
     repo: string;
     branch: string;
     postgresImage?: string;
-    voltagentPostgresImage?: string;
+    /** Railway service name of the Mastra memory database; new copies omit it. */
+    memoryPostgresService?: string;
+    memoryPostgresImage?: string;
 };
 
 function argValue(flag: string): string | undefined {
@@ -246,7 +248,7 @@ const nextConfig: AppConfig = {
 console.log(`
   Project:    ${projectName} (workspace ${workspace})
   Service:    ${serviceName}, built from ./Dockerfile, deploys ${repo}@${branch}
-  Databases:  Postgres, VoltAgent Postgres
+  Databases:  Postgres, Mastra Postgres
   Variables:  BETTER_AUTH_SECRET (generated), BETTER_AUTH_BASE_URL${Object.keys(
       optional,
   )

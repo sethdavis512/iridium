@@ -126,7 +126,7 @@ describe('setComposeIdentity', () => {
         });
         expect(next).toMatch(/^name: acme-notes$/m);
         expect(next).toMatch(/^\s+POSTGRES_DB: acme_notes$/m);
-        expect(next).toMatch(/^\s+POSTGRES_DB: voltagent$/m);
+        expect(next).toMatch(/^\s+POSTGRES_DB: mastra$/m);
         expect(next).not.toMatch(
             new RegExp(`POSTGRES_DB: ${LOCAL_DATABASE_NAME}$`, 'm'),
         );
@@ -152,7 +152,7 @@ describe('replaceLocalDatabaseName', () => {
         );
         expect(next).not.toContain(`5432/${LOCAL_DATABASE_NAME}`);
         expect(next.match(/5432\/acme_notes/g)).toHaveLength(2);
-        expect(next).toContain('localhost:5433/voltagent');
+        expect(next).toContain('localhost:5433/mastra');
     });
 
     it("rewrites prisma.config.ts's POSTGRES_PORT fallback", () => {

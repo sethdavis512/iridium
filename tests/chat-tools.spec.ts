@@ -5,7 +5,7 @@ import { mockChatStream, toolCallChunks } from './chat-mock';
  * Verifies the tool-driven generative UI: the agent returns structured tool
  * output and the thread view renders a rich component (note summary or card)
  * instead of plain text. The /api/chat stream is mocked with dynamic-tool
- * parts that mirror what the VoltAgent backend emits.
+ * parts that resolve to the same tool names the Mastra backend emits.
  */
 
 async function openNewThread(page: import('@playwright/test').Page) {

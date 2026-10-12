@@ -1,35 +1,36 @@
 import type { EventEmitter } from 'node:events';
 
-import { PostgreSQLMemoryAdapter } from '@voltagent/postgres';
+import { PostgresStore } from '@mastra/pg';
+import { Pool } from 'pg';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { openMemoryStorage } from './memory-storage';
 
 /** Port 1 refuses at once, like a stopped database. */
-const UNREACHABLE = 'postgresql://postgres:postgres@127.0.0.1:1/voltagent';
+const UNREACHABLE = 'postgresql://postgres:postgres@127.0.0.1:1/mastra';
 
 afterEach(() => {
     vi.restoreAllMocks();
 });
 
 describe('openMemoryStorage', () => {
-    // Vitest fails the run on an unhandled rejection, so these also prove the
-    // setup promise the adapter's constructor starts is handled.
     it('rejects with the connection error when the database is down', async () => {
         await expect(openMemoryStorage(UNREACHABLE)).rejects.toThrow(
             /ECONNREFUSED/,
         );
     });
 
-    it('closes the failed adapter, whose pool was guarded, so nothing leaks', async () => {
-        const close = vi.spyOn(PostgreSQLMemoryAdapter.prototype, 'close');
+    it('closes the store and ends its guarded pool, so nothing leaks', async () => {
+        const close = vi.spyOn(PostgresStore.prototype, 'close');
+        const end = vi.spyOn(Pool.prototype, 'end');
 
         await openMemoryStorage(UNREACHABLE).catch(() => {});
 
         expect(close).toHaveBeenCalledTimes(1);
-        const adapter = close.mock.contexts[0] as PostgreSQLMemoryAdapter;
-        const pool = Reflect.get(adapter, 'pool') as EventEmitter;
-        expect(Reflect.get(pool, 'ended')).toBe(true);
+        expect(end).toHaveBeenCalledTimes(1);
+        const pool = end.mock.contexts[0] as Pool & EventEmitter;
+        expect(pool.ended).toBe(true);
+        // An idle client's error with no listener would exit the process.
         expect(pool.listenerCount('error')).toBe(1);
     });
 });

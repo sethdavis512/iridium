@@ -6,7 +6,7 @@ import {
     XCircleIcon,
 } from 'lucide-react';
 import { isToolLoading, ToolPartShell } from '~/components/ToolPartShell';
-import type { CardData } from '~/voltagent/tools/cards';
+import type { CardData } from '~/mastra/tools/cards';
 
 interface CardToolPartProps {
     state: string;

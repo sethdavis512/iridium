@@ -21,8 +21,8 @@ describe('pgPoolConfig', () => {
 
     it('keeps two overlapping replicas well under 100 connections per DB', () => {
         const appDb = POOL_MAX.app;
-        const voltagentDb = POOL_MAX.voltagent + POOL_MAX.healthcheck;
+        const mastraDb = POOL_MAX.mastra + POOL_MAX.healthcheck;
         expect(appDb * 2).toBeLessThanOrEqual(50);
-        expect(voltagentDb * 2).toBeLessThanOrEqual(50);
+        expect(mastraDb * 2).toBeLessThanOrEqual(50);
     });
 });

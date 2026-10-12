@@ -13,24 +13,25 @@ import { onShutdown } from '~/lib/shutdown.server';
  */
 export const CHECK_TIMEOUT_MS = 2_500;
 
-// The app DB check reuses Prisma's pool. VoltAgent's adapter keeps its pg
-// pool private, so the VoltAgent DB gets one small dedicated probe pool.
-let voltagentPool: Pool | null = null;
+// The app DB check reuses Prisma's pool. The Mastra memory pool only exists
+// once chat has opened it, so the Mastra DB gets one small dedicated probe
+// pool that works whether or not chat has run.
+let mastraPool: Pool | null = null;
 
-function getVoltagentPool(): Pool {
-    if (!voltagentPool) {
+function getMastraPool(): Pool {
+    if (!mastraPool) {
         const pool = new Pool(
-            pgPoolConfig(env.VOLTAGENT_DATABASE_URL, POOL_MAX.healthcheck),
+            pgPoolConfig(env.MASTRA_DATABASE_URL, POOL_MAX.healthcheck),
         );
         // An idle client error with no listener crashes the process.
         pool.on('error', (error) =>
             log.exception('healthcheck_pool_error', error),
         );
         onShutdown(() => pool.end());
-        voltagentPool = pool;
+        mastraPool = pool;
     }
 
-    return voltagentPool;
+    return mastraPool;
 }
 
 function withTimeout<T>(check: () => Promise<T>, ms: number): Promise<T> {
@@ -50,7 +51,7 @@ function withTimeout<T>(check: () => Promise<T>, ms: number): Promise<T> {
 export async function loader() {
     const checks = {
         iridium: () => prisma.$queryRaw`SELECT 1`,
-        voltagent: () => getVoltagentPool().query('SELECT 1'),
+        mastra: () => getMastraPool().query('SELECT 1'),
     };
 
     const names = Object.keys(checks) as (keyof typeof checks)[];
