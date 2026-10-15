@@ -16,6 +16,12 @@ FROM oven/bun:1.4.2-alpine AS build-env
 COPY --from=development-dependencies-env /app/node_modules /app/node_modules
 COPY . /app/
 WORKDIR /app
+# The build bakes the app's public hosts into React Router's
+# allowedActionOrigins (app/lib/action-origins.ts). Without them every action
+# answers 400 behind a TLS-terminating proxy. Railway passes service variables
+# to matching ARGs; plain Docker builds need --build-arg.
+ARG BETTER_AUTH_BASE_URL
+ARG BETTER_AUTH_TRUSTED_ORIGINS
 # prisma generate only reads the schema -- no DB connection needed.
 # Provide a placeholder so prisma.config.ts can resolve env('DATABASE_URL').
 RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" bunx --bun prisma generate && bun run build
