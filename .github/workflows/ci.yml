@@ -336,6 +336,10 @@ jobs:
                   push: false
                   load: true
                   tags: iridium:ci
+                  # Production's public URL is https while the server behind
+                  # the proxy sees http; the action-origin check below covers it.
+                  build-args: |
+                      BETTER_AUTH_BASE_URL=https://localhost:3000
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
@@ -349,7 +353,7 @@ jobs:
                       -e DATABASE_URL \
                       -e MASTRA_DATABASE_URL \
                       -e BETTER_AUTH_SECRET \
-                      -e BETTER_AUTH_BASE_URL=http://localhost:3000 \
+                      -e BETTER_AUTH_BASE_URL=https://localhost:3000 \
                       iridium:ci
                   for _ in $(seq 1 45); do
                       if curl -fsS --max-time 5 http://localhost:3000/healthcheck; then
@@ -366,6 +370,27 @@ jobs:
                   echo "::error::/healthcheck did not return 200 within 90s"
                   docker logs iridium
                   exit 1
+
+            # Like Railway, the container serves plain http behind a proxy that
+            # terminates TLS, so request.url is http:// while browsers send an
+            # https Origin. React Router's CSRF check must accept the app's own
+            # public origin (allowedActionOrigins) and still reject others.
+            - name: Same-site actions pass the origin check behind a TLS proxy
+              run: |
+                  post() {
+                      curl -s -o /dev/null -w '%{http_code}' -X POST \
+                          http://localhost:3000/api/theme.data \
+                          -H 'Content-Type: application/x-www-form-urlencoded' \
+                          -H "Origin: $1" -d theme=light
+                  }
+                  same=$(post https://localhost:3000)
+                  other=$(post https://evil.example)
+                  echo "same-site: $same, cross-site: $other"
+                  if [ "$same" != 200 ] || [ "$other" != 400 ]; then
+                      echo "::error::Expected 200 for the app's own https origin and 400 for another site"
+                      docker logs iridium
+                      exit 1
+                  fi
 
     # Deploys the Trigger.dev tasks in trigger/ once the other jobs pass on a
     # push to main (it skips with them on docs-only commits). A no-op until the
