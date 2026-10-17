@@ -1,4 +1,4 @@
-# Iridium — Project Guidelines
+# Project Guidelines
 
 Full-stack AI chat app built with React Router v8, Better Auth, Prisma, and Vercel AI SDK.
 
@@ -35,12 +35,12 @@ Prisma CLI: always use `bunx --bun prisma <command>`.
 
 The app runs two PostgreSQL instances via `docker-compose.dev.yml`:
 
-| Database  | Port | Env Var               | Purpose                          |
-| --------- | ---- | --------------------- | -------------------------------- |
-| `iridium` | 5432 | `DATABASE_URL`        | Prisma (app data, auth, threads) |
-| `mastra`  | 5433 | `MASTRA_DATABASE_URL` | Mastra memory and state          |
+| Database   | Port | Env Var               | Purpose                          |
+| ---------- | ---- | --------------------- | -------------------------------- |
+| `<app_db>` | 5432 | `DATABASE_URL`        | Prisma (app data, auth, threads) |
+| `mastra`   | 5433 | `MASTRA_DATABASE_URL` | Mastra memory and state          |
 
-Mastra creates its own tables automatically on first connection -- no migration needed.
+`<app_db>` is `LOCAL_DATABASE_NAME` from `app/config.ts`. Mastra creates its own tables automatically on first connection -- no migration needed.
 
 ## Architecture
 

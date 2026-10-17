@@ -17,7 +17,7 @@ concurrency:
     cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-    DATABASE_URL: postgresql://postgres:postgres@localhost:5432/iridium_test
+    DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app_test
     MASTRA_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/mastra_test
     BETTER_AUTH_SECRET: test-secret-do-not-use-in-production!!
     BETTER_AUTH_BASE_URL: http://localhost:5173
@@ -104,7 +104,7 @@ jobs:
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: iridium_test
+                    POSTGRES_DB: app_test
                 ports:
                     - 5432:5432
                 options: >-
@@ -203,7 +203,7 @@ jobs:
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: iridium_test
+                    POSTGRES_DB: app_test
                 ports:
                     - 5432:5432
                 options: >-
@@ -301,7 +301,7 @@ jobs:
                 env:
                     POSTGRES_USER: postgres
                     POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: iridium_test
+                    POSTGRES_DB: app_test
                 ports:
                     - 5432:5432
                 options: >-
@@ -335,7 +335,7 @@ jobs:
                   context: .
                   push: false
                   load: true
-                  tags: iridium:ci
+                  tags: app:ci
                   # Production's public URL is https while the server behind
                   # the proxy sees http; the action-origin check below covers it.
                   build-args: |
@@ -348,27 +348,27 @@ jobs:
             # The image's CMD runs `prisma migrate deploy` before serving.
             - name: Boot image and wait for /healthcheck
               run: |
-                  docker run -d --name iridium --network host \
+                  docker run -d --name app --network host \
                       -e NODE_ENV=production \
                       -e DATABASE_URL \
                       -e MASTRA_DATABASE_URL \
                       -e BETTER_AUTH_SECRET \
                       -e BETTER_AUTH_BASE_URL=https://localhost:3000 \
-                      iridium:ci
+                      app:ci
                   for _ in $(seq 1 45); do
                       if curl -fsS --max-time 5 http://localhost:3000/healthcheck; then
                           echo
                           exit 0
                       fi
-                      if [ "$(docker inspect -f '{{.State.Running}}' iridium)" != true ]; then
+                      if [ "$(docker inspect -f '{{.State.Running}}' app)" != true ]; then
                           echo "::error::The container exited before /healthcheck returned 200"
-                          docker logs iridium
+                          docker logs app
                           exit 1
                       fi
                       sleep 2
                   done
                   echo "::error::/healthcheck did not return 200 within 90s"
-                  docker logs iridium
+                  docker logs app
                   exit 1
 
             # Like Railway, the container serves plain http behind a proxy that
@@ -388,7 +388,7 @@ jobs:
                   echo "same-site: $same, cross-site: $other"
                   if [ "$same" != 200 ] || [ "$other" != 400 ]; then
                       echo "::error::Expected 200 for the app's own https origin and 400 for another site"
-                      docker logs iridium
+                      docker logs app
                       exit 1
                   fi
 

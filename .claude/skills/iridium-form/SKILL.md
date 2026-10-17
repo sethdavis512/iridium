@@ -1,9 +1,9 @@
 ---
 name: iridium-form
-description: Build validated forms in this Iridium app using React Hook Form v7 + Zod v4, useFetcher submission, and the COSS UI form components (Field, Input, Button, FormAlert). Use when adding any user-input form (login, signup, settings, create/edit pages, contact, etc.), composing fieldsets with accessible error messages, wiring client + server validation against a shared schema, displaying form-level or field-level errors from an action, or editing a *.tsx file that contains a <form> or imports react-hook-form, @hookform/resolvers/zod, or zod. Do NOT use for the chat input (uses @ai-sdk/react useChat), for the existing Better Auth login/register flows, or for pure search/filter forms (use <Form method="get"> directly).
+description: Build validated forms in this app using React Hook Form v7 + Zod v4, useFetcher submission, and the COSS UI form components (Field, Input, Button, FormAlert). Use when adding any user-input form (login, signup, settings, create/edit pages, contact, etc.), composing fieldsets with accessible error messages, wiring client + server validation against a shared schema, displaying form-level or field-level errors from an action, or editing a *.tsx file that contains a <form> or imports react-hook-form, @hookform/resolvers/zod, or zod. Do NOT use for the chat input (uses @ai-sdk/react useChat), for the existing Better Auth login/register flows, or for pure search/filter forms (use <Form method="get"> directly).
 ---
 
-# Iridium Forms
+# Forms
 
 Compose validated, accessible forms with React Hook Form + Zod, submit them through `useFetcher`, and render them with the COSS UI form components in `app/components/forms/` and `app/components/ui/`. The same Zod schema validates on both sides of the wire.
 

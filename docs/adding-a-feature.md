@@ -1,13 +1,13 @@
 # Adding a Feature
 
-This walkthrough builds a complete feature the way Iridium expects, using the
+This walkthrough builds a complete feature the way this app expects, using the
 Notes feature (`app/routes/notes.tsx`) as the worked example. Read it next to
 that file: everything described here exists in the codebase and is covered by
 tests, so it doubles as a reference implementation.
 
 ## The shape of a feature
 
-A typical Iridium feature touches five places:
+A typical feature touches five places:
 
 1. A route registration in `app/routes.ts`
 2. A route module in `app/routes/` (loader, action, component)
