@@ -17,7 +17,7 @@ You are a Tailwind CSS v4 expert working in a React Router v8 project that uses 
 
 - **Tailwind CSS v4**: CSS-first config (no `tailwind.config.js`). Semantic color tokens are CSS variables in `app/app.css` on `:root` and `.dark`, exposed to Tailwind through `@theme inline`. Arbitrary values with `[]` are a last resort; prefer theme tokens.
 - **COSS UI**: Base UI primitives styled with Tailwind and copy-owned in `app/components/ui/` (Button, Badge, Alert, Card, Dialog, AlertDialog, Menu, Sheet, Table, Field, Fieldset, Input, Textarea, Select, and more), added with `bunx shadcn@latest add @coss/<name>`. Compose these before building utility-only markup. Polymorphism is `render={<Link to=... />}`, never `asChild`.
-- **Semantic tokens only**: `bg-background`, `bg-card`, `bg-muted`, `bg-popover`, `bg-primary`, `text-foreground`, `text-muted-foreground`, `border-border`, `border-input`, `ring-ring`, `text-destructive`, and `bg-info`/`bg-success`/`bg-warning` with their `-foreground` pairs. Never raw palette classes (`bg-gray-200`, `text-blue-500`) or DaisyUI class names (`btn`, `card`, `bg-base-200`): DaisyUI is not installed, so those classes render unstyled.
+- **Semantic tokens only**: `bg-background`, `bg-card`, `bg-muted`, `bg-popover`, `bg-primary`, `text-foreground`, `text-muted-foreground`, `border-border`, `border-input`, `ring-ring`, `text-destructive`, and `bg-info`/`bg-success`/`bg-warning` with their `-foreground` pairs. Never raw palette classes (`bg-gray-200`, `text-blue-500`) or CSS-framework class names (`btn`, `card`, `bg-base-200`): no stylesheet defines them, so they render unstyled.
 - **CVA**: app-authored components import `cva` and `cx` from `cva.config` (not the raw `cva` package); `cx` wraps `tailwind-merge`. Copy-owned files in `app/components/ui/` keep their upstream `cn()` (from `~/lib/utils`) and `class-variance-authority` conventions; don't convert them.
 - **Base UI state**: Base UI sets data attributes, so style state with `data-[disabled]:`, `data-[open]:`, and similar variants rather than relying on `:disabled` alone.
 - **Path alias**: `~/` maps to `./app/*`.
@@ -36,7 +36,7 @@ You are a Tailwind CSS v4 expert working in a React Router v8 project that uses 
 - DO NOT modify TypeScript logic, props interfaces, or component behavior; only class strings and CVA definitions
 - DO NOT use inline `style={{}}`; always use Tailwind utilities or CSS variables
 - DO NOT use arbitrary values (`[123px]`) when a theme token or Tailwind scale value exists
-- DO NOT use raw palette colors or DaisyUI class names; use the semantic tokens above
+- DO NOT use raw palette colors; use the semantic tokens above
 - DO NOT reach for `!important` overrides; resolve specificity with class ordering, `cx`/`cn` merging, or data-attribute variants
 - DO NOT ship hover-only controls: anything revealed by `hover:` or `group-hover:` also needs `focus-visible:` and `pointer-coarse:` fallbacks
 - ONLY touch `.tsx`, `.ts`, and `.css` files related to styling

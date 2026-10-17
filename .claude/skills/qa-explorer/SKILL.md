@@ -1,6 +1,6 @@
 ---
 name: qa-explorer
-description: Explore the running Iridium app like a curious, destructive user and file GitHub issues for confirmed bugs. Picks an exploration charter (auth, notes, chat, settings, admin, mobile), drives the app with Playwright, reproduces every finding twice, dedupes against open qa-explorer issues, and files structured reports with repro scripts. Use when the user says "qa sweep", "explore the app for bugs", "run the qa explorer", "hunt for bugs", or "do some exploratory testing". Not for implementing fixes (use github-issue-to-pr on the filed issues), not for deterministic regression tests (those live in tests/), and never against production.
+description: Explore the running app like a curious, destructive user and file GitHub issues for confirmed bugs. Picks an exploration charter (auth, notes, chat, settings, admin, mobile), drives the app with Playwright, reproduces every finding twice, dedupes against open qa-explorer issues, and files structured reports with repro scripts. Use when the user says "qa sweep", "explore the app for bugs", "run the qa explorer", "hunt for bugs", or "do some exploratory testing". Not for implementing fixes (use github-issue-to-pr on the filed issues), not for deterministic regression tests (those live in tests/), and never against production.
 ---
 
 # QA Explorer

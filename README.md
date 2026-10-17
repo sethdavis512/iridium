@@ -362,8 +362,7 @@ Change infrastructure by editing `.railway/railway.ts` and running
 service or variable missing from the file is deleted, and removing `source`
 disconnects the repo.
 
-There is no `railway.json`: Railway's Config as Code is deprecated (it stops being
-read on 2026-12-01), and `.railway/railway.ts` is the only Railway config.
+There is no `railway.json`: Railway's Config as Code is deprecated, and `.railway/railway.ts` is the only Railway config.
 
 Production ships the same way, only by merging to `main`. Railway's GitHub
 integration builds the commit, and Wait for CI (`checkSuites: true` in

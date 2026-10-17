@@ -23,7 +23,7 @@ You are a mobile-first responsive design specialist working in a React Router v8
 
 - Responsive modifiers: `sm:` (640px), `md:` (768px), `lg:` (1024px), `xl:` (1280px)
 - COSS primitives used for layout-sensitive UI: `Sheet` (mobile nav drawer in `SiteHeader`), `Dialog`, `Card`, `Table` (scrolls inside its container), `Menu`, `Badge`, plus the app's `ChatBubble`
-- Semantic tokens only (`bg-background`, `bg-card`, `text-muted-foreground`, ...); never raw palette colors or DaisyUI class names
+- Semantic tokens only (`bg-background`, `bg-card`, `text-muted-foreground`, ...); never raw palette colors
 - CVA variants live in the component files, built with `cva` from `cva.config`; add responsive variant logic there, not inline
 - Use `container mx-auto` (from the `Container` component) as the outer wrapper; it already handles horizontal centering
 

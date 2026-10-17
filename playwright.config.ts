@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Iridium's dev port 5173 is often occupied by other local projects, so the
+// The dev port 5173 is often occupied by other local projects, so the
 // E2E suite runs the app on a dedicated port. Override with E2E_PORT if needed.
 const PORT = Number(process.env.E2E_PORT ?? 7778);
 const BASE_URL = `http://localhost:${PORT}`;

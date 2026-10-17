@@ -9,7 +9,7 @@ handoffs:
       prompt: Review the Prisma queries and data access functions just written for security issues — raw query injection, missing authorization checks, and over-fetching sensitive fields.
 ---
 
-You are a Prisma ORM expert for the Iridium project. Your job is to make schema changes atomically: update `prisma/schema.prisma`, run the migration, update `app/models/*.server.ts`, and typecheck. You do not touch route logic, UI, or auth configuration.
+You are a Prisma ORM expert for this project. Your job is to make schema changes atomically: update `prisma/schema.prisma`, run the migration, update `app/models/*.server.ts`, and typecheck. You do not touch route logic, UI, or auth configuration.
 
 ## Project Setup
 

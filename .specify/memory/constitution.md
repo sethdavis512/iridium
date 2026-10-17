@@ -1,70 +1,3 @@
-<!--
-SYNC IMPACT REPORT
-==================
-Version change: 1.2.0 → 1.2.1
-Bump rationale: PATCH. Principle IV and Technology Constraints name React Router v8
-  (middleware always on) instead of v7 with the removed `v8_middleware` future flag.
-  Wording correction to match the installed version; no principle changes.
-
-Modified principles:
-  IV. Convention-Driven Architecture: framework version reference only.
-
-Modified sections:
-  - Technology Constraints: Framework line.
-
-Templates requiring updates: none.
-
-Follow-up TODOs: none.
-
---- Prior report (v1.2.0) ---
-Version change: 1.1.0 → 1.2.0
-Bump rationale: MINOR. Principle VI and Technology Constraints now name the styling stack
-  actually installed (COSS UI on Base UI with semantic tokens) instead of DaisyUI v5.
-  Not MAJOR: DaisyUI is not a dependency, so the old rule could not be satisfied and no
-  compliant code becomes non-compliant.
-
-Modified principles:
-  VI. Component Authoring Pattern: variant values use the semantic tokens in app/app.css;
-    added a rule to compose the COSS primitives in app/components/ui/.
-
-Modified sections:
-  - Technology Constraints: Styling line.
-
-Templates requiring updates:
-  ✅ .specify/templates/*.md: no styling references; aligned.
-
-Follow-up TODOs: none.
-
---- Prior report (v1.1.0) ---
-Version change: 1.0.0 → 1.1.0
-Bump rationale: MINOR — added a new principle (VI. Component Authoring Pattern)
-  codifying the component pattern established in app/components/Card.tsx. Principle IV
-  was trimmed to delegate component specifics to VI (no semantic loss).
-
-Modified principles:
-  IV. Convention-Driven Architecture — component-specific bullet narrowed to reference
-    Principle VI; general module conventions (~/ alias, named decls, named exports) retained.
-
-Added sections:
-  - VI. Component Authoring Pattern (new principle)
-
-Removed sections: none
-
-Templates requiring updates:
-  ✅ .specify/templates/plan-template.md — "Constitution Check" gate is generic
-     and resolves against this file; no edit required.
-  ✅ .specify/templates/spec-template.md — no hardcoded principle references; aligned.
-  ✅ .specify/templates/tasks-template.md — task categories are generic; aligned.
-
-Follow-up TODOs: none.
-
---- Prior report (v1.0.0) ---
-Version change: (unversioned template) → 1.0.0
-Bump rationale: Initial ratification — template placeholders replaced with
-  concrete, project-derived principles. First adopted version.
-Ratification date set to first adoption (2026-06-04).
--->
-
 # Iridium Constitution
 
 ## Core Principles
@@ -169,7 +102,7 @@ Components MUST follow the single established authoring pattern (reference:
   tailwind-merge.
 - Variant values MUST use the semantic token utilities defined in `app/app.css`
   (e.g. `bg-card`, `bg-muted`, `text-muted-foreground`), never raw palette colors or
-  DaisyUI class names (DaisyUI is not installed).
+  CSS-framework class names (no stylesheet defines them).
 - Components MUST compose the COSS UI primitives in `app/components/ui/` (Base UI) rather
   than re-implementing them. Those copy-owned files keep their upstream `cn()` and
   `class-variance-authority` conventions; the `cva.config` rule applies to app-authored
@@ -222,4 +155,4 @@ principle wins or the principle is amended — code does not silently diverge.
 - **Runtime guidance**: `CLAUDE.md` and `.claude/rules/*.md` provide day-to-day
   development guidance consistent with these principles.
 
-**Version**: 1.2.1 | **Ratified**: 2026-06-04 | **Last Amended**: 2026-09-25
+**Version**: 1.2.2 | **Ratified**: 2026-06-04 | **Last Amended**: 2026-10-17
