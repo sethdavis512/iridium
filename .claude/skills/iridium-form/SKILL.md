@@ -17,7 +17,7 @@ The form stack in this repo. Match the API for the installed major version:
 | `zod`                 | ^4.6    | v4 syntax. Use `z.email()` and `z.url()` as standalone formats, **not** `z.string().email()`. Issues are on `result.error.issues` with `path[]` + `message`.      |
 | `@hookform/resolvers` | ^5.9    | Import `zodResolver` from `@hookform/resolvers/zod`. v5 is the pair for RHF 7 + Zod 4.                                                                            |
 | `react-router`        | 8.4     | Framework mode. Import `useFetcher`, `Form`, `redirect`, `data` from `react-router`. Never `react-router-dom`.                                                    |
-| `@base-ui/react`      | ^1.8    | COSS UI primitives, copy-owned in `app/components/ui/` (`field`, `fieldset`, `input`, `textarea`, `button`, `alert`). There is no DaisyUI; never use its classes. |
+| `@base-ui/react`      | ^1.8    | COSS UI primitives, copy-owned in `app/components/ui/` (`field`, `fieldset`, `input`, `textarea`, `button`, `alert`). Never use CSS-framework classes like `btn`. |
 | `lucide-react`        | ^1.48   | Project's icon library. Use these for form icons; never heroicons.                                                                                                |
 
 ## Form building blocks
@@ -218,7 +218,7 @@ For RHF forms in this project, prefer `useFetcher` + JSON. It keeps client valid
 - Controls come from `~/components/forms/` (`Input`, `Textarea`, `Select`), or from `~/components/ui/` when composing the raw COSS `Field`. Size them with `inputSize`/`textareaSize`/`selectSize` (wrappers) or `size` (COSS), not ad-hoc height classes.
 - Field errors come from `Field`'s `error` prop (rendered as `text-destructive` under the control). Form-level errors use `FormAlert`.
 - Submit with COSS `Button type="submit"` and `loading={isSubmitting}`; `loading` disables the button and shows a spinner. Use `variant="ghost"` for Cancel.
-- Styling uses semantic tokens only (`text-muted-foreground`, `text-destructive`, `bg-card`, ...). Never DaisyUI classes (`btn`, `input`, `fieldset-legend`, `alert-error`) or raw palette colors: DaisyUI is not installed, so they render unstyled.
+- Styling uses semantic tokens only (`text-muted-foreground`, `text-destructive`, `bg-card`, ...). Never CSS-framework class names (`btn`, `input`, `fieldset-legend`, `alert-error`) or raw palette colors: no stylesheet defines those classes, so they render unstyled.
 
 ## Accessibility
 
@@ -264,7 +264,7 @@ Then branch on `parsed.data.intent` in the action.
 - Don't put DB calls directly in the action; delegate to `app/models/*.server.ts` functions.
 - Don't write `z.string().email()`; Zod v4 uses `z.email()`.
 - Don't import from `react-router-dom`. Everything ships from `react-router`.
-- Don't use DaisyUI class names (`btn`, `input`, `fieldset`, `alert-error`, `form-control`). There is no DaisyUI in this project; use the COSS components.
+- Don't use CSS-framework class names (`btn`, `input`, `fieldset`, `alert-error`, `form-control`); nothing defines them here. Use the COSS components.
 
 ## See also
 
