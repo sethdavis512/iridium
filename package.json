@@ -10,6 +10,7 @@
     "scripts": {
         "setup": "bun tools/init.ts",
         "provision": "bun tools/provision.ts",
+        "blop": "blop",
         "build": "react-router build",
         "dev": "react-router dev",
         "dev:full": "bun run docker:up && bun run dev",
@@ -100,6 +101,7 @@
         "@types/pg": "^8.23.1",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
+        "blop": "github:sethdavis512/blop",
         "eslint": "^10.11.0",
         "eslint-plugin-react-hooks": "^7.1.1",
         "husky": "^9.1.7",

@@ -38,6 +38,7 @@ Iridium is a full-stack AI chat application built with React Router v8 (SSR), Be
 | `bun run docker:up`      | Start both Postgres containers        |
 | `bun run docker:down`    | Stop containers (data preserved)      |
 | `bun run docker:nuke`    | Stop containers and delete volumes    |
+| `bun blop`               | Generate code (see Generators below)  |
 
 Run a single Playwright test: `bunx playwright test tests/auth.spec.ts --project=chromium`
 
@@ -241,6 +242,10 @@ Reuse these instead of re-rolling the markup: the COSS primitives in `app/compon
 Shared chrome is extracted into `SiteHeader` and `SiteFooter` (`app/components/`). `SiteHeader` reads auth state via `useRouteLoaderData<typeof rootLoader>('root')` rather than props, and owns the skip link, the labeled Site/Main navs, the theme toggle (Base UI Menu), and the mobile nav Sheet. Root renders the flash `Toaster` and drives dark mode by putting `class="dark"` on `<html>` from the theme cookie; `theme === 'system'` resolves via a pre-paint inline script reading `prefers-color-scheme` (with `suppressHydrationWarning` on `<html>`). The CSP's `script-src` allows only same-origin files and a per-request nonce (no `'unsafe-inline'`): `entry.server.tsx` generates it and passes it to `ServerRouter`, React's stream, and `NonceProvider`, so any new inline `<script>` must take `nonce={useNonce()}` (`app/lib/nonce.tsx`) plus `suppressHydrationWarning`, or the browser blocks it (`tests/csp.spec.ts` checks). Gotcha: an open Sheet/Dialog makes the rest of the page inert, so tests must assert on the popup, not the trigger.
 
 **Definite height matters:** app/auth shells use `h-dvh` (a fixed height) so the `min-h-0` + `overflow-y-auto` chain can scroll children internally. `min-h-screen` is a minimum, not a definite height, and silently breaks internal scrolling once content exceeds the viewport.
+
+### Generators
+
+`blop.config.ts` holds [blop](https://github.com/sethdavis512/blop) generators (`route`, `api`, `model`, `task`, `tool`, `component`) that write new code in this app's patterns and register it in `routes.ts`, `schema.prisma`, `jobs.server.ts`, and `agents.ts`. Use them instead of hand-writing the boilerplate. AGENTS.md is the single source for the workflow, each generator's flags, the follow-up steps, and how to change a generator: @AGENTS.md
 
 ### Formatting
 

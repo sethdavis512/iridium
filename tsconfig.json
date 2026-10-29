@@ -19,6 +19,7 @@
         },
         "esModuleInterop": true,
         "verbatimModuleSyntax": true,
+        "allowImportingTsExtensions": true,
         "noEmit": true,
         "resolveJsonModule": true,
         "skipLibCheck": true,
