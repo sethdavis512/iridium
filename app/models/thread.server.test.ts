@@ -35,8 +35,8 @@ import {
     getThreadMeta,
     saveChat,
     searchThreads,
+    setTitleIfUntitled,
     updateThreadModel,
-    updateThreadTitle,
 } from './thread.server';
 
 beforeEach(() => {
@@ -96,16 +96,24 @@ describe('getThreadById', () => {
     });
 });
 
-describe('updateThreadTitle', () => {
-    it('updates the title', async () => {
-        mockPrisma.thread.update.mockResolvedValue({});
+describe('setTitleIfUntitled', () => {
+    it('sets the title only while the thread is untitled', async () => {
+        mockPrisma.thread.updateMany.mockResolvedValue({ count: 1 });
 
-        await updateThreadTitle('t1', 'New Title');
+        await expect(setTitleIfUntitled('t1', 'New Title')).resolves.toBe(true);
 
-        expect(mockPrisma.thread.update).toHaveBeenCalledWith({
-            where: { id: 't1' },
+        expect(mockPrisma.thread.updateMany).toHaveBeenCalledWith({
+            where: { id: 't1', title: 'Untitled', deletedAt: null },
             data: { title: 'New Title' },
         });
+    });
+
+    it('reports a thread that already has a title', async () => {
+        mockPrisma.thread.updateMany.mockResolvedValue({ count: 0 });
+
+        await expect(setTitleIfUntitled('t1', 'New Title')).resolves.toBe(
+            false,
+        );
     });
 });
 

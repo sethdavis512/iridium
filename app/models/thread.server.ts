@@ -2,12 +2,20 @@ import { type UIMessage } from 'ai';
 
 import { log } from '~/lib/logger.server';
 import prisma from '~/lib/prisma';
+import {
+    parseStoredParts,
+    serializeParts,
+    toStoredRole,
+} from '~/lib/stored-message';
+
+/** The title every thread starts with, until one is generated for it. */
+export const UNTITLED_TITLE = 'Untitled';
 
 export function createThread(createdById: string) {
     return prisma.thread.create({
         data: {
             createdById,
-            title: 'Untitled',
+            title: UNTITLED_TITLE,
         },
     });
 }
@@ -125,7 +133,7 @@ export async function saveChat({
     // Wrap upserts in a transaction so a mid-loop failure rolls back partial writes.
     await prisma.$transaction(
         messagesToSave.map((msg) => {
-            const content = JSON.stringify(msg.parts);
+            const content = serializeParts(msg.parts);
 
             return prisma.message.upsert({
                 where: { id: msg.id },
@@ -134,7 +142,7 @@ export async function saveChat({
                 },
                 create: {
                     id: msg.id,
-                    role: msg.role === 'user' ? 'USER' : 'ASSISTANT',
+                    role: toStoredRole(msg.role),
                     content,
                     threadId: thread.id,
                     userId: msg.role === 'user' ? userId : null,
@@ -144,29 +152,19 @@ export async function saveChat({
     );
 }
 
-export function updateThreadTitle(threadId: string, title: string) {
-    return prisma.thread.update({
-        where: { id: threadId },
+/**
+ * Set a thread's title only while it is still untitled, so a thread is
+ * titled once. Resolves to whether this call set it.
+ */
+export async function setTitleIfUntitled(threadId: string, title: string) {
+    const { count } = await prisma.thread.updateMany({
+        where: { id: threadId, title: UNTITLED_TITLE, deletedAt: null },
         data: { title },
     });
+    return count > 0;
 }
-
-/** The title every thread starts with, until one is generated for it. */
-const UNTITLED_TITLE = 'Untitled';
 
 const TITLE_BACKFILL_BATCH_SIZE = 100;
-
-/** Stored message content: JSON UIMessage parts, or plain text in old rows. */
-function parseMessageParts(content: string): UIMessage['parts'] {
-    try {
-        const parts = JSON.parse(content);
-        if (Array.isArray(parts)) return parts;
-    } catch {
-        // Not JSON: plain-text content.
-    }
-
-    return [{ type: 'text', text: content }];
-}
 
 /**
  * Title non-deleted threads still called "Untitled" from their first user
@@ -210,7 +208,7 @@ export async function backfillUntitledThreadTitles({
 
         for (const { id: threadId, messages } of threads) {
             const [first] = messages;
-            const parts = first ? parseMessageParts(first.content) : [];
+            const parts = first ? parseStoredParts(first.content) : [];
             const hasText = parts.some(
                 (part) => part.type === 'text' && part.text.trim(),
             );
@@ -224,15 +222,7 @@ export async function backfillUntitledThreadTitles({
 
             if (!dryRun) {
                 // Guarded on the title, so one generated meanwhile is kept.
-                const { count } = await prisma.thread.updateMany({
-                    where: {
-                        id: threadId,
-                        title: UNTITLED_TITLE,
-                        deletedAt: null,
-                    },
-                    data: { title },
-                });
-                if (count === 0) continue;
+                if (!(await setTitleIfUntitled(threadId, title))) continue;
             }
 
             titled.push({ threadId, title });

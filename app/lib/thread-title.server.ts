@@ -2,7 +2,7 @@ import type { UIMessage } from 'ai';
 import { Agent } from '@mastra/core/agent';
 import { DEFAULT_MODEL_ID } from '~/lib/ai-models';
 import { log } from '~/lib/logger.server';
-import { updateThreadTitle } from '~/models/thread.server';
+import { setTitleIfUntitled } from '~/models/thread.server';
 
 /**
  * A minimal agent for one-shot title generation: no memory, no tools, so the
@@ -52,7 +52,9 @@ export function buildFallbackTitle(messages: UIMessage[]) {
 /**
  * Generate a title and save it. A title is always stored (the fallback when
  * the model call fails or returns nothing), so each thread is titled once and
- * a failed attempt is never retried, and paid for, on later turns.
+ * a failed attempt is never retried, and paid for, on later turns. The save
+ * only lands while the thread is still untitled, so a duplicate run keeps the
+ * first title.
  */
 export async function generateAndSaveThreadTitle({
     threadId,
@@ -79,7 +81,7 @@ export async function generateAndSaveThreadTitle({
     }
 
     const title = generated || fallbackTitle;
-    await updateThreadTitle(threadId, title);
+    await setTitleIfUntitled(threadId, title);
 
     return title;
 }
