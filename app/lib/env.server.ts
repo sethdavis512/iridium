@@ -67,8 +67,9 @@ const envSchema = z.object({
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     /**
      * Optional: enables Trigger.dev background jobs (async auth emails,
-     * async thread titles; the scheduled purge runs on Trigger's side).
-     * When unset, jobs.server.ts runs the same work inline.
+     * async thread titles, the scheduled purge). When unset, jobs.server.ts
+     * runs the same work inline and production runs the purge in-process
+     * (purge.server.ts).
      */
     TRIGGER_SECRET_KEY: z.string().optional(),
     /**

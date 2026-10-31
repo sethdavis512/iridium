@@ -436,7 +436,7 @@ function modelServer(
             code`
                 /**
                  * Hard-delete ${plural(title(Name).toLowerCase())} soft-deleted more than \`olderThanDays\`
-                 * days ago. Call it from trigger/purge-soft-deleted.ts.
+                 * days ago. Call it from purgeSoftDeleted in app/lib/purge.server.ts.
                  */
                 export function purgeSoftDeleted${Names}(olderThanDays: number) {
                     const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
