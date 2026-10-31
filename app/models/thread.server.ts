@@ -295,6 +295,15 @@ export async function deleteTrailingAssistantMessages(threadId: string) {
     });
 }
 
+/** The ids, out of `threadIds`, of threads that exist and aren't deleted. */
+export async function listLiveThreadIds(threadIds: string[]) {
+    const threads = await prisma.thread.findMany({
+        where: { id: { in: threadIds }, deletedAt: null },
+        select: { id: true },
+    });
+    return new Set(threads.map((thread) => thread.id));
+}
+
 export function deleteThread(threadId: string) {
     // Soft delete: the row (and its messages) stays for recovery/audit, but
     // every read in this module filters deletedAt: null.

@@ -22,6 +22,7 @@ import {
     deleteTrailingAssistantMessages,
     getThreadById,
     getThreadMeta,
+    listLiveThreadIds,
     saveChat,
     UNTITLED_TITLE,
 } from '~/models/thread.server';
@@ -268,7 +269,50 @@ export function createThreadChat({
         }
     }
 
-    return { runTurn, forgetThread };
+    /** Forget every Thread memory a user has. Best-effort, like forgetThread. */
+    async function forgetUser(userId: string) {
+        try {
+            const { memory } = await getChat();
+            const { threads } = await memory.listThreads({
+                filter: { resourceId: userId },
+                perPage: false,
+            });
+            for (const thread of threads) {
+                await memory.deleteThread(thread.id);
+            }
+        } catch (error) {
+            log.exception('thread_memory_forget_failed', error, { userId });
+        }
+    }
+
+    /**
+     * Forget Thread memory whose Thread is deleted or gone: whatever a failed
+     * forget or an account deletion left behind. Resolves to how many were
+     * forgotten, or null when chat memory couldn't be swept.
+     */
+    async function forgetOrphans(): Promise<number | null> {
+        try {
+            const { memory } = await getChat();
+            const { threads } = await memory.listThreads({ perPage: false });
+            if (threads.length === 0) return 0;
+
+            const live = await listLiveThreadIds(
+                threads.map((thread) => thread.id),
+            );
+            let forgotten = 0;
+            for (const thread of threads) {
+                if (live.has(thread.id)) continue;
+                await memory.deleteThread(thread.id);
+                forgotten++;
+            }
+            return forgotten;
+        } catch (error) {
+            log.exception('thread_memory_sweep_failed', error);
+            return null;
+        }
+    }
+
+    return { runTurn, forgetThread, forgetUser, forgetOrphans };
 }
 
 export type ThreadChat = ReturnType<typeof createThreadChat>;

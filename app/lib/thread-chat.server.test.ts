@@ -61,6 +61,8 @@ vi.mock('~/models/thread.server', async () => {
                 else thread.rows.push(row);
             }
         },
+        listLiveThreadIds: async (ids: string[]) =>
+            new Set(ids.filter((id) => threads.has(id))),
         deleteTrailingAssistantMessages: async (threadId: string) => {
             const thread = threads.get(threadId)!;
             const lastUser = thread.rows.map((r) => r.role).lastIndexOf('USER');
@@ -541,6 +543,43 @@ describe('forgetThread', () => {
         );
 
         await expect(chat.forgetThread('thread-1')).resolves.toBeUndefined();
+    });
+});
+
+describe('forgetUser', () => {
+    it('drops every Thread memory the user has, and no one else’s', async () => {
+        const { chat, memory } = setup();
+        await memory.createThread({ threadId: 't-a', resourceId: 'u1' });
+        await memory.createThread({ threadId: 't-b', resourceId: 'u1' });
+        await memory.createThread({ threadId: 't-c', resourceId: 'u2' });
+
+        await chat.forgetUser('u1');
+
+        const { threads: left } = await memory.listThreads({ perPage: false });
+        expect(left.map((thread) => thread.id)).toEqual(['t-c']);
+    });
+});
+
+describe('forgetOrphans', () => {
+    it('drops Thread memory whose Thread is deleted or gone', async () => {
+        addThread();
+        const { chat, memory } = setup();
+        await memory.createThread({ threadId: 'thread-1', resourceId: 'u1' });
+        await memory.createThread({ threadId: 'purged', resourceId: 'u1' });
+
+        expect(await chat.forgetOrphans()).toBe(1);
+
+        const { threads: left } = await memory.listThreads({ perPage: false });
+        expect(left.map((thread) => thread.id)).toEqual(['thread-1']);
+    });
+
+    it('reports null instead of throwing when chat memory is unavailable', async () => {
+        const { chat, getChat } = setup();
+        getChat.mockRejectedValue(
+            new ResourceUnavailableError('mastra_memory', 1000),
+        );
+
+        expect(await chat.forgetOrphans()).toBeNull();
     });
 });
 
