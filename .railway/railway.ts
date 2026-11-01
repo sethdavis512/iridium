@@ -73,7 +73,20 @@ export default defineRailway((ctx) => {
             branch: config.branch,
             checkSuites: true,
         }),
-        build: { builder: 'DOCKERFILE', dockerfilePath: 'Dockerfile' },
+        build: {
+            builder: 'DOCKERFILE',
+            dockerfilePath: 'Dockerfile',
+            // Docs- and agent-only commits skip the rebuild and redeploy. Keep
+            // in step with the `changes` filter in .github/workflows/ci.yml.
+            watchPatterns: [
+                '**',
+                '!/.claude/**',
+                '!/.agents/**',
+                '!/.specify/**',
+                '!/docs/**',
+                '!**/*.md',
+            ],
+        },
         // Railway runs the start command in exec form in place of the image's
         // ENTRYPOINT and CMD, so it names tini itself: tini as PID 1 hands
         // SIGTERM straight to node (no npm or shell), which drains in-flight
