@@ -97,24 +97,10 @@ export const auth = betterAuth({
             enabled: true,
             afterDelete: async (user) => {
                 // Prisma cascades remove the user's rows in the app DB, but
-                // Mastra conversation memory lives in a separate store.
-                try {
-                    const { getChat } = await import('~/mastra');
-                    const { memory } = await getChat();
-                    // Every thread the user owns, with its messages and
-                    // the user's working memory.
-                    const { threads } = await memory.listThreads({
-                        filter: { resourceId: user.id },
-                        perPage: false,
-                    });
-                    for (const thread of threads) {
-                        await memory.deleteThread(thread.id);
-                    }
-                } catch (error) {
-                    log.exception('mastra_memory_cleanup_failed', error, {
-                        userId: user.id,
-                    });
-                }
+                // Thread memory lives in a separate store. Best-effort: the
+                // purge sweep catches anything this misses.
+                const { threadChat } = await import('~/lib/thread-chat.server');
+                await threadChat.forgetUser(user.id);
             },
         },
     },

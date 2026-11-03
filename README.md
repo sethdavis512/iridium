@@ -173,11 +173,11 @@ Background work runs through [Trigger.dev](https://trigger.dev) when
 configured, and inline otherwise, so nothing is required for local dev.
 Tasks live in `trigger/`:
 
-| Task                    | Trigger              | Purpose                                          |
-| ----------------------- | -------------------- | ------------------------------------------------ |
-| `send-auth-email`       | auth flows           | Password reset + verification emails off-request |
-| `generate-thread-title` | `/api/chat`          | AI thread titles without blocking the chat       |
-| `purge-soft-deleted`    | cron, daily 4:17 UTC | Hard-deletes Threads/Notes soft-deleted 30+ days |
+| Task                    | Trigger              | Purpose                                                                             |
+| ----------------------- | -------------------- | ----------------------------------------------------------------------------------- |
+| `send-auth-email`       | auth flows           | Password reset + verification emails off-request                                    |
+| `generate-thread-title` | `/api/chat`          | AI thread titles without blocking the chat                                          |
+| `purge-soft-deleted`    | cron, daily 4:17 UTC | Hard-deletes Threads/Notes soft-deleted 30+ days and forgets orphaned Thread memory |
 
 To enable:
 

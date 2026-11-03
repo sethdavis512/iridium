@@ -14,9 +14,6 @@ import { renderCardTool } from './tools/cards';
 import { createNoteTool, listNotesTool, searchNotesTool } from './tools/notes';
 import { getCurrentDatetimeTool, getWeatherTool } from './tools/weather';
 
-/** Cap tool-call iterations and per-call output to bound cost and abuse. */
-export const CHAT_LIMITS = { maxSteps: 10, maxOutputTokens: 2048 } as const;
-
 // Mastra names a tool after its key on the agent, and the chat UI picks a
 // renderer by that name, so key every tool by its own id.
 function byId<T extends { id: string }>(tools: T[]): Record<string, T> {
@@ -60,11 +57,8 @@ function createChat(storage: MemoryStorage) {
             getCurrentDatetimeTool,
         ]),
         inputProcessors: [notesContext],
+        // Reply limits are passed on each call by the Thread chat module.
         memory,
-        defaultOptions: {
-            maxSteps: CHAT_LIMITS.maxSteps,
-            modelSettings: { maxOutputTokens: CHAT_LIMITS.maxOutputTokens },
-        },
     });
 
     return { storage, memory, agent };

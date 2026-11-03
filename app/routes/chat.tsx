@@ -14,6 +14,7 @@ import {
 import { useDialogState, usePendingIntent } from '~/hooks';
 import { authMiddleware } from '~/middleware/auth';
 import { rateLimit } from '~/lib/rate-limit.server';
+import { threadChat } from '~/lib/thread-chat.server';
 import { redirectWithToast } from '~/lib/toast.server';
 import { navLinkClassName } from '~/shared';
 import { APP_NAME } from '~/config';
@@ -136,6 +137,8 @@ export async function action({ request, context }: Route.ActionArgs) {
         }
 
         await deleteThread(threadId);
+        // Never throws; the purge sweep catches a forget that fails.
+        void threadChat.forgetThread(threadId);
 
         return redirectWithToast('/chat', {
             type: 'success',

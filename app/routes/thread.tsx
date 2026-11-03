@@ -20,6 +20,7 @@ import { Button } from '~/components/ui/button';
 import type { CardData } from '~/mastra/tools/cards';
 import type { Route } from './+types/thread';
 import { getThreadById } from '~/models/thread.server';
+import { toUIMessage } from '~/lib/stored-message';
 import { authMiddleware } from '~/middleware/auth';
 import { requireUserFromContext } from '~/context';
 import {
@@ -97,29 +98,7 @@ export async function loader({ context, params }: Route.LoaderArgs) {
         throw data('Forbidden', { status: 403 });
     }
 
-    const messages: UIMessage[] = thread.messages.flatMap((msg) => {
-        let parts: UIMessage['parts'];
-        try {
-            parts = JSON.parse(msg.content);
-        } catch {
-            parts = [{ type: 'text' as const, text: msg.content }];
-        }
-
-        if (!Array.isArray(parts)) {
-            parts = [{ type: 'text' as const, text: msg.content }];
-        }
-
-        return {
-            id: msg.id,
-            role:
-                msg.role === 'USER'
-                    ? ('user' as const)
-                    : ('assistant' as const),
-            content: '',
-            parts,
-            createdAt: msg.createdAt,
-        };
-    });
+    const messages: UIMessage[] = thread.messages.map(toUIMessage);
 
     return {
         thread: { ...thread, messages },

@@ -13,8 +13,10 @@ import type { RenderToPipeableStreamOptions } from 'react-dom/server';
 import { renderToPipeableStream } from 'react-dom/server';
 import { requestIdContext } from '~/context';
 import { env } from '~/lib/env.server';
+import { isTriggerEnabled } from '~/lib/jobs.server';
 import { log } from '~/lib/logger.server';
 import { NonceProvider } from '~/lib/nonce';
+import { scheduleInlinePurge } from '~/lib/purge.server';
 import { installGracefulShutdown } from '~/lib/shutdown.server';
 
 export const streamTimeout = 5_000;
@@ -24,6 +26,10 @@ const isProduction = env.NODE_ENV === 'production';
 // Drain in-flight requests and close the database pools on SIGTERM/SIGINT.
 // Production only: the dev server owns its own signal handling.
 if (isProduction) installGracefulShutdown();
+
+// Without Trigger.dev, the daily purge runs in the app process. Production
+// only, so dev and E2E runs never purge on boot.
+if (isProduction && !isTriggerEnabled) scheduleInlinePurge();
 
 /**
  * Security headers applied to every document response.

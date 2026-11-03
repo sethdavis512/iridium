@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UIMessage } from 'ai';
 
-const { generate, updateThreadTitle, logException } = vi.hoisted(() => ({
+const { generate, setTitleIfUntitled, logException } = vi.hoisted(() => ({
     generate: vi.fn(),
-    updateThreadTitle: vi.fn(),
+    setTitleIfUntitled: vi.fn(),
     logException: vi.fn(),
 }));
 
@@ -14,7 +14,7 @@ vi.mock('@mastra/core/agent', () => ({
 }));
 
 vi.mock('~/models/thread.server', () => ({
-    updateThreadTitle: (...args: unknown[]) => updateThreadTitle(...args),
+    setTitleIfUntitled: (...args: unknown[]) => setTitleIfUntitled(...args),
 }));
 
 vi.mock('~/lib/logger.server', () => ({
@@ -71,7 +71,7 @@ describe('generateAndSaveThreadTitle', () => {
         await expect(generateAndSaveThreadTitle(payload)).resolves.toBe(
             'Trip Planning',
         );
-        expect(updateThreadTitle).toHaveBeenCalledWith('t1', 'Trip Planning');
+        expect(setTitleIfUntitled).toHaveBeenCalledWith('t1', 'Trip Planning');
     });
 
     it('saves the fallback when the model returns nothing', async () => {
@@ -79,14 +79,14 @@ describe('generateAndSaveThreadTitle', () => {
 
         await generateAndSaveThreadTitle(payload);
 
-        expect(updateThreadTitle).toHaveBeenCalledWith('t1', 'hi');
+        expect(setTitleIfUntitled).toHaveBeenCalledWith('t1', 'hi');
     });
 
     it('saves the fallback and logs when the model call fails', async () => {
         generate.mockRejectedValue(new Error('provider down'));
 
         await expect(generateAndSaveThreadTitle(payload)).resolves.toBe('hi');
-        expect(updateThreadTitle).toHaveBeenCalledWith('t1', 'hi');
+        expect(setTitleIfUntitled).toHaveBeenCalledWith('t1', 'hi');
         expect(logException).toHaveBeenCalledWith(
             'title_generation_failed',
             expect.any(Error),
