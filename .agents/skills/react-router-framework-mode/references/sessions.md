@@ -380,8 +380,8 @@ secrets: ['new-secret', 'old-secret'];
 ## See Also
 
 - [React Router Sessions & Cookies Documentation](https://reactrouter.com/explanation/sessions-and-cookies)
-- [Session API Reference](https://api.reactrouter.com/v7/interfaces/react_router.Session)
-- [Cookie API Reference](https://api.reactrouter.com/v7/interfaces/react_router.Cookie)
+- [Sessions and Cookies](https://reactrouter.com/explanation/sessions-and-cookies)
+- [Cookie API Reference](https://reactrouter.com/api/utils/createCookie)
 - `references/middleware.md` - Middleware patterns for auth
 
 [csrf]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF

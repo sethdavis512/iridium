@@ -33,22 +33,17 @@ Load the relevant reference for detailed guidance on the specific API/concept:
 | `references/pending-ui.md`           | Loading states, optimistic UI                         |
 | `references/error-handling.md`       | Error boundaries, error reporting                     |
 | `references/rendering-strategies.md` | SSR vs SPA vs pre-rendering configuration             |
-| `references/middleware.md`           | Adding middleware (requires v7.9.0+)                  |
+| `references/middleware.md`           | Adding middleware                                     |
 | `references/sessions.md`             | Cookie sessions, authentication, protected routes     |
 | `references/type-safety.md`          | Auto-generated route types, type imports, type safety |
 
 ## Version Compatibility
 
-Some features require specific React Router versions. **Always verify before implementing:**
+This skill predates the React Router version Iridium runs. Where it disagrees with the project `CLAUDE.md`, `CLAUDE.md` wins. For version-sensitive APIs, read the docs in `node_modules/react-router/docs/` and check the installed version:
 
 ```bash
-npm list react-router
+bun pm ls | grep react-router
 ```
-
-| Feature                 | Minimum Version | Notes                         |
-| ----------------------- | --------------- | ----------------------------- |
-| Middleware              | 7.9.0+          | Requires `v8_middleware` flag |
-| Core framework features | 7.0.0+          | loaders, actions, Form, etc.  |
 
 ## Critical Patterns
 

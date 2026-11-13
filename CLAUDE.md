@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Iridium is a full-stack AI chat application built with React Router v8 (SSR), Better Auth, Prisma/PostgreSQL, and Vercel AI SDK with Mastra.
+Iridium is a full-stack AI chat application built with React Router (SSR), Better Auth, Prisma/PostgreSQL, and Vercel AI SDK with Mastra.
 
 ## Commands
 
@@ -78,13 +78,13 @@ Environment variables are validated at startup by `app/lib/env.server.ts` -- mis
 
 ## Tech Stack
 
-- **Framework**: React Router v8 with SSR; middleware is always on (the v7 `future.v8_middleware` flag is gone and RR8 refuses to boot if it is set)
+- **Framework**: React Router with SSR; middleware is always on (never set the removed `future.v8_middleware` flag: React Router refuses to boot with it)
 - **Auth**: Better Auth with Prisma adapter, admin plugin (roles: USER < EDITOR < ADMIN)
 - **Database**: PostgreSQL via Prisma ORM (schema at `prisma/schema.prisma`, generated client at `app/generated/prisma/`)
 - **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`) + Mastra (`@mastra/core`, `@mastra/memory`, `@mastra/pg`, `@mastra/ai-sdk`). Per-thread model selection against the allowlist in `app/lib/ai-models.ts` (Haiku 4.5 default)
 - **Email**: Resend + react-email behind `app/lib/email.server.ts` (console fallback without `RESEND_API_KEY`)
 - **Styling**: Tailwind CSS v4 + COSS UI (Base UI primitives, copy-owned in `app/components/ui/` via the shadcn CLI and the `@coss` registry — `bunx shadcn@latest add @coss/<name>`, config in `components.json`). Installed ui/ files use `cn()` from `app/lib/utils.ts`; app-authored components use CVA from `cva.config`. **Gotcha:** after adding a ui primitive, add any new client dep (including each `@base-ui/react/<subpath>` import) to `optimizeDeps.include` in `vite.config.ts` — late Vite dep discovery re-optimizes mid-session and splits React across module graphs, crashing hydration ("Invalid hook call") in dev and E2E. Also delete the `'use client'` line the registry puts at the top of each added file: it means nothing in React Router SSR, and Rollup-based builds warn on it ("Error when using sourcemap")
-- **Runtime**: Bun (dev), Node 24 Alpine (Docker/prod). React Router 8 needs Node 22.22+ locally and in CI (`actions/setup-node` pins 24)
+- **Runtime**: Bun (dev), Node 24 Alpine (Docker/prod). React Router needs Node 22.22+ locally and in CI (`actions/setup-node` pins 24)
 - **Validation**: Zod + React Hook Form
 - **Icons**: lucide-react
 
@@ -98,9 +98,9 @@ Auto-generated types: `import type { Route } from './+types/<routeName>'`.
 
 API routes live under `/api` prefix and export only `loader`/`action` (no component).
 
-**React Router 8 overrides the `react-router-framework-mode` skill.** The vendored skill predates React Router 8 (its upstream, `remix-run/agent-skills`, is archived). Where it disagrees, these rules win:
+**These React Router rules override the `react-router-framework-mode` skill.** The vendored skill predates the React Router version this repo runs (its upstream, `remix-run/agent-skills`, is archived). Where it disagrees, these rules win:
 
-- Middleware is always on. Never add `future.v8_middleware` (or any other removed `v8_*` flag) to `react-router.config.ts`; React Router 8 refuses to start with it.
+- Middleware is always on. Never add `future.v8_middleware` (or any other removed `v8_*` flag) to `react-router.config.ts`; React Router refuses to start with it.
 - `AppLoadContext` is gone. The `context` argument to loaders, actions, and middleware is always a `RouterContextProvider`: define keys with `createContext` and use `context.set()`/`context.get()` (see `app/context.ts` and `app/middleware/auth.ts`). A custom server's `getLoadContext` must return a `RouterContextProvider`.
 - Loaders and actions receive the raw incoming `request`. Use the `url` argument when you need the normalized URL (no `.data` suffix or `index`/`_routes` params).
 - For anything else version-sensitive, read the version-matched docs in `node_modules/react-router/docs/` and `node_modules/react-router/CHANGELOG.md`.
@@ -168,7 +168,7 @@ Production runs the multi-stage `Dockerfile` (Node 24 Alpine runtime). tini is t
 
 **Graceful shutdown:** in production, `entry.server.tsx` calls `installGracefulShutdown()` (`app/lib/shutdown.server.ts`). On SIGTERM/SIGINT it stops accepting connections, waits for in-flight requests (chat streams included) to finish, runs the cleanups registered with `onShutdown()`, and exits 0. Any new long-lived resource (a database pool, a client with open sockets) must register its close with `onShutdown()`, or it outlives the drain until SIGKILL. Gotcha: in a route module, call `onShutdown()` from loader/action code (see `getMastraPool()` in `routes/healthcheck.ts`), never at module top level, or the client build fails with "Server-only module referenced by client". `RAILWAY_DEPLOYMENT_DRAINING_SECONDS=60` in `.railway/railway.ts` is the SIGTERM-to-SIGKILL window on redeploys.
 
-**Action origins behind a proxy:** React Router's CSRF check compares the `Origin` header with `request.url`'s full origin, scheme included (since 8.3.1). react-router-serve has no `trust proxy`, so behind Railway's TLS-terminating proxy `request.url` is `http://` while browsers send `Origin: https://`, and every form and fetcher action answers 400 (the page falls to the root error boundary). `allowedActionOrigins` in `react-router.config.ts` lists the app's public hosts, from `BETTER_AUTH_BASE_URL` and `BETTER_AUTH_TRUSTED_ORIGINS` (`app/lib/action-origins.ts`). It is read at **build** time, so the Dockerfile declares both as `ARG`s (Railway passes matching service variables; plain Docker needs `--build-arg`), and changing the public domain needs a rebuild. CI's `docker` job builds with an https base URL and checks that `POST /api/theme.data` accepts the app's own https origin and rejects another. Never widen the list with `**`.
+**Action origins behind a proxy:** React Router's CSRF check compares the `Origin` header with `request.url`'s full origin, scheme included. react-router-serve has no `trust proxy`, so behind Railway's TLS-terminating proxy `request.url` is `http://` while browsers send `Origin: https://`, and every form and fetcher action answers 400 (the page falls to the root error boundary). `allowedActionOrigins` in `react-router.config.ts` lists the app's public hosts, from `BETTER_AUTH_BASE_URL` and `BETTER_AUTH_TRUSTED_ORIGINS` (`app/lib/action-origins.ts`). It is read at **build** time, so the Dockerfile declares both as `ARG`s (Railway passes matching service variables; plain Docker needs `--build-arg`), and changing the public domain needs a rebuild. CI's `docker` job builds with an https base URL and checks that `POST /api/theme.data` accepts the app's own https origin and rejects another. Never widen the list with `**`.
 
 **Railway is defined as code** in `.railway/railway.ts` (IaC, evaluated by the Railway CLI via the `railway` devDependency): app service built from the Dockerfile, `Postgres` + the memory database (`memoryPostgresService` in `app.json`, `Mastra Postgres` for new copies), `/healthcheck`, `prisma migrate deploy` as the pre-deploy command, and `checkSuites: true` (Railway's Wait for CI). Per-project values live in `.railway/app.json`; the file throws if `app.json.project` doesn't match the linked Railway project. A fresh copy of the template gets its own project with `bun run provision` (`tools/provision.ts`, `provision-railway` skill), which rewrites `app.json`, runs `railway init` + `railway config apply`, generates a domain, sets secrets on stdin, and waits for `/healthcheck`. Change infra with `railway config plan` then `railway config apply`. Gotchas: variables or services omitted from the file are deleted on apply (declare externally-set values as `preserve()`), omitting `source` disconnects the GitHub repo, and databases holding data must keep their pinned image or a plan swaps the Postgres major version. Never `railway up` to production and never pass `--confirm-destructive` without the user approving the plan.
 

@@ -1,10 +1,10 @@
 # Project Guidelines
 
-Full-stack AI chat app built with React Router v8, Better Auth, Prisma, and Vercel AI SDK.
+Full-stack AI chat app built with React Router, Better Auth, Prisma, and Vercel AI SDK.
 
 ## Tech Stack
 
-- **Framework**: React Router v8 (SSR; middleware is always on, so never set the removed `future.v8_middleware` flag)
+- **Framework**: React Router (SSR; middleware is always on, so never set the removed `future.v8_middleware` flag)
 - **Auth**: Better Auth with Prisma adapter, admin plugin (roles: USER, EDITOR, ADMIN)
 - **Database**: PostgreSQL via Prisma (schema at `prisma/schema.prisma`, client generated to `app/generated/prisma/`)
 - **AI**: Vercel AI SDK (`ai`, `@ai-sdk/react`), Mastra, with per-thread model selection from the allowlist in `app/lib/ai-models.ts` (Haiku 4.5 default)

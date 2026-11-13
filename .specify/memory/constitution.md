@@ -61,7 +61,7 @@ New code MUST follow the established patterns rather than inventing parallel one
 - Code uses the `~/` import alias, named function declarations, and named exports
   (no default exports); components additionally follow the Component Authoring Pattern
   (Principle VI).
-- React Router v8 framework-mode patterns are the source of truth for routing, error
+- React Router framework-mode patterns are the source of truth for routing, error
   boundaries, and form/action handling.
 
 **Rationale**: A small codebase with one way to do each thing stays navigable. Divergent
@@ -116,7 +116,7 @@ styles without copy-paste.
 ## Technology Constraints
 
 - **Runtime/Tooling**: Bun for dev and scripts; Prisma CLI invoked as `bunx --bun prisma`.
-- **Framework**: React Router v8 (SSR; middleware always on, no `future.v8_middleware`
+- **Framework**: React Router (SSR; middleware always on, no `future.v8_middleware`
   flag).
 - **Auth**: Better Auth with the Prisma adapter and admin plugin (roles USER < EDITOR < ADMIN).
 - **Data**: PostgreSQL via Prisma; app data and Mastra memory live in separate databases.
