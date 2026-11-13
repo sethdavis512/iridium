@@ -26,20 +26,20 @@ For mutation patterns (when to use Form vs useFetcher), see [actions.md](./actio
 Track global navigation state:
 
 ```tsx
-import { useNavigation } from 'react-router';
+import { useNavigation } from "react-router";
 
 export default function Root() {
-    const navigation = useNavigation();
-    const isNavigating = Boolean(navigation.location);
+  const navigation = useNavigation();
+  const isNavigating = Boolean(navigation.location);
 
-    return (
-        <html>
-            <body className={isNavigating ? 'loading' : ''}>
-                {isNavigating && <GlobalSpinner />}
-                <Outlet />
-            </body>
-        </html>
-    );
+  return (
+    <html>
+      <body className={isNavigating ? "loading" : ""}>
+        {isNavigating && <GlobalSpinner />}
+        <Outlet />
+      </body>
+    </html>
+  );
 }
 ```
 
@@ -54,13 +54,13 @@ export default function Root() {
 const navigation = useNavigation();
 
 // Check if navigating
-const isNavigating = navigation.state !== 'idle';
+const isNavigating = navigation.state !== "idle";
 
 // Check if submitting a form
-const isSubmitting = navigation.state === 'submitting';
+const isSubmitting = navigation.state === "submitting";
 
 // Check if loading after submission
-const isLoading = navigation.state === 'loading';
+const isLoading = navigation.state === "loading";
 ```
 
 ## NavLink Pending State
@@ -68,16 +68,14 @@ const isLoading = navigation.state === 'loading';
 Show pending state on the specific link being clicked:
 
 ```tsx
-import { NavLink } from 'react-router';
+import { NavLink } from "react-router";
 
 function Nav() {
-    return (
-        <NavLink to="/dashboard">
-            {({ isPending }) => (
-                <span>Dashboard {isPending && <Spinner />}</span>
-            )}
-        </NavLink>
-    );
+  return (
+    <NavLink to="/dashboard">
+      {({ isPending }) => <span>Dashboard {isPending && <Spinner />}</span>}
+    </NavLink>
+  );
 }
 ```
 
@@ -85,10 +83,10 @@ Or use className:
 
 ```tsx
 <NavLink
-    to="/dashboard"
-    className={({ isPending }) => (isPending ? 'pending' : '')}
+  to="/dashboard"
+  className={({ isPending }) => (isPending ? "pending" : "")}
 >
-    Dashboard
+  Dashboard
 </NavLink>
 ```
 
@@ -97,21 +95,21 @@ Or use className:
 Each fetcher tracks its own state independently:
 
 ```tsx
-import { useFetcher } from 'react-router';
+import { useFetcher } from "react-router";
 
 function LikeButton({ postId, liked }) {
-    const fetcher = useFetcher();
+  const fetcher = useFetcher();
 
-    // Show pending state while submitting
-    const isPending = fetcher.state !== 'idle';
+  // Show pending state while submitting
+  const isPending = fetcher.state !== "idle";
 
-    return (
-        <fetcher.Form method="post" action={`/posts/${postId}/like`}>
-            <button disabled={isPending}>
-                {isPending ? '...' : liked ? 'Unlike' : 'Like'}
-            </button>
-        </fetcher.Form>
-    );
+  return (
+    <fetcher.Form method="post" action={`/posts/${postId}/like`}>
+      <button disabled={isPending}>
+        {isPending ? "..." : liked ? "Unlike" : "Like"}
+      </button>
+    </fetcher.Form>
+  );
 }
 ```
 
@@ -126,52 +124,52 @@ function LikeButton({ postId, liked }) {
 **This is the standard pattern for mutations.** Show the expected result immediately using `fetcher.formData`:
 
 ```tsx
-import { useFetcher } from 'react-router';
+import { useFetcher } from "react-router";
 
 function LikeButton({ postId, initialLiked }) {
-    const fetcher = useFetcher();
+  const fetcher = useFetcher();
 
-    // Optimistic: check pending form data first, fallback to server state
-    const liked = fetcher.formData
-        ? fetcher.formData.get('liked') === 'true'
-        : initialLiked;
+  // Optimistic: check pending form data first, fallback to server state
+  const liked = fetcher.formData
+    ? fetcher.formData.get("liked") === "true"
+    : initialLiked;
 
-    return (
-        <fetcher.Form method="post" action={`/posts/${postId}/like`}>
-            <input type="hidden" name="liked" value={String(!liked)} />
-            <button>{liked ? '❤️' : '🤍'}</button>
-        </fetcher.Form>
-    );
+  return (
+    <fetcher.Form method="post" action={`/posts/${postId}/like`}>
+      <input type="hidden" name="liked" value={String(!liked)} />
+      <button>{liked ? "❤️" : "🤍"}</button>
+    </fetcher.Form>
+  );
 }
 ```
 
 ### Complete Optimistic UI Example
 
 ```tsx
-import { useFetcher } from 'react-router';
+import { useFetcher } from "react-router";
 
 function RatingStars({ itemId, currentRating }) {
-    const fetcher = useFetcher();
+  const fetcher = useFetcher();
 
-    // 1. Check if we're submitting - use the pending value
-    // 2. Otherwise use the server value
-    const displayRating = fetcher.formData
-        ? Number(fetcher.formData.get('rating'))
-        : currentRating;
+  // 1. Check if we're submitting - use the pending value
+  // 2. Otherwise use the server value
+  const displayRating = fetcher.formData
+    ? Number(fetcher.formData.get("rating"))
+    : currentRating;
 
-    const isSubmitting = fetcher.state !== 'idle';
+  const isSubmitting = fetcher.state !== "idle";
 
-    return (
-        <fetcher.Form method="post" action={`/items/${itemId}/rate`}>
-            <div style={{ opacity: isSubmitting ? 0.5 : 1 }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <button key={star} type="submit" name="rating" value={star}>
-                        {star <= displayRating ? '★' : '☆'}
-                    </button>
-                ))}
-            </div>
-        </fetcher.Form>
-    );
+  return (
+    <fetcher.Form method="post" action={`/items/${itemId}/rate`}>
+      <div style={{ opacity: isSubmitting ? 0.5 : 1 }}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button key={star} type="submit" name="rating" value={star}>
+            {star <= displayRating ? "★" : "☆"}
+          </button>
+        ))}
+      </div>
+    </fetcher.Form>
+  );
 }
 ```
 
@@ -186,25 +184,25 @@ function RatingStars({ itemId, currentRating }) {
 For form submissions that navigate:
 
 ```tsx
-import { Form, useNavigation } from 'react-router';
+import { Form, useNavigation } from "react-router";
 
 function NewProjectForm() {
-    const navigation = useNavigation();
+  const navigation = useNavigation();
 
-    // Get optimistic value from submission
-    const optimisticTitle = navigation.formData?.get('title');
-    const isSubmitting = navigation.state === 'submitting';
+  // Get optimistic value from submission
+  const optimisticTitle = navigation.formData?.get("title");
+  const isSubmitting = navigation.state === "submitting";
 
-    return (
-        <Form method="post">
-            <input type="text" name="title" />
-            <button disabled={isSubmitting}>
-                {isSubmitting ? 'Creating...' : 'Create'}
-            </button>
+  return (
+    <Form method="post">
+      <input type="text" name="title" />
+      <button disabled={isSubmitting}>
+        {isSubmitting ? "Creating..." : "Create"}
+      </button>
 
-            {optimisticTitle && <p>Creating "{optimisticTitle}"...</p>}
-        </Form>
-    );
+      {optimisticTitle && <p>Creating "{optimisticTitle}"...</p>}
+    </Form>
+  );
 }
 ```
 
@@ -213,28 +211,28 @@ function NewProjectForm() {
 Show skeletons while data loads:
 
 ```tsx
-import { Suspense } from 'react';
-import { Await } from 'react-router';
+import { Suspense } from "react";
+import { Await } from "react-router";
 
 export async function loader() {
-    return {
-        fastData: await getFastData(),
-        slowData: getSlowData(), // Don't await
-    };
+  return {
+    fastData: await getFastData(),
+    slowData: getSlowData(), // Don't await
+  };
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
-    return (
-        <div>
-            <h1>{loaderData.fastData.title}</h1>
+  return (
+    <div>
+      <h1>{loaderData.fastData.title}</h1>
 
-            <Suspense fallback={<CommentsSkeleton />}>
-                <Await resolve={loaderData.slowData}>
-                    {(data) => <Comments data={data} />}
-                </Await>
-            </Suspense>
-        </div>
-    );
+      <Suspense fallback={<CommentsSkeleton />}>
+        <Await resolve={loaderData.slowData}>
+          {(data) => <Comments data={data} />}
+        </Await>
+      </Suspense>
+    </div>
+  );
 }
 ```
 
@@ -244,17 +242,17 @@ Prevent double submissions:
 
 ```tsx
 function ContactForm() {
-    const navigation = useNavigation();
-    const isSubmitting = navigation.state === 'submitting';
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
 
-    return (
-        <Form method="post">
-            <input type="text" name="message" disabled={isSubmitting} />
-            <button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Sending...' : 'Send'}
-            </button>
-        </Form>
-    );
+  return (
+    <Form method="post">
+      <input type="text" name="message" disabled={isSubmitting} />
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Sending..." : "Send"}
+      </button>
+    </Form>
+  );
 }
 ```
 
@@ -264,8 +262,8 @@ Use CSS for simple loading indicators:
 
 ```css
 .loading {
-    opacity: 0.5;
-    pointer-events: none;
+  opacity: 0.5;
+  pointer-events: none;
 }
 ```
 

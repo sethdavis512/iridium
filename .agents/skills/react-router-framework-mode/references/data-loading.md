@@ -14,12 +14,12 @@ Runs on the server during SSR and on server during client navigation:
 
 ```tsx
 export async function loader({ params, request }: Route.LoaderArgs) {
-    const product = await db.getProduct(params.id);
-    return product;
+  const product = await db.getProduct(params.id);
+  return product;
 }
 
 export default function Product({ loaderData }: Route.ComponentProps) {
-    return <h1>{loaderData.name}</h1>;
+  return <h1>{loaderData.name}</h1>;
 }
 ```
 
@@ -39,8 +39,8 @@ Runs in the browser. Useful for:
 
 ```tsx
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-    const res = await fetch(`/api/products/${params.id}`);
-    return res.json();
+  const res = await fetch(`/api/products/${params.id}`);
+  return res.json();
 }
 ```
 
@@ -48,17 +48,17 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 ```tsx
 export async function loader({ params }: Route.LoaderArgs) {
-    return db.getProduct(params.id);
+  return db.getProduct(params.id);
 }
 
 export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
-    // Get server data
-    const serverData = await serverLoader();
+  // Get server data
+  const serverData = await serverLoader();
 
-    // Add client-only data
-    const preferences = localStorage.getItem('prefs');
+  // Add client-only data
+  const preferences = localStorage.getItem("prefs");
 
-    return { ...serverData, preferences: JSON.parse(preferences || '{}') };
+  return { ...serverData, preferences: JSON.parse(preferences || "{}") };
 }
 ```
 
@@ -68,12 +68,12 @@ Force `clientLoader` to run during initial page hydration:
 
 ```tsx
 export async function clientLoader({ serverLoader }: Route.ClientLoaderArgs) {
-    const cached = getFromCache();
-    if (cached) return cached;
+  const cached = getFromCache();
+  if (cached) return cached;
 
-    const data = await serverLoader();
-    setInCache(data);
-    return data;
+  const data = await serverLoader();
+  setInCache(data);
+  return data;
 }
 
 // This enables the clientLoader to run on hydration
@@ -81,7 +81,7 @@ clientLoader.hydrate = true;
 
 // Show fallback while clientLoader runs
 export function HydrateFallback() {
-    return <ProductSkeleton />;
+  return <ProductSkeleton />;
 }
 ```
 
@@ -91,13 +91,13 @@ Loaders can return plain objects or Response objects:
 
 ```tsx
 export async function loader({ params }: Route.LoaderArgs) {
-    const product = await db.getProduct(params.id);
+  const product = await db.getProduct(params.id);
 
-    if (!product) {
-        throw new Response('Not Found', { status: 404 });
-    }
+  if (!product) {
+    throw new Response("Not Found", { status: 404 });
+  }
 
-    return product;
+  return product;
 }
 ```
 
@@ -106,16 +106,16 @@ export async function loader({ params }: Route.LoaderArgs) {
 Redirect from loaders using `redirect`:
 
 ```tsx
-import { redirect } from 'react-router';
+import { redirect } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-    const user = await getUser(request);
+  const user = await getUser(request);
 
-    if (!user) {
-        throw redirect('/login');
-    }
+  if (!user) {
+    throw redirect("/login");
+  }
 
-    return user;
+  return user;
 }
 ```
 
@@ -125,13 +125,13 @@ Access headers, URL, and signal from the request:
 
 ```tsx
 export async function loader({ request }: Route.LoaderArgs) {
-    const url = new URL(request.url);
-    const query = url.searchParams.get('q');
+  const url = new URL(request.url);
+  const query = url.searchParams.get("q");
 
-    // Use abort signal for cancellation
-    const results = await search(query, { signal: request.signal });
+  // Use abort signal for cancellation
+  const results = await search(query, { signal: request.signal });
 
-    return results;
+  return results;
 }
 ```
 
@@ -144,27 +144,27 @@ React Router loads data for all matched routes in parallel. Parent and child loa
 Stream slow data while rendering fast data immediately:
 
 ```tsx
-import { defer, Await } from 'react-router';
-import { Suspense } from 'react';
+import { defer, Await } from "react-router";
+import { Suspense } from "react";
 
 export async function loader({ params }: Route.LoaderArgs) {
-    return {
-        product: await db.getProduct(params.id), // Await immediately
-        reviews: db.getReviews(params.id), // Don't await - stream later
-    };
+  return {
+    product: await db.getProduct(params.id), // Await immediately
+    reviews: db.getReviews(params.id), // Don't await - stream later
+  };
 }
 
 export default function Product({ loaderData }: Route.ComponentProps) {
-    return (
-        <div>
-            <h1>{loaderData.product.name}</h1>
+  return (
+    <div>
+      <h1>{loaderData.product.name}</h1>
 
-            <Suspense fallback={<ReviewsSkeleton />}>
-                <Await resolve={loaderData.reviews}>
-                    {(reviews) => <Reviews items={reviews} />}
-                </Await>
-            </Suspense>
-        </div>
-    );
+      <Suspense fallback={<ReviewsSkeleton />}>
+        <Await resolve={loaderData.reviews}>
+          {(reviews) => <Reviews items={reviews} />}
+        </Await>
+      </Suspense>
+    </div>
+  );
 }
 ```

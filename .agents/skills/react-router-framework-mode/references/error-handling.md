@@ -13,35 +13,33 @@ React Router catches errors in loaders, actions, and rendering, then displays th
 Export an `ErrorBoundary` from any route module:
 
 ```tsx
-import { isRouteErrorResponse, useRouteError } from 'react-router';
+import { isRouteErrorResponse, useRouteError } from "react-router";
 
 export function ErrorBoundary() {
-    const error = useRouteError();
+  const error = useRouteError();
 
-    if (isRouteErrorResponse(error)) {
-        return (
-            <div>
-                <h1>
-                    {error.status} {error.statusText}
-                </h1>
-                <p>{error.data}</p>
-            </div>
-        );
-    }
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div>
+        <h1>
+          {error.status} {error.statusText}
+        </h1>
+        <p>{error.data}</p>
+      </div>
+    );
+  }
 
-    if (error instanceof Error) {
-        return (
-            <div>
-                <h1>Error</h1>
-                <p>{error.message}</p>
-                {process.env.NODE_ENV === 'development' && (
-                    <pre>{error.stack}</pre>
-                )}
-            </div>
-        );
-    }
+  if (error instanceof Error) {
+    return (
+      <div>
+        <h1>Error</h1>
+        <p>{error.message}</p>
+        {process.env.NODE_ENV === "development" && <pre>{error.stack}</pre>}
+      </div>
+    );
+  }
 
-    return <h1>Unknown Error</h1>;
+  return <h1>Unknown Error</h1>;
 }
 ```
 
@@ -51,32 +49,32 @@ Throw Response objects for expected errors:
 
 ```tsx
 export async function loader({ params }: Route.LoaderArgs) {
-    const product = await db.getProduct(params.id);
+  const product = await db.getProduct(params.id);
 
-    if (!product) {
-        throw new Response('Product not found', { status: 404 });
-    }
+  if (!product) {
+    throw new Response("Product not found", { status: 404 });
+  }
 
-    return product;
+  return product;
 }
 ```
 
 Use the `data` helper for structured error data:
 
 ```tsx
-import { data } from 'react-router';
+import { data } from "react-router";
 
 export async function loader({ params }: Route.LoaderArgs) {
-    const product = await db.getProduct(params.id);
+  const product = await db.getProduct(params.id);
 
-    if (!product) {
-        throw data(
-            { message: 'Product not found', productId: params.id },
-            { status: 404 },
-        );
-    }
+  if (!product) {
+    throw data(
+      { message: "Product not found", productId: params.id },
+      { status: 404 },
+    );
+  }
 
-    return product;
+  return product;
 }
 ```
 
@@ -85,19 +83,19 @@ export async function loader({ params }: Route.LoaderArgs) {
 Check if an error is a Response thrown from a loader/action:
 
 ```tsx
-import { isRouteErrorResponse, useRouteError } from 'react-router';
+import { isRouteErrorResponse, useRouteError } from "react-router";
 
 export function ErrorBoundary() {
-    const error = useRouteError();
+  const error = useRouteError();
 
-    if (isRouteErrorResponse(error)) {
-        // This was a Response thrown intentionally
-        // error.status, error.statusText, error.data are available
-        return <NotFoundPage />;
-    }
+  if (isRouteErrorResponse(error)) {
+    // This was a Response thrown intentionally
+    // error.status, error.statusText, error.data are available
+    return <NotFoundPage />;
+  }
 
-    // This was an unexpected error
-    return <GenericErrorPage />;
+  // This was an unexpected error
+  return <GenericErrorPage />;
 }
 ```
 
@@ -121,25 +119,25 @@ Always define an ErrorBoundary in your root route as a last resort:
 ```tsx
 // app/root.tsx
 export function ErrorBoundary() {
-    const error = useRouteError();
+  const error = useRouteError();
 
-    return (
-        <html>
-            <head>
-                <title>Oops!</title>
-            </head>
-            <body>
-                <h1>Something went wrong</h1>
-                {isRouteErrorResponse(error) ? (
-                    <p>
-                        {error.status}: {error.data}
-                    </p>
-                ) : (
-                    <p>An unexpected error occurred</p>
-                )}
-            </body>
-        </html>
-    );
+  return (
+    <html>
+      <head>
+        <title>Oops!</title>
+      </head>
+      <body>
+        <h1>Something went wrong</h1>
+        {isRouteErrorResponse(error) ? (
+          <p>
+            {error.status}: {error.data}
+          </p>
+        ) : (
+          <p>An unexpected error occurred</p>
+        )}
+      </body>
+    </html>
+  );
 }
 ```
 
@@ -149,19 +147,19 @@ Report errors to a logging service in `entry.server.tsx`:
 
 ```tsx
 // app/entry.server.tsx
-import type { HandleErrorFunction } from 'react-router';
+import type { HandleErrorFunction } from "react-router";
 
 export const handleError: HandleErrorFunction = (error, { request }) => {
-    // Don't log aborted requests
-    if (request.signal.aborted) {
-        return;
-    }
+  // Don't log aborted requests
+  if (request.signal.aborted) {
+    return;
+  }
 
-    // Report to your error tracking service
-    reportErrorToService(error);
+  // Report to your error tracking service
+  reportErrorToService(error);
 
-    // Always log for debugging
-    console.error(error);
+  // Always log for debugging
+  console.error(error);
 };
 ```
 
@@ -176,19 +174,19 @@ npx react-router reveal entry.server
 For form validation, return errors from the action instead of throwing:
 
 ```tsx
-import { data } from 'react-router';
+import { data } from "react-router";
 
 export async function action({ request }: Route.ActionArgs) {
-    const formData = await request.formData();
-    const email = formData.get('email')?.toString() ?? '';
+  const formData = await request.formData();
+  const email = formData.get("email")?.toString() ?? "";
 
-    if (!email.includes('@')) {
-        return data({ errors: { email: 'Invalid email' } }, { status: 400 });
-    }
+  if (!email.includes("@")) {
+    return data({ errors: { email: "Invalid email" } }, { status: 400 });
+  }
 
-    // Success
-    await createUser({ email });
-    return redirect('/welcome');
+  // Success
+  await createUser({ email });
+  return redirect("/welcome");
 }
 ```
 
@@ -196,16 +194,16 @@ Access in component via `fetcher.data`:
 
 ```tsx
 function SignupForm() {
-    const fetcher = useFetcher();
-    const errors = fetcher.data?.errors;
+  const fetcher = useFetcher();
+  const errors = fetcher.data?.errors;
 
-    return (
-        <fetcher.Form method="post">
-            <input type="email" name="email" />
-            {errors?.email && <span className="error">{errors.email}</span>}
-            <button>Sign Up</button>
-        </fetcher.Form>
-    );
+  return (
+    <fetcher.Form method="post">
+      <input type="email" name="email" />
+      {errors?.email && <span className="error">{errors.email}</span>}
+      <button>Sign Up</button>
+    </fetcher.Form>
+  );
 }
 ```
 

@@ -41,7 +41,8 @@
         "react-router-framework-mode": {
             "source": "remix-run/agent-skills",
             "sourceType": "github",
-            "computedHash": "26c5bdac2f686c47eb4c4b48b6cb52401cde1dc833e6d26408ddfb22ea83c5ca"
+            "skillPath": "skills/react-router-framework-mode/SKILL.md",
+            "computedHash": "aee6b24c178c335eb9eb65a8b06a2a0df69bc8a9ecf3a38111e9ca902b7d26d0"
         }
     }
 }

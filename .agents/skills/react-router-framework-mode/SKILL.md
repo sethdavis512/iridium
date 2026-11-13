@@ -33,17 +33,22 @@ Load the relevant reference for detailed guidance on the specific API/concept:
 | `references/pending-ui.md`           | Loading states, optimistic UI                         |
 | `references/error-handling.md`       | Error boundaries, error reporting                     |
 | `references/rendering-strategies.md` | SSR vs SPA vs pre-rendering configuration             |
-| `references/middleware.md`           | Adding middleware                                     |
+| `references/middleware.md`           | Adding middleware (requires v7.9.0+)                  |
 | `references/sessions.md`             | Cookie sessions, authentication, protected routes     |
 | `references/type-safety.md`          | Auto-generated route types, type imports, type safety |
 
 ## Version Compatibility
 
-This skill predates the React Router version Iridium runs. Where it disagrees with the project `CLAUDE.md`, `CLAUDE.md` wins. For version-sensitive APIs, read the docs in `node_modules/react-router/docs/` and check the installed version:
+Some features require specific React Router versions. **Always verify before implementing:**
 
 ```bash
-bun pm ls | grep react-router
+npm list react-router
 ```
+
+| Feature                 | Minimum Version | Notes                         |
+| ----------------------- | --------------- | ----------------------------- |
+| Middleware              | 7.9.0+          | Requires `v8_middleware` flag |
+| Core framework features | 7.0.0+          | loaders, actions, Form, etc.  |
 
 ## Critical Patterns
 
@@ -67,10 +72,10 @@ These are the most important patterns to follow. Load the relevant reference for
 
 ```tsx
 const fetcher = useFetcher();
-const optimistic = fetcher.formData?.get('favorite') === 'true' ?? isFavorite;
+const optimistic = fetcher.formData?.get("favorite") === "true" ?? isFavorite;
 
 <fetcher.Form method="post" action={`/favorites/${id}`}>
-    <button>{optimistic ? '★' : '☆'}</button>
+  <button>{optimistic ? "★" : "☆"}</button>
 </fetcher.Form>;
 ```
 
@@ -83,13 +88,13 @@ See `references/actions.md` for complete patterns.
 ```tsx
 // app/root.tsx - add navigation, footer, providers here
 export default function App() {
-    return (
-        <div>
-            <nav>...</nav>
-            <Outlet />
-            <footer>...</footer>
-        </div>
-    );
+  return (
+    <div>
+      <nav>...</nav>
+      <Outlet />
+      <footer>...</footer>
+    </div>
+  );
 }
 ```
 

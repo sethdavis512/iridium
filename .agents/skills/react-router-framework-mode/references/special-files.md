@@ -44,27 +44,24 @@ React Router framework mode uses several special files with specific purposes.
 ### Basic root.tsx Structure
 
 ```tsx
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
+import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 export default function App() {
-    return (
-        <html lang="en">
-            <head>
-                <meta charSet="utf-8" />
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1"
-                />
-                <Meta />
-                <Links />
-            </head>
-            <body>
-                <Outlet />
-                <ScrollRestoration />
-                <Scripts />
-            </body>
-        </html>
-    );
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        <Outlet />
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
 }
 ```
 
@@ -73,39 +70,36 @@ export default function App() {
 The `Layout` export avoids duplicating the document shell across your component, `HydrateFallback`, and `ErrorBoundary`:
 
 ```tsx
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
+import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-    return (
-        <html lang="en">
-            <head>
-                <meta charSet="utf-8" />
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1"
-                />
-                <Meta />
-                <Links />
-            </head>
-            <body>
-                {children}
-                <ScrollRestoration />
-                <Scripts />
-            </body>
-        </html>
-    );
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        {children}
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
 }
 
 export default function App() {
-    return <Outlet />;
+  return <Outlet />;
 }
 
 export function ErrorBoundary() {
-    return <div>Something went wrong</div>;
+  return <div>Something went wrong</div>;
 }
 
 export function HydrateFallback() {
-    return <div>Loading...</div>;
+  return <div>Loading...</div>;
 }
 ```
 
@@ -113,82 +107,79 @@ export function HydrateFallback() {
 
 ```tsx
 import {
-    Links,
-    Meta,
-    NavLink,
-    Outlet,
-    Scripts,
-    ScrollRestoration,
-    useNavigation,
-    useRouteLoaderData,
-} from 'react-router';
-import './app.css';
+  Links,
+  Meta,
+  NavLink,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  useNavigation,
+  useRouteLoaderData,
+} from "react-router";
+import "./app.css";
 
 export function Layout({ children }: { children: React.ReactNode }) {
-    return (
-        <html lang="en">
-            <head>
-                <meta charSet="utf-8" />
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1"
-                />
-                {/* Global fonts go in root.tsx, not layout components */}
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link
-                    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
-                    rel="stylesheet"
-                />
-                <Meta />
-                <Links />
-            </head>
-            <body>
-                {children}
-                <ScrollRestoration />
-                <Scripts />
-            </body>
-        </html>
-    );
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Global fonts go in root.tsx, not layout components */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+        <Meta />
+        <Links />
+      </head>
+      <body>
+        {children}
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
 }
 
 export default function App() {
-    const navigation = useNavigation();
-    const isNavigating = navigation.state !== 'idle';
+  const navigation = useNavigation();
+  const isNavigating = navigation.state !== "idle";
 
-    return (
-        <div className="app-layout">
-            {/* Global loading indicator */}
-            {isNavigating && <ProgressBar />}
+  return (
+    <div className="app-layout">
+      {/* Global loading indicator */}
+      {isNavigating && <ProgressBar />}
 
-            {/* Global navigation */}
-            <header className="app-header">
-                <nav className="app-nav">
-                    <NavLink
-                        to="/"
-                        className={({ isActive }) => (isActive ? 'active' : '')}
-                    >
-                        Home
-                    </NavLink>
-                    <NavLink
-                        to="/products"
-                        className={({ isActive }) => (isActive ? 'active' : '')}
-                    >
-                        Products
-                    </NavLink>
-                </nav>
-            </header>
+      {/* Global navigation */}
+      <header className="app-header">
+        <nav className="app-nav">
+          <NavLink
+            to="/"
+            className={({ isActive }) => (isActive ? "active" : "")}
+          >
+            Home
+          </NavLink>
+          <NavLink
+            to="/products"
+            className={({ isActive }) => (isActive ? "active" : "")}
+          >
+            Products
+          </NavLink>
+        </nav>
+      </header>
 
-            {/* Page content */}
-            <main className="app-main">
-                <Outlet />
-            </main>
+      {/* Page content */}
+      <main className="app-main">
+        <Outlet />
+      </main>
 
-            {/* Global footer */}
-            <footer className="app-footer">
-                © {new Date().getFullYear()} My App
-            </footer>
-        </div>
-    );
+      {/* Global footer */}
+      <footer className="app-footer">
+        © {new Date().getFullYear()} My App
+      </footer>
+    </div>
+  );
 }
 ```
 
@@ -206,19 +197,19 @@ Quick example:
 
 ```ts
 import {
-    type RouteConfig,
-    route,
-    index,
-    layout,
-} from '@react-router/dev/routes';
+  type RouteConfig,
+  route,
+  index,
+  layout,
+} from "@react-router/dev/routes";
 
 export default [
-    index('./home.tsx'),
-    route('about', './about.tsx'),
-    layout('./dashboard/layout.tsx', [
-        route('dashboard', './dashboard/index.tsx'),
-        route('dashboard/settings', './dashboard/settings.tsx'),
-    ]),
+  index("./home.tsx"),
+  route("about", "./about.tsx"),
+  layout("./dashboard/layout.tsx", [
+    route("dashboard", "./dashboard/index.tsx"),
+    route("dashboard/settings", "./dashboard/settings.tsx"),
+  ]),
 ] satisfies RouteConfig;
 ```
 
@@ -229,28 +220,28 @@ export default [
 Configures framework-level settings:
 
 ```ts
-import type { Config } from '@react-router/dev/config';
+import type { Config } from "@react-router/dev/config";
 
 export default {
-    // App directory (default: "app")
-    appDirectory: 'app',
+  // App directory (default: "app")
+  appDirectory: "app",
 
-    // Build output directory (default: "build")
-    buildDirectory: 'build',
+  // Build output directory (default: "build")
+  buildDirectory: "build",
 
-    // Enable/disable SSR (default: true)
-    ssr: true,
+  // Enable/disable SSR (default: true)
+  ssr: true,
 
-    // Pre-render routes at build time
-    prerender: ['/', '/about', '/pricing'],
+  // Pre-render routes at build time
+  prerender: ["/", "/about", "/pricing"],
 
-    // Base path for all routes
-    basename: '/my-app',
+  // Base path for all routes
+  basename: "/my-app",
 
-    // Future flags
-    future: {
-        v8_middleware: true,
-    },
+  // Future flags
+  future: {
+    v8_middleware: true,
+  },
 } satisfies Config;
 ```
 
@@ -271,7 +262,7 @@ Disable SSR for a single-page application:
 
 ```ts
 export default {
-    ssr: false,
+  ssr: false,
 } satisfies Config;
 ```
 
@@ -281,10 +272,10 @@ Pre-render routes to static HTML at build time:
 
 ```ts
 export default {
-    async prerender({ getStaticPaths }) {
-        const dynamicPaths = await getStaticPaths();
-        return ['/', '/about', ...dynamicPaths];
-    },
+  async prerender({ getStaticPaths }) {
+    const dynamicPaths = await getStaticPaths();
+    return ["/", "/about", ...dynamicPaths];
+  },
 } satisfies Config;
 ```
 
@@ -299,17 +290,17 @@ npx react-router reveal
 ```
 
 ```tsx
-import { startTransition, StrictMode } from 'react';
-import { hydrateRoot } from 'react-dom/client';
-import { HydratedRouter } from 'react-router/dom';
+import { startTransition, StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
+import { HydratedRouter } from "react-router/dom";
 
 startTransition(() => {
-    hydrateRoot(
-        document,
-        <StrictMode>
-            <HydratedRouter />
-        </StrictMode>,
-    );
+  hydrateRoot(
+    document,
+    <StrictMode>
+      <HydratedRouter />
+    </StrictMode>,
+  );
 });
 ```
 
@@ -330,40 +321,40 @@ npx react-router reveal
 ```
 
 ```tsx
-import { PassThrough } from 'node:stream';
-import type { EntryContext } from 'react-router';
-import { createReadableStreamFromReadable } from '@react-router/node';
-import { ServerRouter } from 'react-router';
-import { renderToPipeableStream } from 'react-dom/server';
+import { PassThrough } from "node:stream";
+import type { EntryContext } from "react-router";
+import { createReadableStreamFromReadable } from "@react-router/node";
+import { ServerRouter } from "react-router";
+import { renderToPipeableStream } from "react-dom/server";
 
 export default function handleRequest(
-    request: Request,
-    responseStatusCode: number,
-    responseHeaders: Headers,
-    routerContext: EntryContext,
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  routerContext: EntryContext,
 ) {
-    return new Promise((resolve, reject) => {
-        const { pipe, abort } = renderToPipeableStream(
-            <ServerRouter context={routerContext} url={request.url} />,
-            {
-                onShellReady() {
-                    responseHeaders.set('Content-Type', 'text/html');
-                    const body = new PassThrough();
-                    const stream = createReadableStreamFromReadable(body);
-                    resolve(
-                        new Response(stream, {
-                            headers: responseHeaders,
-                            status: responseStatusCode,
-                        }),
-                    );
-                    pipe(body);
-                },
-                onShellError(error: unknown) {
-                    reject(error);
-                },
-            },
-        );
-    });
+  return new Promise((resolve, reject) => {
+    const { pipe, abort } = renderToPipeableStream(
+      <ServerRouter context={routerContext} url={request.url} />,
+      {
+        onShellReady() {
+          responseHeaders.set("Content-Type", "text/html");
+          const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
+          resolve(
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            }),
+          );
+          pipe(body);
+        },
+        onShellError(error: unknown) {
+          reject(error);
+        },
+      },
+    );
+  });
 }
 
 // Optional: Control streaming timeout
@@ -371,9 +362,9 @@ export const streamTimeout = 10000;
 
 // Optional: Handle errors
 export function handleError(error: unknown, { request }: { request: Request }) {
-    if (!request.signal.aborted) {
-        console.error(error);
-    }
+  if (!request.signal.aborted) {
+    console.error(error);
+  }
 }
 ```
 
@@ -400,7 +391,7 @@ app/
 
 ```tsx
 // db.server.ts
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 export const db = new PrismaClient();
 ```
@@ -432,7 +423,7 @@ app/
 ```tsx
 // analytics.client.ts
 export function trackEvent(name: string) {
-    window.gtag?.('event', name);
+  window.gtag?.("event", name);
 }
 ```
 

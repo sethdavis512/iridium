@@ -13,16 +13,16 @@ React Router provides several ways to navigate between routes.
 Basic navigation:
 
 ```tsx
-import { Link } from 'react-router';
+import { Link } from "react-router";
 
 function Nav() {
-    return (
-        <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-            <Link to="/products/123">Product</Link>
-        </nav>
-    );
+  return (
+    <nav>
+      <Link to="/">Home</Link>
+      <Link to="/about">About</Link>
+      <Link to="/products/123">Product</Link>
+    </nav>
+  );
 }
 ```
 
@@ -34,8 +34,8 @@ function Nav() {
 - `prefetch` - `"none"`, `"intent"`, `"render"`, `"viewport"`
 
 ```tsx
-<Link to="/dashboard" replace state={{ from: 'home' }} prefetch="intent">
-    Dashboard
+<Link to="/dashboard" replace state={{ from: "home" }} prefetch="intent">
+  Dashboard
 </Link>
 ```
 
@@ -44,29 +44,29 @@ function Nav() {
 Link with active/pending state awareness:
 
 ```tsx
-import { NavLink } from 'react-router';
+import { NavLink } from "react-router";
 
 function Nav() {
-    return (
-        <nav>
-            <NavLink
-                to="/"
-                end
-                className={({ isActive }) => (isActive ? 'active' : '')}
-            >
-                Home
-            </NavLink>
+  return (
+    <nav>
+      <NavLink
+        to="/"
+        end
+        className={({ isActive }) => (isActive ? "active" : "")}
+      >
+        Home
+      </NavLink>
 
-            <NavLink
-                to="/products"
-                className={({ isActive, isPending }) =>
-                    isPending ? 'pending' : isActive ? 'active' : ''
-                }
-            >
-                Products
-            </NavLink>
-        </nav>
-    );
+      <NavLink
+        to="/products"
+        className={({ isActive, isPending }) =>
+          isPending ? "pending" : isActive ? "active" : ""
+        }
+      >
+        Products
+      </NavLink>
+    </nav>
+  );
 }
 ```
 
@@ -79,9 +79,9 @@ function Nav() {
 
 ```tsx
 <NavLink to="/messages">
-    {({ isActive, isPending }) => (
-        <span>Messages {isPending && <Spinner />}</span>
-    )}
+  {({ isActive, isPending }) => (
+    <span>Messages {isPending && <Spinner />}</span>
+  )}
 </NavLink>
 ```
 
@@ -90,17 +90,17 @@ function Nav() {
 Programmatic navigation:
 
 ```tsx
-import { useNavigate } from 'react-router';
+import { useNavigate } from "react-router";
 
 function LogoutButton() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    async function handleLogout() {
-        await logout();
-        navigate('/login');
-    }
+  async function handleLogout() {
+    await logout();
+    navigate("/login");
+  }
 
-    return <button onClick={handleLogout}>Logout</button>;
+  return <button onClick={handleLogout}>Logout</button>;
 }
 ```
 
@@ -110,13 +110,13 @@ function LogoutButton() {
 const navigate = useNavigate();
 
 // Basic navigation
-navigate('/dashboard');
+navigate("/dashboard");
 
 // Replace history entry
-navigate('/login', { replace: true });
+navigate("/login", { replace: true });
 
 // Pass state
-navigate('/checkout', { state: { cartId: 'abc' } });
+navigate("/checkout", { state: { cartId: "abc" } });
 
 // Go back/forward
 navigate(-1); // Back
@@ -128,21 +128,21 @@ navigate(1); // Forward
 Redirect from loaders and actions:
 
 ```tsx
-import { redirect } from 'react-router';
+import { redirect } from "react-router";
 
 export async function loader({ request }: Route.LoaderArgs) {
-    const user = await getUser(request);
+  const user = await getUser(request);
 
-    if (!user) {
-        throw redirect('/login');
-    }
+  if (!user) {
+    throw redirect("/login");
+  }
 
-    return user;
+  return user;
 }
 
 export async function action({ request }: Route.ActionArgs) {
-    await createProject(request);
-    return redirect('/projects');
+  await createProject(request);
+  return redirect("/projects");
 }
 ```
 
@@ -150,10 +150,10 @@ export async function action({ request }: Route.ActionArgs) {
 
 ```tsx
 // Temporary redirect (302, default)
-throw redirect('/new-location');
+throw redirect("/new-location");
 
 // Permanent redirect (301)
-throw redirect('/new-location', { status: 301 });
+throw redirect("/new-location", { status: 301 });
 ```
 
 ## Form Navigation
@@ -161,15 +161,15 @@ throw redirect('/new-location', { status: 301 });
 Forms with `method="get"` navigate with search params:
 
 ```tsx
-import { Form } from 'react-router';
+import { Form } from "react-router";
 
 function SearchForm() {
-    return (
-        <Form method="get" action="/search">
-            <input type="text" name="q" />
-            <button type="submit">Search</button>
-        </Form>
-    );
+  return (
+    <Form method="get" action="/search">
+      <input type="text" name="q" />
+      <button type="submit">Search</button>
+    </Form>
+  );
 }
 // Navigates to /search?q=...
 ```
@@ -197,18 +197,18 @@ Use `relative="path"` for path-based relativity instead of route-based:
 Read state passed during navigation:
 
 ```tsx
-import { useLocation } from 'react-router';
+import { useLocation } from "react-router";
 
 function Checkout() {
-    const location = useLocation();
-    const { from } = location.state || {};
+  const location = useLocation();
+  const { from } = location.state || {};
 
-    return (
-        <div>
-            <h1>Checkout</h1>
-            {from && <Link to={from}>Go back</Link>}
-        </div>
-    );
+  return (
+    <div>
+      <h1>Checkout</h1>
+      {from && <Link to={from}>Go back</Link>}
+    </div>
+  );
 }
 ```
 
@@ -220,6 +220,6 @@ Prevent scroll reset on specific links:
 
 ```tsx
 <Link to="/products" preventScrollReset>
-    Products
+  Products
 </Link>
 ```

@@ -14,10 +14,10 @@ Default mode. Pages are rendered on the server for each request:
 
 ```ts
 // react-router.config.ts
-import type { Config } from '@react-router/dev/config';
+import type { Config } from "@react-router/dev/config";
 
 export default {
-    ssr: true, // default
+  ssr: true, // default
 } satisfies Config;
 ```
 
@@ -40,10 +40,10 @@ Disable SSR for a single-page application:
 
 ```ts
 // react-router.config.ts
-import type { Config } from '@react-router/dev/config';
+import type { Config } from "@react-router/dev/config";
 
 export default {
-    ssr: false,
+  ssr: false,
 } satisfies Config;
 ```
 
@@ -63,8 +63,8 @@ In SPA mode, use `clientLoader` instead of `loader`:
 
 ```tsx
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-    const res = await fetch(`/api/products/${params.id}`);
-    return res.json();
+  const res = await fetch(`/api/products/${params.id}`);
+  return res.json();
 }
 ```
 
@@ -74,11 +74,11 @@ Generate static HTML at build time:
 
 ```ts
 // react-router.config.ts
-import type { Config } from '@react-router/dev/config';
+import type { Config } from "@react-router/dev/config";
 
 export default {
-    ssr: true,
-    prerender: true, // Pre-render all static routes
+  ssr: true,
+  prerender: true, // Pre-render all static routes
 } satisfies Config;
 ```
 
@@ -86,8 +86,8 @@ export default {
 
 ```ts
 export default {
-    ssr: true,
-    prerender: ['/', '/about', '/pricing'],
+  ssr: true,
+  prerender: ["/", "/about", "/pricing"],
 } satisfies Config;
 ```
 
@@ -97,11 +97,11 @@ Use an async function:
 
 ```ts
 export default {
-    ssr: true,
-    async prerender() {
-        const products = await db.getAllProducts();
-        return ['/', '/about', ...products.map((p) => `/products/${p.id}`)];
-    },
+  ssr: true,
+  async prerender() {
+    const products = await db.getAllProducts();
+    return ["/", "/about", ...products.map((p) => `/products/${p.id}`)];
+  },
 } satisfies Config;
 ```
 
@@ -124,9 +124,9 @@ When using `ssr: false`, a fallback HTML file is generated for routes not pre-re
 
 ```ts
 export default {
-    ssr: false,
-    prerender: ['/', '/about'], // These are pre-rendered
-    // Other routes use the SPA fallback
+  ssr: false,
+  prerender: ["/", "/about"], // These are pre-rendered
+  // Other routes use the SPA fallback
 } satisfies Config;
 ```
 
@@ -136,9 +136,9 @@ You can combine pre-rendering with SSR:
 
 ```ts
 export default {
-    ssr: true,
-    prerender: ['/', '/about', '/pricing'],
-    // Other routes are server-rendered
+  ssr: true,
+  prerender: ["/", "/about", "/pricing"],
+  // Other routes are server-rendered
 } satisfies Config;
 ```
 

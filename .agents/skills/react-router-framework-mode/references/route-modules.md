@@ -2,7 +2,7 @@
 title: Route Modules
 description: All route module exports - loader, action, meta, links, ErrorBoundary, etc.
 tags:
-    [route-module, loader, action, meta, links, ErrorBoundary, headers, handle]
+  [route-module, loader, action, meta, links, ErrorBoundary, headers, handle]
 ---
 
 # Route Modules
@@ -35,15 +35,15 @@ Route modules are files referenced in `routes.ts` that define automatic code-spl
 The default export renders when the route matches:
 
 ```tsx
-import type { Route } from './+types/my-route';
+import type { Route } from "./+types/my-route";
 
 export default function MyRoute({
-    loaderData,
-    actionData,
-    params,
-    matches,
+  loaderData,
+  actionData,
+  params,
+  matches,
 }: Route.ComponentProps) {
-    return <div>{loaderData.message}</div>;
+  return <div>{loaderData.message}</div>;
 }
 ```
 
@@ -62,11 +62,11 @@ Loads data on the server before render:
 
 ```tsx
 export async function loader({ params, request }: Route.LoaderArgs) {
-    const data = await db.find(params.id);
-    if (!data) {
-        throw new Response('Not Found', { status: 404 });
-    }
-    return data;
+  const data = await db.find(params.id);
+  if (!data) {
+    throw new Response("Not Found", { status: 404 });
+  }
+  return data;
 }
 ```
 
@@ -80,12 +80,12 @@ Runs in browser. Can augment or replace server loader:
 
 ```tsx
 export async function clientLoader({
-    params,
-    serverLoader,
+  params,
+  serverLoader,
 }: Route.ClientLoaderArgs) {
-    const serverData = await serverLoader();
-    const clientData = await getClientData();
-    return { ...serverData, ...clientData };
+  const serverData = await serverLoader();
+  const clientData = await getClientData();
+  return { ...serverData, ...clientData };
 }
 
 // Run during initial hydration
@@ -106,21 +106,21 @@ clientLoader.hydrate = true as const;
 Handles form submissions with automatic revalidation:
 
 ```tsx
-import { Form, redirect } from 'react-router';
+import { Form, redirect } from "react-router";
 
 export async function action({ request }: Route.ActionArgs) {
-    const formData = await request.formData();
-    await db.create({ title: formData.get('title') });
-    return redirect('/list');
+  const formData = await request.formData();
+  await db.create({ title: formData.get("title") });
+  return redirect("/list");
 }
 
 export default function NewItem() {
-    return (
-        <Form method="post">
-            <input name="title" />
-            <button type="submit">Create</button>
-        </Form>
-    );
+  return (
+    <Form method="post">
+      <input name="title" />
+      <button type="submit">Create</button>
+    </Form>
+  );
 }
 ```
 
@@ -134,11 +134,11 @@ Handles mutations in the browser:
 
 ```tsx
 export async function clientAction({
-    request,
-    serverAction,
+  request,
+  serverAction,
 }: Route.ClientActionArgs) {
-    invalidateClientCache();
-    return await serverAction();
+  invalidateClientCache();
+  return await serverAction();
 }
 ```
 
@@ -152,14 +152,14 @@ Runs before/after document and data requests on the server:
 
 ```tsx
 export const middleware: Route.MiddlewareFunction[] = [
-    async function auth({ request, context }, next) {
-        const session = await getSession(request);
-        if (!session.userId) {
-            throw redirect('/login');
-        }
-        context.set(userContext, await getUser(session.userId));
-        return next();
-    },
+  async function auth({ request, context }, next) {
+    const session = await getSession(request);
+    if (!session.userId) {
+      throw redirect("/login");
+    }
+    context.set(userContext, await getUser(session.userId));
+    return next();
+  },
 ];
 ```
 
@@ -175,11 +175,11 @@ Same as `middleware` but runs in browser. No Response returned:
 
 ```tsx
 export const clientMiddleware: Route.ClientMiddlewareFunction[] = [
-    async function timing({ request }, next) {
-        const start = performance.now();
-        await next();
-        console.log(`${request.url} - ${performance.now() - start}ms`);
-    },
+  async function timing({ request }, next) {
+    const start = performance.now();
+    await next();
+    console.log(`${request.url} - ${performance.now() - start}ms`);
+  },
 ];
 ```
 
@@ -190,32 +190,32 @@ export const clientMiddleware: Route.ClientMiddlewareFunction[] = [
 Renders when loader, action, or component throws:
 
 ```tsx
-import { isRouteErrorResponse, useRouteError } from 'react-router';
+import { isRouteErrorResponse, useRouteError } from "react-router";
 
 export function ErrorBoundary() {
-    const error = useRouteError();
+  const error = useRouteError();
 
-    if (isRouteErrorResponse(error)) {
-        return (
-            <div>
-                <h1>
-                    {error.status} {error.statusText}
-                </h1>
-                <p>{error.data}</p>
-            </div>
-        );
-    }
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div>
+        <h1>
+          {error.status} {error.statusText}
+        </h1>
+        <p>{error.data}</p>
+      </div>
+    );
+  }
 
-    if (error instanceof Error) {
-        return (
-            <div>
-                <h1>Error</h1>
-                <p>{error.message}</p>
-            </div>
-        );
-    }
+  if (error instanceof Error) {
+    return (
+      <div>
+        <h1>Error</h1>
+        <p>{error.message}</p>
+      </div>
+    );
+  }
 
-    return <h1>Unknown Error</h1>;
+  return <h1>Unknown Error</h1>;
 }
 ```
 
@@ -227,12 +227,12 @@ Renders during initial load while `clientLoader.hydrate` runs:
 
 ```tsx
 export async function clientLoader() {
-    return await loadLocalData();
+  return await loadLocalData();
 }
 clientLoader.hydrate = true as const;
 
 export function HydrateFallback() {
-    return <div>Loading...</div>;
+  return <div>Loading...</div>;
 }
 ```
 
@@ -244,10 +244,10 @@ Sets HTTP response headers:
 
 ```tsx
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-    return {
-        'Cache-Control': loaderHeaders.get('Cache-Control') ?? 'max-age=3600',
-        'X-Custom-Header': 'value',
-    };
+  return {
+    "Cache-Control": loaderHeaders.get("Cache-Control") ?? "max-age=3600",
+    "X-Custom-Header": "value",
+  };
 }
 ```
 
@@ -257,10 +257,10 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 
 ```tsx
 export function meta({ loaderData }: Route.MetaArgs) {
-    return [
-        { title: loaderData.product.name },
-        { name: 'description', content: loaderData.product.description },
-    ];
+  return [
+    { title: loaderData.product.name },
+    { name: "description", content: loaderData.product.description },
+  ];
 }
 ```
 
@@ -274,11 +274,11 @@ Adds `<link>` elements to document head:
 
 ```tsx
 export function links() {
-    return [
-        { rel: 'stylesheet', href: '/styles/page.css' },
-        { rel: 'preload', href: '/images/hero.jpg', as: 'image' },
-        { rel: 'icon', href: '/favicon.png', type: 'image/png' },
-    ];
+  return [
+    { rel: "stylesheet", href: "/styles/page.css" },
+    { rel: "preload", href: "/images/hero.jpg", as: "image" },
+    { rel: "icon", href: "/favicon.png", type: "image/png" },
+  ];
 }
 ```
 
@@ -290,22 +290,22 @@ Custom data accessible via `useMatches`:
 
 ```tsx
 export const handle = {
-    breadcrumb: 'Dashboard',
-    permissions: ['admin'],
+  breadcrumb: "Dashboard",
+  permissions: ["admin"],
 };
 ```
 
 **Usage:**
 
 ```tsx
-import { useMatches } from 'react-router';
+import { useMatches } from "react-router";
 
 function Breadcrumbs() {
-    const matches = useMatches();
-    const crumbs = matches
-        .filter((m) => m.handle?.breadcrumb)
-        .map((m) => m.handle.breadcrumb);
-    return <nav>{crumbs.join(' > ')}</nav>;
+  const matches = useMatches();
+  const crumbs = matches
+    .filter((m) => m.handle?.breadcrumb)
+    .map((m) => m.handle.breadcrumb);
+  return <nav>{crumbs.join(" > ")}</nav>;
 }
 ```
 
@@ -317,16 +317,16 @@ Opt out of automatic loader revalidation:
 
 ```tsx
 export function shouldRevalidate({
-    currentUrl,
-    nextUrl,
-    formMethod,
-    defaultShouldRevalidate,
+  currentUrl,
+  nextUrl,
+  formMethod,
+  defaultShouldRevalidate,
 }: Route.ShouldRevalidateFunctionArgs) {
-    // Skip for query-only changes
-    if (currentUrl.pathname === nextUrl.pathname) {
-        return false;
-    }
-    return defaultShouldRevalidate;
+  // Skip for query-only changes
+  if (currentUrl.pathname === nextUrl.pathname) {
+    return false;
+  }
+  return defaultShouldRevalidate;
 }
 ```
 
@@ -335,57 +335,57 @@ export function shouldRevalidate({
 ## Complete Example
 
 ```tsx
-import type { Route } from './+types/team';
+import type { Route } from "./+types/team";
 import {
-    Form,
-    redirect,
-    isRouteErrorResponse,
-    useRouteError,
-} from 'react-router';
+  Form,
+  redirect,
+  isRouteErrorResponse,
+  useRouteError,
+} from "react-router";
 
 export const middleware: Route.MiddlewareFunction[] = [
-    async function requireAuth({ context }, next) {
-        if (!context.get(userContext)) throw redirect('/login');
-        return next();
-    },
+  async function requireAuth({ context }, next) {
+    if (!context.get(userContext)) throw redirect("/login");
+    return next();
+  },
 ];
 
 export async function loader({ params }: Route.LoaderArgs) {
-    const team = await db.teams.find(params.teamId);
-    if (!team) throw new Response('Not Found', { status: 404 });
-    return { team };
+  const team = await db.teams.find(params.teamId);
+  if (!team) throw new Response("Not Found", { status: 404 });
+  return { team };
 }
 
 export async function action({ request, params }: Route.ActionArgs) {
-    const formData = await request.formData();
-    await db.teams.update(params.teamId, { name: formData.get('name') });
-    return { success: true };
+  const formData = await request.formData();
+  await db.teams.update(params.teamId, { name: formData.get("name") });
+  return { success: true };
 }
 
 export function headers() {
-    return { 'Cache-Control': 'private, max-age=60' };
+  return { "Cache-Control": "private, max-age=60" };
 }
 
 export default function Team({ loaderData, actionData }: Route.ComponentProps) {
-    return (
-        <div>
-            <title>{loaderData.team.name}</title>
-            <h1>{loaderData.team.name}</h1>
-            {actionData?.success && <p>Updated!</p>}
-            <Form method="post">
-                <input name="name" defaultValue={loaderData.team.name} />
-                <button type="submit">Update</button>
-            </Form>
-        </div>
-    );
+  return (
+    <div>
+      <title>{loaderData.team.name}</title>
+      <h1>{loaderData.team.name}</h1>
+      {actionData?.success && <p>Updated!</p>}
+      <Form method="post">
+        <input name="name" defaultValue={loaderData.team.name} />
+        <button type="submit">Update</button>
+      </Form>
+    </div>
+  );
 }
 
 export function ErrorBoundary() {
-    const error = useRouteError();
-    if (isRouteErrorResponse(error) && error.status === 404) {
-        return <h1>Team not found</h1>;
-    }
-    return <h1>Something went wrong</h1>;
+  const error = useRouteError();
+  if (isRouteErrorResponse(error) && error.status === 404) {
+    return <h1>Team not found</h1>;
+  }
+  return <h1>Something went wrong</h1>;
 }
 ```
 

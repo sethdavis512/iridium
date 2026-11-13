@@ -29,12 +29,12 @@ npm list react-router
 
 ```ts
 // react-router.config.ts
-import type { Config } from '@react-router/dev/config';
+import type { Config } from "@react-router/dev/config";
 
 export default {
-    future: {
-        v8_middleware: true, // Required for middleware
-    },
+  future: {
+    v8_middleware: true, // Required for middleware
+  },
 } satisfies Config;
 ```
 
@@ -57,15 +57,15 @@ Root middleware end
 ## Basic Middleware
 
 ```tsx
-import type { Route } from './+types/dashboard';
-import { redirect } from 'react-router';
+import type { Route } from "./+types/dashboard";
+import { redirect } from "react-router";
 
 async function authMiddleware({ request, context }: Route.MiddlewareArgs) {
-    const user = await getUserFromSession(request);
-    if (!user) {
-        throw redirect('/login');
-    }
-    context.set(userContext, user);
+  const user = await getUserFromSession(request);
+  if (!user) {
+    throw redirect("/login");
+  }
+  context.set(userContext, user);
 }
 
 export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
@@ -77,15 +77,15 @@ Call `next()` to continue the chain and get the response:
 
 ```tsx
 async function loggingMiddleware(
-    { request }: Route.MiddlewareArgs,
-    next: Route.MiddlewareNext,
+  { request }: Route.MiddlewareArgs,
+  next: Route.MiddlewareNext,
 ) {
-    console.log(`→ ${request.method} ${request.url}`);
+  console.log(`→ ${request.method} ${request.url}`);
 
-    const response = await next();
+  const response = await next();
 
-    console.log(`← ${response.status}`);
-    return response;
+  console.log(`← ${response.status}`);
+  return response;
 }
 ```
 
@@ -99,7 +99,7 @@ Create typed context to share data between middleware and loaders/actions:
 
 ```tsx
 // app/context.ts
-import { createContext } from 'react-router';
+import { createContext } from "react-router";
 
 export const userContext = createContext<User | null>(null);
 export const dbContext = createContext<Database>();
@@ -108,11 +108,11 @@ export const dbContext = createContext<Database>();
 ### Setting Context in Middleware
 
 ```tsx
-import { userContext } from '~/context';
+import { userContext } from "~/context";
 
 async function authMiddleware({ request, context }: Route.MiddlewareArgs) {
-    const user = await getUser(request);
-    context.set(userContext, user);
+  const user = await getUser(request);
+  context.set(userContext, user);
 }
 
 export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
@@ -121,16 +121,16 @@ export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
 ### Reading Context in Loaders/Actions
 
 ```tsx
-import { userContext } from '~/context';
+import { userContext } from "~/context";
 
 export async function loader({ context }: Route.LoaderArgs) {
-    const user = context.get(userContext);
-    return { profile: await getProfile(user) };
+  const user = context.get(userContext);
+  return { profile: await getProfile(user) };
 }
 
 export async function action({ context }: Route.ActionArgs) {
-    const user = context.get(userContext);
-    // user is available here too
+  const user = context.get(userContext);
+  // user is available here too
 }
 ```
 
@@ -140,11 +140,11 @@ export async function action({ context }: Route.ActionArgs) {
 
 ```tsx
 export const middleware: Route.MiddlewareFunction[] = [
-    async ({ request, context }, next) => {
-        // Runs on server
-        const response = await next();
-        return response;
-    },
+  async ({ request, context }, next) => {
+    // Runs on server
+    const response = await next();
+    return response;
+  },
 ];
 ```
 
@@ -152,12 +152,12 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 ```tsx
 export const clientMiddleware: Route.ClientMiddlewareFunction[] = [
-    async ({ context }, next) => {
-        // Runs in browser
-        const start = performance.now();
-        await next();
-        console.log(`Navigation: ${performance.now() - start}ms`);
-    },
+  async ({ context }, next) => {
+    // Runs in browser
+    const start = performance.now();
+    await next();
+    console.log(`Navigation: ${performance.now() - start}ms`);
+  },
 ];
 ```
 
@@ -175,7 +175,7 @@ To force middleware on routes without loaders, add an empty loader:
 export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
 
 export async function loader() {
-    return null;
+  return null;
 }
 ```
 
@@ -185,11 +185,11 @@ export async function loader() {
 
 ```tsx
 async function authMiddleware({ request, context }: Route.MiddlewareArgs) {
-    const session = await getSession(request);
-    if (!session.get('userId')) {
-        throw redirect('/login');
-    }
-    context.set(userContext, await getUserById(session.get('userId')));
+  const session = await getSession(request);
+  if (!session.get("userId")) {
+    throw redirect("/login");
+  }
+  context.set(userContext, await getUserById(session.get("userId")));
 }
 ```
 
@@ -197,17 +197,17 @@ async function authMiddleware({ request, context }: Route.MiddlewareArgs) {
 
 ```tsx
 async function loggingMiddleware(
-    { request }: Route.MiddlewareArgs,
-    next: Route.MiddlewareNext,
+  { request }: Route.MiddlewareArgs,
+  next: Route.MiddlewareNext,
 ) {
-    const id = crypto.randomUUID();
-    const start = performance.now();
+  const id = crypto.randomUUID();
+  const start = performance.now();
 
-    console.log(`[${id}] ${request.method} ${request.url}`);
-    const response = await next();
-    console.log(`[${id}] ${response.status} (${performance.now() - start}ms)`);
+  console.log(`[${id}] ${request.method} ${request.url}`);
+  const response = await next();
+  console.log(`[${id}] ${response.status} (${performance.now() - start}ms)`);
 
-    return response;
+  return response;
 }
 ```
 
@@ -215,13 +215,13 @@ async function loggingMiddleware(
 
 ```tsx
 async function securityHeaders(
-    _: Route.MiddlewareArgs,
-    next: Route.MiddlewareNext,
+  _: Route.MiddlewareArgs,
+  next: Route.MiddlewareNext,
 ) {
-    const response = await next();
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    return response;
+  const response = await next();
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  return response;
 }
 ```
 
@@ -229,17 +229,17 @@ async function securityHeaders(
 
 ```tsx
 async function cmsFallback(
-    { request }: Route.MiddlewareArgs,
-    next: Route.MiddlewareNext,
+  { request }: Route.MiddlewareArgs,
+  next: Route.MiddlewareNext,
 ) {
-    const response = await next();
+  const response = await next();
 
-    if (response.status === 404) {
-        const redirect = await checkCmsRedirects(request.url);
-        if (redirect) throw redirect(redirect, 302);
-    }
+  if (response.status === 404) {
+    const redirect = await checkCmsRedirects(request.url);
+    if (redirect) throw redirect(redirect, 302);
+  }
 
-    return response;
+  return response;
 }
 ```
 
@@ -247,12 +247,12 @@ async function cmsFallback(
 
 ```tsx
 export const middleware: Route.MiddlewareFunction[] = [
-    async ({ request, context }, next) => {
-        if (request.method === 'POST') {
-            await requireAuth(request, context);
-        }
-        return next();
-    },
+  async ({ request, context }, next) => {
+    if (request.method === "POST") {
+      await requireAuth(request, context);
+    }
+    return next();
+  },
 ];
 ```
 
@@ -262,12 +262,12 @@ Errors bubble to the nearest `ErrorBoundary`. The `next()` function always retur
 
 ```tsx
 export const middleware: Route.MiddlewareFunction[] = [
-    async (_, next) => {
-        const response = await next();
-        // response.status = 500 if child threw
-        // Can still set headers, commit sessions, etc.
-        return response;
-    },
+  async (_, next) => {
+    const response = await next();
+    // response.status = 500 if child threw
+    // Can still set headers, commit sessions, etc.
+    return response;
+  },
 ];
 ```
 
