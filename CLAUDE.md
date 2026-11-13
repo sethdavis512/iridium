@@ -254,3 +254,7 @@ Prettier with: 80 char width, 4-space indentation, single quotes, semicolons, ta
 ## Linear
 
 Issues for this repo live in Linear team **Tech with Seth**, project **Iridium**. Skills that query Linear (such as `linear-triage`) read the team and project from this section. A copy of the template should point this at its own project or delete the section.
+
+## Project hub
+
+This project's hub is `Projects/Iridium.md` in the Second Brain vault (`~/Documents/second-brain`). Record decisions, direction changes, and open questions there, in its `## Decisions` section, not here. Git and Linear hold the changelog. See "Where things live" in `~/repositories/CLAUDE.md`. A copy of the template should point this at its own hub or delete the section.
