@@ -51,4 +51,4 @@ ENTRYPOINT ["/sbin/tini", "--"]
 # work. On Railway the start command in .railway/railway.ts replaces both
 # ENTRYPOINT and CMD (so it names tini itself), and migrations run once per
 # deploy in the pre-deploy step.
-CMD ["sh", "-c", "npx --no-install prisma migrate deploy && exec node node_modules/@react-router/serve/bin.cjs build/server/index.js"]
+CMD ["sh", "-c", "npx --no-install prisma migrate deploy && exec node build/serve.js"]
