@@ -3,8 +3,8 @@
  * in react-router.config.ts), on top of request.url's own origin.
  *
  * React Router compares the Origin header with request.url's full origin,
- * scheme included. react-router-serve builds request.url from the socket
- * (Express without `trust proxy`), so behind a TLS-terminating proxy such as
+ * scheme included. The production server (server.ts) builds request.url from
+ * the socket (no `trust proxy`), so behind a TLS-terminating proxy such as
  * Railway's it is http:// while the browser sends `Origin: https://...`, and
  * every form and fetcher action answers 400. Listing the app's own public
  * hosts (BETTER_AUTH_BASE_URL plus BETTER_AUTH_TRUSTED_ORIGINS) lets those

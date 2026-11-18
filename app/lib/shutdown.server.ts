@@ -7,7 +7,7 @@ type Cleanup = () => unknown;
 
 const cleanups = new Set<Cleanup>();
 
-// Node's built-in HTTP diagnostics channels. react-router-serve creates the
+// Node's built-in HTTP diagnostics channels. server.ts creates the
 // http.Server, so the app learns about it from these instead of a reference.
 const REQUEST_START = 'http.server.request.start';
 const RESPONSE_FINISH = 'http.server.response.finish';
@@ -39,8 +39,8 @@ export async function runShutdownCleanups() {
 
 /**
  * Resolves once `server` has closed and every in-flight response (chat
- * streams included) has finished. react-router-serve's own SIGTERM/SIGINT
- * listener calls server.close(); this closes it only if nothing else did.
+ * streams included) has finished. Closes the server unless something else
+ * already did.
  */
 export function waitForDrain(server: Server | undefined) {
     return new Promise<void>((resolve) => {
@@ -69,7 +69,7 @@ export function waitForDrain(server: Server | undefined) {
 /**
  * On SIGTERM or SIGINT: stop accepting connections, let in-flight requests
  * finish, close the pools registered with onShutdown(), and exit 0. Without
- * this, react-router-serve closes its server but the open pools keep the
+ * this, the open pools keep the
  * process alive until the platform's SIGKILL. The platform still bounds the
  * wait (RAILWAY_DEPLOYMENT_DRAINING_SECONDS, `docker stop -t`).
  */

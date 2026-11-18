@@ -91,7 +91,7 @@ export default defineRailway((ctx) => {
         // ENTRYPOINT and CMD, so it names tini itself: tini as PID 1 hands
         // SIGTERM straight to node (no npm or shell), which drains in-flight
         // requests and closes the database pools before exiting.
-        start: '/sbin/tini -- node /app/node_modules/@react-router/serve/bin.cjs /app/build/server/index.js',
+        start: '/sbin/tini -- node /app/build/serve.js',
         preDeploy: 'npx --no-install prisma migrate deploy',
         healthcheck: '/healthcheck',
         healthcheckTimeout: 100,
